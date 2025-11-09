@@ -166,9 +166,9 @@
             background: rgba(214, 17, 25, 0.12);
             color: var(--primary);
             padding: 0.65rem;
+            display: none;
             border-radius: 14px;
             cursor: pointer;
-            display: flex;
             align-items: center;
             justify-content: center;
             transition: background 0.2s ease;
@@ -266,6 +266,38 @@
             color: var(--muted);
             line-height: 1.8;
         }
+
+        @media (min-width: 993px) {
+            body.sidebar-collapsed .sidebar {
+                width: 96px;
+            }
+            body.sidebar-collapsed .main-shell {
+                margin-right: 96px;
+            }
+            body.sidebar-collapsed .brand > div,
+            body.sidebar-collapsed .nav-title,
+            body.sidebar-collapsed .brand small {
+                display: none;
+            }
+            body.sidebar-collapsed .brand img {
+                margin: 0 auto;
+            }
+            body.sidebar-collapsed .nav-item {
+                justify-content: center;
+                padding: 0.65rem;
+                font-size: 0;
+                border-radius: 16px;
+            }
+            body.sidebar-collapsed .nav-item svg {
+                margin: 0;
+                width: 22px;
+                height: 22px;
+            }
+            body.sidebar-collapsed .nav-section {
+                gap: 0.6rem;
+            }
+        }
+
         @media (max-width: 992px) {
             .sidebar {
                 transform: translateX(110%);
@@ -285,8 +317,9 @@
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                padding: 0.75rem 1rem;
+                padding: 1rem 1.25rem;
                 position: relative;
+                min-height: 88px;
             }
             .page-meta {
                 position: absolute;
@@ -415,6 +448,8 @@
     const sidebar = document.getElementById('adminSidebar');
     const overlay = document.getElementById('sidebarOverlay');
     const toggleBtn = document.getElementById('sidebarToggle');
+    const body = document.body;
+    const DESKTOP_BREAKPOINT = 993;
 
     function closeSidebar() {
         sidebar?.classList.remove('open');
@@ -427,6 +462,10 @@
     }
 
     toggleBtn?.addEventListener('click', () => {
+        if (window.innerWidth >= DESKTOP_BREAKPOINT) {
+            body.classList.toggle('sidebar-collapsed');
+            return;
+        }
         const isOpen = sidebar?.classList.contains('open');
         if (isOpen) {
             closeSidebar();
@@ -438,9 +477,11 @@
     overlay?.addEventListener('click', () => closeSidebar());
 
     window.addEventListener('resize', () => {
-        if (window.innerWidth >= 993) {
+        if (window.innerWidth >= DESKTOP_BREAKPOINT) {
             sidebar?.classList.remove('open');
             overlay?.classList.remove('visible');
+        } else {
+            body.classList.remove('sidebar-collapsed');
         }
     });
 </script>
