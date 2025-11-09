@@ -11,7 +11,7 @@
     <style>
         :root {
             color-scheme: light;
-            --primary: #D81C24;
+            --primary: #D61119;
         }
         * {
             box-sizing: border-box;
@@ -145,7 +145,7 @@
             padding: 0.95rem;
             font-size: 1rem;
             font-weight: 600;
-            background: linear-gradient(135deg, #D81C24, #b5151c);
+            background: linear-gradient(135deg, #D61119, #a00b11);
             color: #fff;
             cursor: pointer;
             box-shadow: 0 15px 30px rgba(216, 28, 36, 0.3);
