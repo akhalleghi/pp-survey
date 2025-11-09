@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سامانه نظرسنجی شرکت پاریز پیشرو صنعت توسعه</title>
     <link rel="stylesheet" href="{{ asset('css/index.css') }}">
+    <style>
+        .gap-12 {
+            gap: 3rem;
+            margin-top: 50px;
+            }
+    </style>
 </head>
 <body class="bg-gray-50 font-vazir">
     <!-- Navigation Header -->
@@ -147,25 +153,39 @@
 
                         <!-- Recent Survey Card -->
                         <div class="floating-card bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl col-span-2" style="animation-delay: 2s;">
-                            <div class="flex items-center space-x-4 space-x-reverse">
-                                <img src="{{ asset("storage/poll-image.jpg") }}" 
-                                     alt="تصویر محیط کار مدرن با کامپیوترها و فضای باز" 
-                                     class="w-16 h-16 rounded-xl object-cover"
-                                     onerror="this.src='{{ asset("storage/poll-image.jpg") }}'; this.onerror=null;">
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-gray-900 mb-1">نظرسنجی رضایت از محیط کار</h4>
-                                    <p class="text-sm text-gray-600">آخرین نظرسنجی منتشر شده</p>
-                                    <div class="flex items-center mt-2">
-                                        <span class="text-xs text-gray-500">۱۴۰۳/۰۸/۱۵</span>
-                                        <span class="mx-2 text-gray-300">•</span>
-                                        <span class="text-xs text-primary">۱۲۳ پاسخ</span>
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="flex items-start gap-4 flex-1">
+                                    <img src="{{ asset('storage/poll-image.jpg') }}"
+                                         alt="تصویر محیط کار مدرن با کامپیوترها و فضای باز"
+                                         class="w-16 h-16 rounded-2xl object-cover shadow-sm ring-1 ring-gray-100"
+                                         onerror="this.src='{{ asset("storage/poll-image.jpg") }}'; this.onerror=null;">
+                                    <div class="flex-1">
+                                        <h4 class="font-semibold text-gray-900 mb-1">نظرسنجی رضایت از محیط کار</h4>
+                                        <p class="text-sm text-gray-600 mb-3">آخرین نظرسنجی منتشر شده</p>
+                                        <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                                            <span class="flex items-center gap-1">
+                                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z"></path>
+                                                </svg>
+                                                ۱۴۰۳/۰۸/۱۵
+                                            </span>
+                                            <span class="h-4 w-px bg-gray-200 hidden sm:inline-block"></span>
+                                            <span class="flex items-center gap-1 text-primary">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                                </svg>
+                                                ۱۲۳ پاسخ
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="pulse-animation">
-                                    <svg class="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                                {{-- <div class="shrink-0 self-start sm:self-center">
+                                    <div class="pulse-animation rounded-full bg-primary/10 text-primary p-3 hover:bg-primary/20 transition">
+                                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
                                     </svg>
-                                </div>
+                                    </div>
+                                </div> --}}
                             </div>
                         </div>
                     </div>
@@ -174,14 +194,14 @@
         </div>
 
         <!-- Scroll Indicator -->
-        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
+        {{-- <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
             <div class="flex flex-col items-center text-white/80">
                 <p class="text-sm mb-2">برای مشاهده جزئیات بیشتر اسکرول کنید</p>
                 <div class="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center">
                     <div class="w-1 h-3 bg-white/70 rounded-full mt-2 animate-bounce"></div>
                 </div>
             </div>
-        </div>
+        </div> --}}
     </section>
 
     <!-- Recent Surveys Section -->
@@ -650,7 +670,7 @@
     </section>
 
     <!-- Technology Stack -->
-    <section class="py-16 bg-gray-50">
+    {{-- <section class="py-16 bg-gray-50">
         <div class="container-max section-padding">
             <div class="text-center mb-12">
                 <h2 class="text-4xl font-bold text-gray-900 mb-4">تکنولوژی‌های استفاده شده</h2>
@@ -708,7 +728,7 @@
                 </div>
             </div>
         </div>
-    </section>
+    </section> --}}
 
     <!-- Footer -->
     <footer class="bg-gray-900 text-white py-12">
