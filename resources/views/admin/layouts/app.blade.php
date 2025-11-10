@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -379,7 +379,7 @@
 <body>
 @php
     $admin = $admin ?? null;
-        $navItems = [
+    $navItems = [
         [
             'label' => 'داشبورد',
             'href' => route('admin.dashboard'),
@@ -393,13 +393,13 @@
             'route' => 'admin.units.index',
         ],
         [
-            'label' => 'گزارش‌ها',
-            'href' => '#',
+            'label' => 'تعریف سمت‌ها',
+            'href' => route('admin.positions.index'),
             'icon' => 'M12 14l9-5-9-5-9 5 9 5zm0 0v7',
-            'route' => null,
+            'route' => 'admin.positions.index',
         ],
         [
-            'label' => 'عملیات پرواز',
+            'label' => 'گزارش‌ها',
             'href' => '#',
             'icon' => 'M12 6v12m6-6H6',
             'route' => null,
@@ -517,3 +517,4 @@
 </script>
 </body>
 </html>
+

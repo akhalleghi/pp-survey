@@ -66,16 +66,36 @@
     </section>
 
     <section class="panel-grid">
-        <div class="panel">
+                <div class="panel">
             <h3>
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6h18M3 12h18M3 18h10" />
                 </svg>
                 تعریف واحدها
             </h3>
-            <p>برای افزودن یا ویرایش واحدهای سازمانی به صفحهٔ اختصاصی آن بروید و ساختار تیمی را همواره به‌روز نگه دارید.</p>
+            <p>برای افزودن یا ویرایش واحدهای سازمانی به صفحه اختصاصی آن بروید و ساختار تیمی را همیشه به‌روز نگه دارید.</p>
             <a href="{{ route('admin.units.index') }}" class="primary-link">مدیریت واحدها</a>
         </div>
+        <div class="panel">
+            <h3>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v12m6-6H6"/>
+                </svg>
+                تعریف سمت‌ها
+            </h3>
+            <p>سمت‌های کلیدی سازمان را در این بخش مدیریت کنید و برای اعضای تیم جایگاه مشخص تعیین نمایید.</p>
+            <a href="{{ route('admin.positions.index') }}" class="primary-link">مدیریت سمت‌ها</a>
+        </div>
+        {{-- <div class="panel">
+            <h3>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v12m6-6H6" />
+                </svg>
+                تعریف سمت‌ها
+            </h3>
+            <p>سمت‌های کلیدی سازمان را در این بخش مدیریت کنید و برای اعضای تیم جایگاه مشخص تعیین نمایید.</p>
+            <a href="{{ route('admin.positions.index') }}" class="primary-link">مدیریت سمت‌ها</a>
+        </div> --}}
         <div class="panel">
             <h3>
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22">
