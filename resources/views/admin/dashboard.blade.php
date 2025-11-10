@@ -4,6 +4,19 @@
 @section('page-description', 'نمای کلی عملکرد سیستم و دسترسی سریع به ماژول‌ها')
 
 @section('content')
+    <style>
+        .panel .primary-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1rem;
+            padding: 0.85rem 1.4rem;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            font-weight: 600;
+        }
+    </style>
     <section class="stats-grid">
         <div class="stat-card">
             <div class="stat-card-icon">
@@ -53,6 +66,16 @@
     </section>
 
     <section class="panel-grid">
+        <div class="panel">
+            <h3>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6h18M3 12h18M3 18h10" />
+                </svg>
+                تعریف واحدها
+            </h3>
+            <p>برای افزودن یا ویرایش واحدهای سازمانی به صفحهٔ اختصاصی آن بروید و ساختار تیمی را همواره به‌روز نگه دارید.</p>
+            <a href="{{ route('admin.units.index') }}" class="primary-link">مدیریت واحدها</a>
+        </div>
         <div class="panel">
             <h3>
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22">

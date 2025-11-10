@@ -379,13 +379,43 @@
 <body>
 @php
     $admin = $admin ?? null;
-    $navItems = [
-        ['label' => 'داشبورد', 'href' => route('admin.dashboard'), 'icon' => 'M3 9.75l9-7.5 9 7.5V20a1 1 0 01-1 1h-5.5a1 1 0 01-1-1v-5h-4v5a1 1 0 01-1 1H4a1 1 0 01-1-1V9.75z', 'route' => 'admin.dashboard'],
-        ['label' => 'تعریف پرسنل', 'href' => '#', 'icon' => 'M12 14l9-5-9-5-9 5 9 5zm0 0v7', 'route' => null],
-        ['label' => 'تعریف واحدها', 'href' => '#', 'icon' => 'M3 6h18M3 12h18M3 18h10', 'route' => null],
-        ['label' => 'نظرسنجی جدید', 'href' => '#', 'icon' => 'M12 6v12m6-6H6', 'route' => null],
-        ['label' => 'گزارش‌گیری', 'href' => '#', 'icon' => 'M4 6h16M4 10h16M4 14h10M4 18h6', 'route' => null],
-        ['label' => 'مدیریت مدیران', 'href' => '#', 'icon' => 'M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 10-6 0 3 3 0 006 0z', 'route' => null],
+        $navItems = [
+        [
+            'label' => 'داشبورد',
+            'href' => route('admin.dashboard'),
+            'icon' => 'M3 9.75l9-7.5 9 7.5V20a1 1 0 01-1 1h-5.5a1 1 0 01-1-1v-5h-4v5a1 1 0 01-1 1H4a1 1 0 01-1-1V9.75z',
+            'route' => 'admin.dashboard',
+        ],
+        [
+            'label' => 'تعریف واحدها',
+            'href' => route('admin.units.index'),
+            'icon' => 'M3 6h18M3 12h18M3 18h10',
+            'route' => 'admin.units.index',
+        ],
+        [
+            'label' => 'گزارش‌ها',
+            'href' => '#',
+            'icon' => 'M12 14l9-5-9-5-9 5 9 5zm0 0v7',
+            'route' => null,
+        ],
+        [
+            'label' => 'عملیات پرواز',
+            'href' => '#',
+            'icon' => 'M12 6v12m6-6H6',
+            'route' => null,
+        ],
+        [
+            'label' => 'تنظیمات',
+            'href' => '#',
+            'icon' => 'M4 6h16M4 10h16M4 14h10M4 18h6',
+            'route' => null,
+        ],
+        [
+            'label' => 'پروفایل',
+            'href' => '#',
+            'icon' => 'M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 10-6 0 3 3 0 006 0z',
+            'route' => null,
+        ],
     ];
 @endphp
 <div class="dashboard-shell">
