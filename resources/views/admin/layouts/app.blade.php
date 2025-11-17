@@ -399,6 +399,12 @@
             'route' => 'admin.positions.index',
         ],
         [
+            'label' => 'تعریف پرسنل',
+            'href' => route('admin.personnel.index'),
+            'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14c-4.418 0-8 2.015-8 4.5V21h16v-2.5c0-2.485-3.582-4.5-8-4.5z',
+            'route' => 'admin.personnel.index',
+        ],
+        [
             'label' => 'گزارش‌ها',
             'href' => '#',
             'icon' => 'M12 6v12m6-6H6',

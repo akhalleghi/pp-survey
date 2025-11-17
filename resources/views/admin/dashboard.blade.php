@@ -3,13 +3,26 @@
 @section('page-title', 'داشبورد مدیریتی')
 @section('page-description', 'نمای کلی عملکرد سیستم و دسترسی سریع به ماژول‌ها')
 
+@php
+    $stats = $stats ?? ['units' => 0, 'positions' => 0, 'personnel' => 0];
+@endphp
+
 @section('content')
     <style>
+        .panel-grid .panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 0.9rem;
+        }
+        .panel-grid .panel p {
+            flex: 1;
+        }
         .panel .primary-link {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            margin-top: 1rem;
+            margin-top: auto;
             padding: 0.85rem 1.4rem;
             border-radius: 16px;
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
@@ -25,8 +38,8 @@
                 </svg>
             </div>
             <div>
-                <h3>۰%</h3>
-                <span>میزان مشارکت امروز</span>
+                <h3>{{ number_format($stats['units']) }}</h3>
+                <span>واحد ثبت شده</span>
             </div>
         </div>
         <div class="stat-card">
@@ -36,8 +49,8 @@
                 </svg>
             </div>
             <div>
-                <h3>۰</h3>
-                <span>نظرسنجی‌های فعال</span>
+                <h3>{{ number_format($stats['positions']) }}</h3>
+                <span>سمت تعریف شده</span>
             </div>
         </div>
         <div class="stat-card">
@@ -47,8 +60,8 @@
                 </svg>
             </div>
             <div>
-                <h3>۰</h3>
-                <span>پاسخ‌های جدید</span>
+                <h3>{{ number_format($stats['personnel']) }}</h3>
+                <span>پرسنل ثبت شده</span>
             </div>
         </div>
         <div class="stat-card">
@@ -60,7 +73,7 @@
             </div>
             <div>
                 <h3>۰</h3>
-                <span>پرسنل ثبت شده</span>
+                <span>نظرسنجی‌های فعال</span>
             </div>
         </div>
     </section>
@@ -104,6 +117,7 @@
                 تعریف پرسنل
             </h3>
             <p>ثبت و ویرایش اطلاعات کارکنان، تخصیص به واحدها و تعیین سطح دسترسی از این قسمت مدیریت خواهد شد.</p>
+            <a href="{{ route('admin.personnel.index') }}" class="primary-link">مدیریت پرسنل</a>
         </div>
         <div class="panel">
             <h3>

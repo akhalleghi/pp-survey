@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UnitController;
 use App\Http\Controllers\Admin\PositionController;
+use App\Http\Controllers\Admin\PersonnelController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -21,5 +22,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::resource('units', UnitController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('positions', PositionController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('personnel', PersonnelController::class)->only(['index', 'store', 'update', 'destroy']);
     });
 });
