@@ -313,7 +313,7 @@
                             <tr>
                                 <td>#{{ $position->id }}</td>
                                 <td>{{ $position->name }}</td>
-                                <td>{{ $position->created_at->format('Y/m/d H:i') }}</td>
+                                <td>{{ jalali_date($position->created_at, 'Y/m/d H:i') }}</td>
                                 <td class="actions">
                                     <button type="button"
                                             class="action-btn edit edit-position-btn"
@@ -346,7 +346,7 @@
                             <strong>#{{ $position->id }}</strong>
                         </div>
                         <div class="card-actions">
-                            <time>{{ $position->created_at->format('Y/m/d') }}</time>
+                            <time>{{ jalali_date($position->created_at) }}</time>
                             <div class="card-buttons">
                                 <button type="button"
                                         class="action-btn edit edit-position-btn"

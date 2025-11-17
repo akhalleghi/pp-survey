@@ -11,6 +11,7 @@
 @endphp
 
 @section('content')
+    <link rel="stylesheet" href="https://unpkg.com/persian-datepicker@latest/dist/css/persian-datepicker.min.css">
     <style>
         .personnel-wrapper {
             display: flex;
@@ -258,6 +259,19 @@
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(214, 17, 25, 0.15);
         }
+        .jalali-date-input {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .jalali-date-input input[type="text"] {
+            border: 1px solid rgba(15,23,42,0.15);
+            border-radius: 16px;
+            padding: 0.85rem 1rem;
+            font-size: 0.95rem;
+            font-family: 'Vazirmatn', system-ui, sans-serif;
+            direction: rtl;
+        }
         .error-text {
             color: #b91c1c;
             font-size: 0.85rem;
@@ -342,7 +356,7 @@
                                 <td>{{ $member->unit?->name ?? '—' }}</td>
                                 <td>{{ $genders[$member->gender] ?? $member->gender }}</td>
                                 <td>{{ $member->national_code }}</td>
-                                <td>{{ optional($member->birth_date)->format('Y/m/d') }}</td>
+                                <td>{{ jalali_date($member->birth_date) }}</td>
                                 <td class="actions">
                                     <button type="button"
                                             class="action-btn edit edit-personnel-btn"
@@ -404,11 +418,11 @@
                             </div>
                             <div>
                                 <span>تاریخ تولد</span>
-                                <strong>{{ optional($member->birth_date)->format('Y/m/d') }}</strong>
+                                <strong>{{ jalali_date($member->birth_date) }}</strong>
                             </div>
                         </div>
                         <div class="card-actions">
-                            <time>ثبت {{ $member->created_at->format('Y/m/d') }}</time>
+                            <time>ثبت {{ jalali_date($member->created_at) }}</time>
                             <div class="card-buttons">
                                 <button type="button"
                                         class="action-btn edit edit-personnel-btn"
@@ -491,7 +505,10 @@
                     </div>
                     <div class="field">
                         <label for="create-birth-date">تاریخ تولد</label>
-                        <input id="create-birth-date" type="date" name="birth_date" value="{{ $shouldOpenCreateModal ? old('birth_date') : '' }}">
+                        <div class="jalali-date-input" data-jalali-input>
+                            <input id="create-birth-date-display" type="text" placeholder="مثلاً 1400/01/12" data-jalali-display value="{{ $shouldOpenCreateModal ? jalali_date(old('birth_date')) : '' }}">
+                            <input id="create-birth-date" type="hidden" name="birth_date" data-jalali-hidden value="{{ $shouldOpenCreateModal ? old('birth_date') : '' }}">
+                        </div>
                         @if ($errors->createPersonnel->has('birth_date'))
                             <span class="error-text">{{ $errors->createPersonnel->first('birth_date') }}</span>
                         @endif
@@ -594,7 +611,10 @@
                     </div>
                     <div class="field">
                         <label for="edit-birth-date">تاریخ تولد</label>
-                        <input id="edit-birth-date" type="date" name="birth_date" value="{{ $shouldOpenEditModal ? old('birth_date') : '' }}">
+                        <div class="jalali-date-input" data-jalali-input>
+                            <input id="edit-birth-date-display" type="text" placeholder="مثلاً 1400/01/12" data-jalali-display value="{{ $shouldOpenEditModal ? jalali_date(old('birth_date')) : '' }}">
+                            <input id="edit-birth-date" type="hidden" name="birth_date" data-jalali-hidden value="{{ $shouldOpenEditModal ? old('birth_date') : '' }}">
+                        </div>
                         @if ($errors->updatePersonnel->has('birth_date'))
                             <span class="error-text">{{ $errors->updatePersonnel->first('birth_date') }}</span>
                         @endif
@@ -648,8 +668,75 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://unpkg.com/persian-date@latest/dist/persian-date.min.js"></script>
+    <script src="https://unpkg.com/persian-datepicker@latest/dist/js/persian-datepicker.min.js"></script>
     <script>
+        const initJalaliPickers = () => {
+            if (!window.jQuery || !window.jQuery.fn?.persianDatepicker || !window.persianDate) {
+                console.warn('Persian datepicker dependencies not loaded.');
+                return;
+            }
+            document.querySelectorAll('[data-jalali-input]').forEach((wrapper) => {
+                const displayInput = wrapper.querySelector('[data-jalali-display]');
+                const hiddenInput = wrapper.querySelector('[data-jalali-hidden]');
+                if (!displayInput || !hiddenInput) {
+                    return;
+                }
+                const $display = window.jQuery(displayInput);
+                $display.persianDatepicker({
+                    observer: false,
+                    autoClose: true,
+                    initialValue: false,
+                    format: 'YYYY/MM/DD',
+                    calendar: {
+                        persian: {
+                            locale: 'fa',
+                            showHint: true,
+                        },
+                        gregorian: {
+                            locale: 'en',
+                        },
+                    },
+                    toolbox: {
+                        calendarSwitch: {
+                            enabled: false,
+                        },
+                    },
+                    onSelect: function (unix) {
+                        if (!unix) {
+                            hiddenInput.value = '';
+                            return;
+                        }
+                        const gregorian = new window.persianDate(unix)
+                            .toCalendar('gregorian')
+                            .toLocale('en')
+                            .format('YYYY-MM-DD');
+                        hiddenInput.value = gregorian;
+                    },
+                });
+                const instance = $display.data('datepicker');
+                const syncFromHidden = () => {
+                    if (!instance) {
+                        return;
+                    }
+                    if (!hiddenInput.value) {
+                        $display.val('');
+                        return;
+                    }
+                    const iso = `${hiddenInput.value}T00:00:00`;
+                    const date = new Date(iso);
+                    if (!Number.isNaN(date.getTime())) {
+                        instance.setDate(date);
+                    }
+                };
+                wrapper.addEventListener('refresh-jalali-picker', syncFromHidden);
+                syncFromHidden();
+            });
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
+            initJalaliPickers();
             const body = document.body;
             const createModal = document.getElementById('createPersonnelModal');
             const editModal = document.getElementById('editPersonnelModal');
@@ -711,7 +798,10 @@
                 if (editFields.personnel_code) editFields.personnel_code.value = data.personnelCode || '';
                 if (editFields.national_code) editFields.national_code.value = data.nationalCode || '';
                 if (editFields.mobile) editFields.mobile.value = data.mobile || '';
-                if (editFields.birth_date) editFields.birth_date.value = data.birthDate || '';
+                if (editFields.birth_date) {
+                    editFields.birth_date.value = data.birthDate || '';
+                    editFields.birth_date.closest('[data-jalali-input]')?.dispatchEvent(new CustomEvent('refresh-jalali-picker'));
+                }
                 if (editFields.position_id) editFields.position_id.value = data.positionId || '';
                 if (editFields.unit_id) editFields.unit_id.value = data.unitId || '';
                 if (editFields.gender) editFields.gender.value = data.gender || '';
