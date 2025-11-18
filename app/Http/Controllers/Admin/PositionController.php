@@ -14,13 +14,20 @@ class PositionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $positions = Position::query()
-            ->latest()
-            ->paginate(10);
+        $search = $request->query('search');
 
-        return view('admin.positions', compact('positions'));
+        $positions = Position::query()
+            ->when($search, fn ($query) => $query->where('name', 'like', "%{$search}%"))
+            ->latest()
+            ->paginate(10)
+            ->appends(['search' => $search]);
+
+        return view('admin.positions', [
+            'positions' => $positions,
+            'search' => $search,
+        ]);
     }
 
     /**

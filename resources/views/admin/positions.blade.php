@@ -202,6 +202,53 @@
             text-align: center;
             color: var(--muted);
         }
+        .positions-filter {
+            background: #fff;
+            border-radius: 22px;
+            border: 1px solid rgba(15,23,42,0.06);
+            padding: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .positions-filter form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            width: 100%;
+            align-items: center;
+        }
+        .positions-filter input[type="text"] {
+            border: 1px solid rgba(15,23,42,0.15);
+            border-radius: 14px;
+            padding: 0.75rem 1rem;
+            flex: 1 1 240px;
+            font-family: 'Vazirmatn', system-ui, sans-serif;
+        }
+        .positions-filter .filter-actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .positions-filter .filter-actions button,
+        .positions-filter .filter-actions a {
+            border: none;
+            border-radius: 12px;
+            padding: 0.65rem 1.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .positions-filter .filter-actions .apply {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+        }
+        .positions-filter .filter-actions .reset {
+            background: rgba(15,23,42,0.05);
+            color: var(--slate);
+            text-decoration: none;
+        }
         .positions-card-grid {
             display: none;
             gap: 1rem;
@@ -271,20 +318,11 @@
         $shouldOpenCreateModal = $errors->createPosition->any() || ($oldFormType === 'create');
         $shouldOpenEditModal = $errors->updatePosition->any() || ($oldFormType === 'update');
         $editAction = $editingPositionId ? route('admin.positions.update', $editingPositionId) : '#';
+        $search = $search ?? request('search');
     @endphp
 
-    <div class="positions-wrapper">
-        @if (session('status'))
-            <div class="status-message">
-                {{ session('status') }}
-            </div>
-        @endif
+    
 
-        @if ($errors->any())
-            <div class="status-message" style="background: rgba(214,17,25,0.12); color: var(--primary); border-color: rgba(214,17,25,0.3);">
-                لطفاً خطاهای فرم را بررسی کنید.
-            </div>
-        @endif
 
         <div class="positions-card">
             <div>
@@ -296,6 +334,31 @@
                 <a href="{{ route('admin.positions.index') }}" class="ghost">بارگذاری مجدد</a>
             </div>
         </div>
+
+
+        <div class="positions-wrapper">
+        @if (session('status'))
+            <div class="status-message">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div class="status-message" style="background: rgba(214,17,25,0.12); color: var(--primary); border-color: rgba(214,17,25,0.3);">
+                لطفاً خطاهای فرم را بررسی کنید.
+            </div>
+        @endif
+    <div class="positions-filter">
+        <form method="GET" action="{{ route('admin.positions.index') }}">
+            <input type="text" name="search" class="filter-control" placeholder="جستجو کنید ..." value="{{ $search }}">
+            <div class="filter-actions">
+                <button type="submit" class="apply">جستجو</button>
+                @if ($search)
+                    <a href="{{ route('admin.positions.index') }}" class="reset">بازنشانی</a>
+                @endif
+            </div>
+        </form>
+    </div>
 
         @if ($positions->count())
             <div class="positions-table-wrapper">

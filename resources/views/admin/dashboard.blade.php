@@ -122,6 +122,16 @@
         <div class="panel">
             <h3>
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+                ناظر واحدها
+            </h3>
+            <p>برای هر واحد یک ناظر مشخص کرده و به‌روزرسانی‌های لازم را از این بخش انجام دهید.</p>
+            <a href="{{ route('admin.unit-supervisors.index') }}" class="primary-link">مدیریت ناظرها</a>
+        </div>
+        <div class="panel">
+            <h3>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6h18M3 12h18M3 18h10"/>
                 </svg>
                 تعریف واحدها

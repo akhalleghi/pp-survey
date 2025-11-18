@@ -202,6 +202,53 @@
             text-align: center;
             color: var(--muted);
         }
+        .units-filter {
+            background: #fff;
+            border-radius: 22px;
+            border: 1px solid rgba(15,23,42,0.06);
+            padding: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .units-filter form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            width: 100%;
+            align-items: center;
+        }
+        .units-filter input[type="text"] {
+            border: 1px solid rgba(15,23,42,0.15);
+            border-radius: 14px;
+            padding: 0.75rem 1rem;
+            flex: 1 1 240px;
+            font-family: 'Vazirmatn', system-ui, sans-serif;
+        }
+        .units-filter .filter-actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .units-filter .filter-actions button,
+        .units-filter .filter-actions a {
+            border: none;
+            border-radius: 12px;
+            padding: 0.65rem 1.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .units-filter .filter-actions .apply {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+        }
+        .units-filter .filter-actions .reset {
+            background: rgba(15,23,42,0.05);
+            color: var(--slate);
+            text-decoration: none;
+        }
         .units-card-grid {
             display: none;
             gap: 1rem;
@@ -271,6 +318,7 @@
         $shouldOpenCreateModal = $errors->createUnit->any() || ($oldFormType === 'create');
         $shouldOpenEditModal = $errors->updateUnit->any() || ($oldFormType === 'update');
         $editAction = $editingUnitId ? route('admin.units.update', $editingUnitId) : '#';
+        $search = request('search');
     @endphp
 
     <div class="units-wrapper">
@@ -285,6 +333,26 @@
                 لطفاً خطاهای فرم را بررسی کنید.
             </div>
         @endif
+
+        <div class="units-filter">
+            <form method="GET" action="{{ route('admin.units.index') }}">
+                <input type="text"
+                       name="search"
+                       class="filter-control"
+                       placeholder="جستجو بر اساس نام واحد"
+                       value="{{ $search ?? '' }}">
+                <div class="filter-actions">
+                    <button type="submit" class="apply">جستجو</button>
+                    @if (!empty($search))
+                        <a href="{{ route('admin.units.index') }}" class="reset">حذف فیلتر</a>
+                    @endif
+                </div>
+            </form>
+        </div>
+
+
+
+
 
         <div class="units-card">
             <div>

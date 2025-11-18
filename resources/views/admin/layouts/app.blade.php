@@ -405,6 +405,12 @@
             'route' => 'admin.personnel.index',
         ],
         [
+            'label' => 'ناظر واحدها',
+            'href' => route('admin.unit-supervisors.index'),
+            'icon' => 'M3 7h18M3 12h18M3 17h18',
+            'route' => 'admin.unit-supervisors.index',
+        ],
+        [
             'label' => 'گزارش‌ها',
             'href' => '#',
             'icon' => 'M12 6v12m6-6H6',

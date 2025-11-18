@@ -9,6 +9,12 @@
     $shouldOpenCreateModal = $errors->createPersonnel->any() || ($oldFormType === 'create');
     $shouldOpenEditModal = $errors->updatePersonnel->any() || ($oldFormType === 'update');
     $shouldOpenBulkModal = $errors->bulkPersonnel->any() || ($oldFormType === 'bulk');
+    $filters = $filters ?? [
+        'search' => request('search'),
+        'unit' => request('unit'),
+        'position' => request('position'),
+        'gender' => request('gender'),
+    ];
 @endphp
 
 @section('content')
@@ -77,6 +83,51 @@
             border-radius: 18px;
             padding: 0.9rem 1.2rem;
             font-weight: 600;
+        }
+        .filter-bar {
+            background: #fff;
+            border-radius: 22px;
+            border: 1px solid rgba(15,23,42,0.06);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        .filter-bar form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: center;
+        }
+        .filter-control {
+            border: 1px solid rgba(15,23,42,0.15);
+            border-radius: 14px;
+            padding: 0.75rem 1rem;
+            font-family: 'Vazirmatn', system-ui, sans-serif;
+            min-width: 180px;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .filter-actions button,
+        .filter-actions a {
+            border: none;
+            border-radius: 12px;
+            padding: 0.65rem 1.4rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .filter-actions .apply {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+        }
+        .filter-actions .reset {
+            background: rgba(15,23,42,0.05);
+            color: var(--slate);
+            text-decoration: none;
         }
         .bulk-hint {
             background: rgba(15,23,42,0.04);
@@ -369,6 +420,43 @@
         </div>
 @endif
 
+    <div class="filter-bar">
+        <form method="GET" action="{{ route('admin.personnel.index') }}">
+            <input type="text"
+                   name="search"
+                   class="filter-control"
+                   placeholder="جستجو..."
+                   value="{{ $filters['search'] }}">
+            <select name="unit" class="filter-control">
+                <option value="">همه واحدها</option>
+                @foreach ($units as $unit)
+                    <option value="{{ $unit->id }}" {{ (string) $filters['unit'] === (string) $unit->id ? 'selected' : '' }}>
+                        {{ $unit->name }}
+                    </option>
+                @endforeach
+            </select>
+            <select name="position" class="filter-control">
+                <option value="">همه سمت ها</option>
+                @foreach ($positions as $position)
+                    <option value="{{ $position->id }}" {{ (string) $filters['position'] === (string) $position->id ? 'selected' : '' }}>
+                        {{ $position->name }}
+                    </option>
+                @endforeach
+            </select>
+            <select name="gender" class="filter-control">
+                <option value="">همه جنسیت ها</option>
+                @foreach ($genders as $key => $label)
+                    <option value="{{ $key }}" {{ $filters['gender'] === $key ? 'selected' : '' }}>
+                        {{ $label }}
+                    </option>
+                @endforeach
+            </select>
+            <div class="filter-actions">
+                <button type="submit" class="apply">اعمال فیلتر</button>
+                <a href="{{ route('admin.personnel.index') }}" class="reset">بازنشانی جستجو</a>
+            </div>
+        </form>
+    </div>
     <div class="modal {{ $shouldOpenBulkModal ? 'open' : '' }}" id="bulkImportModal" data-open="{{ $shouldOpenBulkModal ? 'true' : 'false' }}">
         <div class="modal-dialog">
             <div class="modal-header">

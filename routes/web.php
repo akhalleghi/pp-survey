@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UnitController;
 use App\Http\Controllers\Admin\PositionController;
 use App\Http\Controllers\Admin\PersonnelController;
+use App\Http\Controllers\Admin\UnitSupervisorController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -25,5 +26,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('personnel', PersonnelController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::post('personnel/bulk-import', [PersonnelController::class, 'bulkImport'])->name('personnel.bulk-import');
         Route::get('personnel/template/download', [PersonnelController::class, 'downloadTemplate'])->name('personnel.template');
+        Route::resource('unit-supervisors', UnitSupervisorController::class)->only(['index', 'store', 'update', 'destroy']);
     });
 });

@@ -20,18 +20,48 @@ require_once app_path('Support/SimpleXLSXGen.php');
 
 class PersonnelController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $search = $request->query('search');
+        $unitFilter = $request->query('unit');
+        $positionFilter = $request->query('position');
+        $genderFilter = $request->query('gender');
+
         $personnel = Personnel::query()
             ->with(['unit', 'position'])
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('personnel_code', 'like', "%{$search}%")
+                        ->orWhere('mobile', 'like', "%{$search}%")
+                        ->orWhere('national_code', 'like', "%{$search}%");
+                });
+            })
+            ->when($unitFilter, fn ($query) => $query->where('unit_id', $unitFilter))
+            ->when($positionFilter, fn ($query) => $query->where('position_id', $positionFilter))
+            ->when($genderFilter, fn ($query) => $query->where('gender', $genderFilter))
             ->latest()
-            ->paginate(10);
+            ->paginate(10)
+            ->appends([
+                'search' => $search,
+                'unit' => $unitFilter,
+                'position' => $positionFilter,
+                'gender' => $genderFilter,
+            ]);
 
         $units = Unit::query()->orderBy('name')->get();
         $positions = Position::query()->orderBy('name')->get();
         $genders = Personnel::GENDERS;
 
-        return view('admin.personnel', compact('personnel', 'units', 'positions', 'genders'));
+        $filters = [
+            'search' => $search,
+            'unit' => $unitFilter,
+            'position' => $positionFilter,
+            'gender' => $genderFilter,
+        ];
+
+        return view('admin.personnel', compact('personnel', 'units', 'positions', 'genders', 'filters'));
     }
 
     public function store(Request $request): RedirectResponse
