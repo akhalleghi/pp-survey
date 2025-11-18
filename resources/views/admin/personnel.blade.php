@@ -8,10 +8,11 @@
     $editingPersonnelId = old('personnel_id');
     $shouldOpenCreateModal = $errors->createPersonnel->any() || ($oldFormType === 'create');
     $shouldOpenEditModal = $errors->updatePersonnel->any() || ($oldFormType === 'update');
+    $shouldOpenBulkModal = $errors->bulkPersonnel->any() || ($oldFormType === 'bulk');
 @endphp
 
 @section('content')
-    <link rel="stylesheet" href="https://unpkg.com/persian-datepicker@latest/dist/css/persian-datepicker.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.css">
     <style>
         .personnel-wrapper {
             display: flex;
@@ -64,6 +65,11 @@
             color: var(--slate);
             text-decoration: none;
         }
+        .personnel-actions .outline {
+            border: 1px dashed rgba(15,23,42,0.2);
+            background: transparent;
+            color: var(--slate);
+        }
         .status-message {
             background: rgba(34, 197, 94, 0.12);
             border: 1px solid rgba(34, 197, 94, 0.2);
@@ -71,6 +77,14 @@
             border-radius: 18px;
             padding: 0.9rem 1.2rem;
             font-weight: 600;
+        }
+        .bulk-hint {
+            background: rgba(15,23,42,0.04);
+            border-radius: 16px;
+            padding: 0.85rem 1rem;
+            font-size: 0.9rem;
+            color: var(--muted);
+            line-height: 1.8;
         }
         .personnel-table-wrapper {
             background: #fff;
@@ -253,6 +267,11 @@
             font-family: 'Vazirmatn', system-ui, sans-serif;
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
+        .modal-body input[type="file"] {
+            border-radius: 16px;
+            background: rgba(15,23,42,0.02);
+            padding: 0.75rem 1rem;
+        }
         .modal-body input:focus,
         .modal-body select:focus {
             outline: none;
@@ -280,6 +299,19 @@
             display: flex;
             gap: 0.75rem;
             flex-wrap: wrap;
+        }
+        .download-template {
+            border: none;
+            border-radius: 16px;
+            padding: 0.85rem 1.6rem;
+            background: rgba(15,23,42,0.08);
+            color: var(--slate);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
         }
         .submit-btn {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
@@ -316,15 +348,68 @@
             </div>
             <div class="personnel-actions">
                 <button type="button" class="primary" id="openCreatePersonnelModal">افزودن پرسنل جدید</button>
+                <button type="button" class="outline" id="openBulkImportModal">بارگذاری یکجا</button>
                 <a href="{{ route('admin.personnel.index') }}" class="ghost">بارگذاری مجدد</a>
             </div>
         </div>
 
-        @if (session('status'))
-            <div class="status-message">
-                {{ session('status') }}
+    @if (session('status'))
+        <div class="status-message">
+            {{ session('status') }}
+        </div>
+    @endif
+    @if (session('bulk_errors') && count(session('bulk_errors')))
+        <div class="status-message" style="background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.4); color: #b91c1c;">
+            <strong>موارد دارای خطا:</strong>
+            <ul style="margin: 0.35rem 1.2rem 0; padding: 0; list-style: disc; text-align: right;">
+                @foreach (session('bulk_errors') as $issue)
+                    <li>{{ $issue }}</li>
+                @endforeach
+            </ul>
+        </div>
+@endif
+
+    <div class="modal {{ $shouldOpenBulkModal ? 'open' : '' }}" id="bulkImportModal" data-open="{{ $shouldOpenBulkModal ? 'true' : 'false' }}">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>بارگذاری یکجا پرسنل</h3>
+                <button type="button" class="modal-close" data-modal-close>&times;</button>
             </div>
-        @endif
+            <form method="POST" action="{{ route('admin.personnel.bulk-import') }}" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" name="form" value="bulk">
+                <div class="modal-body">
+                    <div class="field" style="grid-column: 1 / -1;">
+                        <div class="bulk-hint">
+                            فایل اکسل باید دارای ستون‌های <strong>first_name, last_name, personnel_code, mobile, position_id, unit_id, gender, national_code, birth_date</strong> باشد.
+                            برای ستون‌های شناسه (سمت، واحد و جنسیت) مقدار عددی همان شناسه ثبت‌شده در سیستم را وارد کنید. تاریخ تولد را می‌توانید به میلادی (YYYY-MM-DD) یا شمسی (YYYY/MM/DD) بنویسید.
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="bulk-import-file">انتخاب فایل اکسل</label>
+                        <input id="bulk-import-file" type="file" name="import_file" accept=".xlsx,.xls">
+                        @if ($errors->bulkPersonnel->has('import_file'))
+                            <span class="error-text">{{ $errors->bulkPersonnel->first('import_file') }}</span>
+                        @endif
+                    </div>
+                    <div class="field">
+                        <label>راهنمای سریع</label>
+                        <ul style="margin:0; padding-right: 1rem; color: var(--muted); line-height: 1.8;">
+                            <li>در ستون‌های position_id و unit_id شناسه عددی سمت و واحد را درج کنید (مثلاً 1 برای مدیرعامل).</li>
+                            <li>در ستون gender از اعداد 1 (مرد)، 2 (زن) یا 3 (سایر) استفاده کنید.</li>
+                            <li>برای جلوگیری از حذف صفرهای ابتدای کد پرسنلی، ستون personnel_code را روی حالت «متن» تنظیم کنید یا مقدار را با '00123 وارد نمایید.</li>
+                            <li>پیش از بارگذاری، از فایل نمونه برای مشاهده ساختار صحیح استفاده کنید.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="submit-btn">شروع آپلود</button>
+                    <a href="{{ route('admin.personnel.template') }}" class="download-template" target="_blank" rel="noopener">دانلود فایل نمونه</a>
+                    <button type="button" class="cancel-btn" data-modal-close>انصراف</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
         @if ($personnel->count())
             <div class="personnel-table-wrapper">
@@ -506,7 +591,7 @@
                     <div class="field">
                         <label for="create-birth-date">تاریخ تولد</label>
                         <div class="jalali-date-input" data-jalali-input>
-                            <input id="create-birth-date-display" type="text" placeholder="مثلاً 1400/01/12" data-jalali-display value="{{ $shouldOpenCreateModal ? jalali_date(old('birth_date')) : '' }}">
+                            <input id="create-birth-date-display" type="text" placeholder="مثلاً 1400/01/12" data-jdp data-jalali-display value="{{ $shouldOpenCreateModal ? jalali_date(old('birth_date')) : '' }}">
                             <input id="create-birth-date" type="hidden" name="birth_date" data-jalali-hidden value="{{ $shouldOpenCreateModal ? old('birth_date') : '' }}">
                         </div>
                         @if ($errors->createPersonnel->has('birth_date'))
@@ -612,7 +697,7 @@
                     <div class="field">
                         <label for="edit-birth-date">تاریخ تولد</label>
                         <div class="jalali-date-input" data-jalali-input>
-                            <input id="edit-birth-date-display" type="text" placeholder="مثلاً 1400/01/12" data-jalali-display value="{{ $shouldOpenEditModal ? jalali_date(old('birth_date')) : '' }}">
+                            <input id="edit-birth-date-display" type="text" placeholder="مثلاً 1400/01/12" data-jdp data-jalali-display value="{{ $shouldOpenEditModal ? jalali_date(old('birth_date')) : '' }}">
                             <input id="edit-birth-date" type="hidden" name="birth_date" data-jalali-hidden value="{{ $shouldOpenEditModal ? old('birth_date') : '' }}">
                         </div>
                         @if ($errors->updatePersonnel->has('birth_date'))
@@ -668,79 +753,185 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-    <script src="https://unpkg.com/persian-date@latest/dist/persian-date.min.js"></script>
-    <script src="https://unpkg.com/persian-datepicker@latest/dist/js/persian-datepicker.min.js"></script>
+    <script src="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.js"></script>
     <script>
-        const initJalaliPickers = () => {
-            if (!window.jQuery || !window.jQuery.fn?.persianDatepicker || !window.persianDate) {
-                console.warn('Persian datepicker dependencies not loaded.');
+        const gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        const jDaysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
+        const persianDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+
+        const pad2 = (num) => String(num).padStart(2, '0');
+        const normalizeDigits = (value) => {
+            if (!value) return '';
+            return value.replace(/[۰-۹]/g, (d) => String(persianDigits.indexOf(d)));
+        };
+
+        const isLeapGregorian = (year) => {
+            return ((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0);
+        };
+
+        const gregorianToJalali = (gy, gm, gd) => {
+            gy = parseInt(gy, 10);
+            gm = parseInt(gm, 10);
+            gd = parseInt(gd, 10);
+            let jy;
+
+            if (gy > 1600) {
+                jy = 979;
+                gy -= 1600;
+            } else {
+                jy = 0;
+                gy -= 621;
+            }
+
+            const gy2 = gm > 2 ? gy + 1 : gy;
+            let days = (365 * gy)
+                + Math.floor((gy2 + 3) / 4)
+                - Math.floor((gy2 + 99) / 100)
+                + Math.floor((gy2 + 399) / 400)
+                - 80
+                + gd;
+
+            for (let i = 0; i < gm - 1; i++) {
+                days += gDaysInMonth[i];
+            }
+
+            if (gm > 2 && isLeapGregorian(gy2)) {
+                days++;
+            }
+
+            jy += 33 * Math.floor(days / 12053);
+            days %= 12053;
+
+            jy += 4 * Math.floor(days / 1461);
+            days %= 1461;
+
+            if (days > 365) {
+                jy += Math.floor((days - 1) / 365);
+                days = (days - 1) % 365;
+            }
+
+            let jm = 0;
+            for (; jm < 11 && days >= jDaysInMonth[jm]; jm++) {
+                days -= jDaysInMonth[jm];
+            }
+
+            const jd = days + 1;
+
+            return [jy, jm + 1, jd];
+        };
+
+        const jalaliToGregorian = (jy, jm, jd) => {
+            jy = parseInt(jy, 10);
+            jm = parseInt(jm, 10);
+            jd = parseInt(jd, 10);
+
+            jy -= 979;
+            let gy = 1600;
+            let days = (365 * jy)
+                + Math.floor(jy / 33) * 8
+                + Math.floor(((jy % 33) + 3) / 4)
+                + jd - 1;
+
+            for (let i = 0; i < jm - 1; i++) {
+                days += jDaysInMonth[i];
+            }
+
+            gy += 400 * Math.floor(days / 146097);
+            days %= 146097;
+
+            if (days > 36524) {
+                gy += 100 * Math.floor(--days / 36524);
+                days %= 36524;
+                if (days >= 365) {
+                    days++;
+                }
+            }
+
+            gy += 4 * Math.floor(days / 1461);
+            days %= 1461;
+
+            if (days > 365) {
+                gy += Math.floor((days - 1) / 365);
+                days = (days - 1) % 365;
+            }
+
+            let gm = 0;
+            while (gm < 12) {
+                const leapAdd = (gm === 1 && isLeapGregorian(gy)) ? 1 : 0;
+                const monthLength = gDaysInMonth[gm] + leapAdd;
+                if (days < monthLength) {
+                    break;
+                }
+                days -= monthLength;
+                gm++;
+            }
+
+            const gd = days + 1;
+
+            return [gy, gm + 1, gd];
+        };
+
+        const initJalaliInputs = () => {
+            if (!window.jalaliDatepicker) {
+                console.warn('jalaliDatepicker library not loaded.');
                 return;
             }
+            window.jalaliDatepicker.startWatch({ time: false });
             document.querySelectorAll('[data-jalali-input]').forEach((wrapper) => {
                 const displayInput = wrapper.querySelector('[data-jalali-display]');
                 const hiddenInput = wrapper.querySelector('[data-jalali-hidden]');
                 if (!displayInput || !hiddenInput) {
                     return;
                 }
-                const $display = window.jQuery(displayInput);
-                $display.persianDatepicker({
-                    observer: false,
-                    autoClose: true,
-                    initialValue: false,
-                    format: 'YYYY/MM/DD',
-                    calendar: {
-                        persian: {
-                            locale: 'fa',
-                            showHint: true,
-                        },
-                        gregorian: {
-                            locale: 'en',
-                        },
-                    },
-                    toolbox: {
-                        calendarSwitch: {
-                            enabled: false,
-                        },
-                    },
-                    onSelect: function (unix) {
-                        if (!unix) {
-                            hiddenInput.value = '';
-                            return;
-                        }
-                        const gregorian = new window.persianDate(unix)
-                            .toCalendar('gregorian')
-                            .toLocale('en')
-                            .format('YYYY-MM-DD');
-                        hiddenInput.value = gregorian;
-                    },
-                });
-                const instance = $display.data('datepicker');
-                const syncFromHidden = () => {
-                    if (!instance) {
-                        return;
-                    }
+
+                const updateDisplay = () => {
                     if (!hiddenInput.value) {
-                        $display.val('');
+                        displayInput.value = '';
                         return;
                     }
-                    const iso = `${hiddenInput.value}T00:00:00`;
-                    const date = new Date(iso);
-                    if (!Number.isNaN(date.getTime())) {
-                        instance.setDate(date);
+                    const parts = hiddenInput.value.split('-').map((part) => parseInt(part, 10));
+                    if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) {
+                        displayInput.value = '';
+                        return;
                     }
+                    const [jy, jm, jd] = gregorianToJalali(parts[0], parts[1], parts[2]);
+                    displayInput.value = `${jy}/${pad2(jm)}/${pad2(jd)}`;
                 };
-                wrapper.addEventListener('refresh-jalali-picker', syncFromHidden);
-                syncFromHidden();
+
+                const updateHidden = () => {
+                    const normalized = normalizeDigits(displayInput.value.trim());
+                    const matches = normalized.match(/^(\d{3,4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+                    if (!matches) {
+                        hiddenInput.value = '';
+                        return;
+                    }
+                    const jy = parseInt(matches[1], 10);
+                    const jm = parseInt(matches[2], 10);
+                    const jd = parseInt(matches[3], 10);
+                    if (!jy || jm < 1 || jm > 12 || jd < 1 || jd > 31) {
+                        hiddenInput.value = '';
+                        return;
+                    }
+                    const [gy, gm, gd] = jalaliToGregorian(jy, jm, jd);
+                    hiddenInput.value = `${gy}-${pad2(gm)}-${pad2(gd)}`;
+                };
+
+                displayInput.addEventListener('change', updateHidden);
+                displayInput.addEventListener('blur', updateHidden);
+                hiddenInput.addEventListener('refreshJalaliDisplay', updateDisplay);
+
+                updateDisplay();
             });
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            initJalaliPickers();
+            initJalaliInputs();
             const body = document.body;
             const createModal = document.getElementById('createPersonnelModal');
             const editModal = document.getElementById('editPersonnelModal');
+            const bulkModal = document.getElementById('bulkImportModal');
             const openCreateBtn = document.getElementById('openCreatePersonnelModal');
+            const openBulkBtn = document.getElementById('openBulkImportModal');
 
             const openModal = (modal) => {
                 if (!modal) return;
@@ -760,6 +951,7 @@
                 openModal(createModal);
                 createModal?.querySelector('input[name="first_name"]')?.focus();
             });
+            openBulkBtn?.addEventListener('click', () => openModal(bulkModal));
 
             document.querySelectorAll('[data-modal-close]').forEach((btn) => {
                 btn.addEventListener('click', () => closeModal(btn.closest('.modal')));
@@ -800,7 +992,7 @@
                 if (editFields.mobile) editFields.mobile.value = data.mobile || '';
                 if (editFields.birth_date) {
                     editFields.birth_date.value = data.birthDate || '';
-                    editFields.birth_date.closest('[data-jalali-input]')?.dispatchEvent(new CustomEvent('refresh-jalali-picker'));
+                    editFields.birth_date.dispatchEvent(new Event('refreshJalaliDisplay'));
                 }
                 if (editFields.position_id) editFields.position_id.value = data.positionId || '';
                 if (editFields.unit_id) editFields.unit_id.value = data.unitId || '';
@@ -844,6 +1036,10 @@
                 } else {
                     openModal(editModal);
                 }
+            }
+
+            if (bulkModal?.dataset.open === 'true') {
+                openModal(bulkModal);
             }
         });
     </script>
