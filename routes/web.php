@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UnitController;
 use App\Http\Controllers\Admin\PositionController;
 use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\UnitSupervisorController;
+use App\Http\Controllers\Admin\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -27,5 +28,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('personnel/bulk-import', [PersonnelController::class, 'bulkImport'])->name('personnel.bulk-import');
         Route::get('personnel/template/download', [PersonnelController::class, 'downloadTemplate'])->name('personnel.template');
         Route::resource('unit-supervisors', UnitSupervisorController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
+        Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
+        Route::post('settings/branding', [SettingsController::class, 'updateBranding'])->name('settings.branding');
+        Route::post('settings/colors', [SettingsController::class, 'updateColors'])->name('settings.colors');
     });
 });

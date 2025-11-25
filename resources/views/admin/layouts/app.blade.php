@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -7,13 +7,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+    @php
+        $themeColors = $appSettings['colors'] ?? \App\Support\AppSettings::get('colors', []);
+    @endphp
     <style>
         :root {
-            --primary: #D61119;
-            --primary-dark: #ab0c12;
-            --slate: #0F172A;
-            --muted: #6B7280;
-            --sidebar: #0c111d;
+            --primary: {{ $themeColors['primary'] ?? '#D61119' }};
+            --primary-dark: {{ $themeColors['primary_dark'] ?? '#ab0c12' }};
+            --slate: {{ $themeColors['slate'] ?? '#0F172A' }};
+            --muted: {{ $themeColors['muted'] ?? '#6B7280' }};
+            --sidebar: {{ $themeColors['sidebar'] ?? '#0c111d' }};
         }
         *, *::before, *::after {
             box-sizing: border-box;
@@ -22,7 +25,7 @@
             margin: 0;
             min-height: 100vh;
             font-family: 'Vazirmatn', system-ui, sans-serif;
-            background: #f4f5f7;
+            background: {{ $themeColors['background'] ?? '#f4f5f7' }};
             color: var(--slate);
             display: flex;
         }
@@ -387,45 +390,45 @@
             'route' => 'admin.dashboard',
         ],
         [
-            'label' => 'تعریف واحدها',
+            'label' => 'واحدهای سازمانی',
             'href' => route('admin.units.index'),
-            'icon' => 'M3 6h18M3 12h18M3 18h10',
+            'icon' => 'M3 10h18v9H3zM7 10V5h10v5',
             'route' => 'admin.units.index',
         ],
         [
-            'label' => 'تعریف سمت‌ها',
+            'label' => 'چارت سمت‌ها',
             'href' => route('admin.positions.index'),
-            'icon' => 'M12 14l9-5-9-5-9 5 9 5zm0 0v7',
+            'icon' => 'M6 7h4v4H6zM14 7h4v4h-4zM10 13h4v4h-4zM8 9h8M12 13v-2',
             'route' => 'admin.positions.index',
         ],
         [
-            'label' => 'تعریف پرسنل',
+            'label' => 'پرسنل سازمان',
             'href' => route('admin.personnel.index'),
-            'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14c-4.418 0-8 2.015-8 4.5V21h16v-2.5c0-2.485-3.582-4.5-8-4.5z',
+            'icon' => 'M8.5 7a3.5 3.5 0 117 0 3.5 3.5 0 01-7 0zM4 19.5c0-2.485 3.358-4.5 7.5-4.5s7.5 2.015 7.5 4.5V21H4z',
             'route' => 'admin.personnel.index',
         ],
         [
-            'label' => 'ناظر واحدها',
+            'label' => 'سرپرستان واحدها',
             'href' => route('admin.unit-supervisors.index'),
-            'icon' => 'M3 7h18M3 12h18M3 17h18',
+            'icon' => 'M12 6l2 3 3 .5-2.2 2.4.5 3.1L12 13l-3.3 1.9.5-3.1L7 9.5l3-.5zM5 20v-2c0-1.657 3.134-3 7-3s7 1.343 7 3v2',
             'route' => 'admin.unit-supervisors.index',
         ],
         [
-            'label' => 'گزارش‌ها',
-            'href' => '#',
-            'icon' => 'M12 6v12m6-6H6',
-            'route' => null,
-        ],
-        [
             'label' => 'تنظیمات',
+            'href' => route('admin.settings.index'),
+            'icon' => 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l.149.457a1 1 0 00.95.69h.48c.969 0 1.371 1.24.588 1.81l-.39.284a1 1 0 000 1.62l.39.284c.783.57.38 1.81-.588 1.81h-.48a1 1 0 00-.95.69l-.149.457c-.3.921-1.603.921-1.902 0l-.149-.457a1 1 0 00-.95-.69h-.48c-.969 0-1.371-1.24-.588-1.81l.39-.284a1 1 0 000-1.62l-.39-.284c-.783-.57-.38-1.81.588-1.81h.48a1 1 0 00.95-.69l.149-.457zM12 15.5a3 3 0 100 6 3 3 0 000-6z',
+            'route' => 'admin.settings.index',
+        ],
+        [
+            'label' => 'گزارشات',
             'href' => '#',
-            'icon' => 'M4 6h16M4 10h16M4 14h10M4 18h6',
+            'icon' => 'M5 9h3v8H5zM10.5 5h3v12h-3zM16 11h3v6h-3z',
             'route' => null,
         ],
         [
-            'label' => 'پروفایل',
+            'label' => 'پروفایل کاربر',
             'href' => '#',
-            'icon' => 'M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 10-6 0 3 3 0 006 0z',
+            'icon' => 'M12 12a4 4 0 100-8 4 4 0 000 8zm-6 7c0-2.761 3.134-5 6-5s6 2.239 6 5v1H6z',
             'route' => null,
         ],
     ];
@@ -433,10 +436,10 @@
 <div class="dashboard-shell">
     <aside class="sidebar" id="adminSidebar">
         <div class="brand">
-            <img src="{{ asset('storage/logo.png') }}" alt="لوگو">
+            <img src="{{ asset($appSettings['logo_path'] ?? 'storage/logo.png') }}" alt="لوگوی {{ $appSettings['app_name'] ?? 'سامانه نظرسنجی' }}">
             <div>
-                <h1>پنل مدیریت</h1>
-                <small>سیستم نظرسنجی</small>
+                <h1>{{ $appSettings['app_name'] ?? 'سامانه نظرسنجی' }}</h1>
+                <small>پنل مدیریت</small>
             </div>
         </div>
         <div class="nav-section">
@@ -529,4 +532,5 @@
 </script>
 </body>
 </html>
+
 
