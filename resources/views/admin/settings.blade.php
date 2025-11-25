@@ -181,6 +181,7 @@
             flex-wrap: wrap;
             gap: 0.75rem;
             justify-content: flex-end;
+            margin-top: 1rem;
         }
         .primary-btn {
             border: none;
@@ -259,6 +260,7 @@
             .form-actions {
                 flex-direction: column-reverse;
                 align-items: stretch;
+                margin-top: 1.25rem;
             }
         }
     </style>

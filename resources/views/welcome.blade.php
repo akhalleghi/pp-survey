@@ -1144,6 +1144,7 @@
         });
 
     </script>
+    @include('components.persian-digits-script')
 
 </body>
 
