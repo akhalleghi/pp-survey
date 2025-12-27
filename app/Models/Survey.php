@@ -32,6 +32,7 @@ class Survey extends Model
         'result_visibility',
         'audience_filters',
         'tags',
+        'public_token',
         'start_at',
         'end_at',
         'thank_you_message',

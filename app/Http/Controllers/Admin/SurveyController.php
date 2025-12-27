@@ -7,6 +7,7 @@ use App\Models\Survey;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -208,4 +209,18 @@ class SurveyController extends Controller
             ->route('admin.surveys.index')
             ->with('status', 'نظرسنجی حذف شد.');
     }
+
+    public function generateLink(Survey $survey): RedirectResponse
+    {
+        if (!$survey->public_token) {
+            $survey->update([
+                'public_token' => Str::random(40),
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.surveys.index')
+            ->with('status', '???? ??????? ????? ??.');
+    }
+
 }

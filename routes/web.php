@@ -9,11 +9,14 @@ use App\Http\Controllers\Admin\UnitSupervisorController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SurveyController;
 use App\Http\Controllers\Admin\SurveyQuestionController;
+use App\Http\Controllers\PublicSurveyController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('surveys/public/{token}', [PublicSurveyController::class, 'show'])->name('surveys.public.show');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -32,6 +35,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('unit-supervisors', UnitSupervisorController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::get('surveys/{survey}/settings', [SurveyController::class, 'edit'])->name('surveys.edit');
         Route::resource('surveys', SurveyController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::post('surveys/{survey}/generate-link', [SurveyController::class, 'generateLink'])->name('surveys.generate-link');
         Route::get('surveys/{survey}/questions', [SurveyQuestionController::class, 'index'])->name('surveys.questions.index');
         Route::post('surveys/{survey}/questions', [SurveyQuestionController::class, 'store'])->name('surveys.questions.store');
         Route::delete('surveys/{survey}/questions/{question}', [SurveyQuestionController::class, 'destroy'])->name('surveys.questions.destroy');

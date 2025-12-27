@@ -6,8 +6,8 @@
 @php
     $audiencePresets = $audiencePresets ?? ['همه کاربران', 'براساس واحد', 'براساس جنسیت', 'براساس سمت', 'براساس مدرک تحصیلی', 'انتخابی توسط ادمین'];
     $metrics = $metrics ?? ['active' => 0, 'responses' => 0, 'avg_questions' => 0, 'closed' => 0];
-    $statusLabels = ['active' => 'فعال', 'draft' => 'در حال آماده‌سازی', 'closed' => 'بسته شده'];
-    $statusFilters = ['' => 'همه', 'active' => 'فعال', 'draft' => 'در حال آماده‌سازی', 'closed' => 'بسته شده'];
+    $statusLabels = ['active' => 'فعال', 'draft' => 'در حال آماده سازی', 'closed' => 'بسته شده'];
+    $statusFilters = ['' => 'همه', 'active' => 'فعال', 'draft' => 'در حال آماده سازی', 'closed' => 'بسته شده'];
     $units = $units ?? collect();
 @endphp
 
@@ -212,6 +212,22 @@
             flex-wrap: wrap;
             gap: 0.4rem;
         }
+        .survey-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(15, 23, 42, 0.04);
+            border-radius: 12px;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+        .survey-link a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
         .survey-actions button,
         .survey-actions a {
             border: none;
@@ -518,6 +534,16 @@
                                         <button type="button" class="outline">مشاهده گزارش</button>
                                         <a href="{{ route('admin.surveys.edit', $survey) }}" class="outline">تنظیمات</a>
                                         <a href="{{ route('admin.surveys.questions.index', $survey) }}" class="ghost">طراحی سوالات</a>
+                                        <form method="POST" action="{{ route('admin.surveys.generate-link', $survey) }}" style="display:inline;">
+                                            @csrf
+                                            <button type="submit" class="outline">ایجاد لینک</button>
+                                        </form>
+                                        @if ($survey->public_token)
+                                            <span class="survey-link">
+                                                لینک:
+                                                <a href="{{ route('surveys.public.show', $survey->public_token) }}" target="_blank">باز کردن</a>
+                                            </span>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

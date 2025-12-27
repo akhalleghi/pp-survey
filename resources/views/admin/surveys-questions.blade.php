@@ -147,6 +147,11 @@
             padding: 0.75rem 0.9rem;
             font-family: inherit;
         }
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.6rem;
+        }
         .inline-toggle {
             display: inline-flex;
             align-items: center;
@@ -224,6 +229,56 @@
                     @if ($question->description)
                         <div class="question-meta">{{ $question->description }}</div>
                     @endif
+                    @if (!empty($question->settings))
+                        <div class="question-meta">
+                            @php
+                                $settingsBadges = [];
+                                $settings = $question->settings ?? [];
+                                if (!empty($settings['min_length'])) {
+                                    $settingsBadges[] = 'حداقل کاراکتر: ' . $settings['min_length'];
+                                }
+                                if (!empty($settings['max_length'])) {
+                                    $settingsBadges[] = 'حداکثر کاراکتر: ' . $settings['max_length'];
+                                }
+                                if (!empty($settings['placeholder'])) {
+                                    $settingsBadges[] = 'راهنما: ' . $settings['placeholder'];
+                                }
+                                if (!empty($settings['min_value'])) {
+                                    $settingsBadges[] = 'حداقل مقدار: ' . $settings['min_value'];
+                                }
+                                if (!empty($settings['max_value'])) {
+                                    $settingsBadges[] = 'حداکثر مقدار: ' . $settings['max_value'];
+                                }
+                                if (!empty($settings['step'])) {
+                                    $settingsBadges[] = 'گام: ' . $settings['step'];
+                                }
+                                if (!empty($settings['min_rating'])) {
+                                    $settingsBadges[] = 'حداقل امتیاز: ' . $settings['min_rating'];
+                                }
+                                if (!empty($settings['max_rating'])) {
+                                    $settingsBadges[] = 'حداکثر امتیاز: ' . $settings['max_rating'];
+                                }
+                                if (!empty($settings['rating_step'])) {
+                                    $settingsBadges[] = 'گام امتیاز: ' . $settings['rating_step'];
+                                }
+                                if (!empty($settings['min_date'])) {
+                                    $settingsBadges[] = 'حداقل تاریخ: ' . $settings['min_date'];
+                                }
+                                if (!empty($settings['max_date'])) {
+                                    $settingsBadges[] = 'حداکثر تاریخ: ' . $settings['max_date'];
+                                }
+                                if (!empty($settings['min_choices'])) {
+                                    $settingsBadges[] = 'حداقل انتخاب: ' . $settings['min_choices'];
+                                }
+                                if (!empty($settings['max_choices'])) {
+                                    $settingsBadges[] = 'حداکثر انتخاب: ' . $settings['max_choices'];
+                                }
+                            @endphp
+                            @foreach ($settingsBadges as $badge)
+                                <span>{{ $badge }}</span>
+                            @endforeach
+                        </div>
+                    @endif
                     @if (in_array($question->type, ['multiple_choice', 'checkboxes', 'dropdown'], true))
                         <div class="question-options">
                             @foreach ($question->options as $option)
@@ -280,6 +335,51 @@
                     سوال اجباری باشد
                 </label>
 
+                <div class="form-field" id="settingsWrapper">
+                    <label>تنظیمات سوال</label>
+                    <div class="settings-grid">
+                        <div data-setting-group="text">
+                            <input type="number" min="1" name="settings[min_length]" placeholder="حداقل کاراکتر">
+                        </div>
+                        <div data-setting-group="text">
+                            <input type="number" min="1" name="settings[max_length]" placeholder="حداکثر کاراکتر">
+                        </div>
+                        <div data-setting-group="text">
+                            <input type="text" name="settings[placeholder]" placeholder="راهنمای پاسخ">
+                        </div>
+                        <div data-setting-group="number">
+                            <input type="number" name="settings[min_value]" placeholder="حداقل مقدار">
+                        </div>
+                        <div data-setting-group="number">
+                            <input type="number" name="settings[max_value]" placeholder="حداکثر مقدار">
+                        </div>
+                        <div data-setting-group="number">
+                            <input type="number" name="settings[step]" placeholder="گام (Step)">
+                        </div>
+                        <div data-setting-group="rating">
+                            <input type="number" min="1" name="settings[min_rating]" placeholder="حداقل امتیاز">
+                        </div>
+                        <div data-setting-group="rating">
+                            <input type="number" min="1" name="settings[max_rating]" placeholder="حداکثر امتیاز">
+                        </div>
+                        <div data-setting-group="rating">
+                            <input type="number" min="1" name="settings[rating_step]" placeholder="گام امتیاز">
+                        </div>
+                        <div data-setting-group="date">
+                            <input type="text" name="settings[min_date]" placeholder="حداقل تاریخ (مثلاً 1403/01/01)">
+                        </div>
+                        <div data-setting-group="date">
+                            <input type="text" name="settings[max_date]" placeholder="حداکثر تاریخ (مثلاً 1403/12/29)">
+                        </div>
+                        <div data-setting-group="choice">
+                            <input type="number" min="1" name="settings[min_choices]" placeholder="حداقل انتخاب">
+                        </div>
+                        <div data-setting-group="choice">
+                            <input type="number" min="1" name="settings[max_choices]" placeholder="حداکثر انتخاب">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-field" id="optionsWrapper" style="display:none;">
                     <label>گزینه ها</label>
                     <div class="option-list" id="optionList">
@@ -313,12 +413,32 @@
             const optionList = document.getElementById('optionList');
             const addOptionBtn = document.getElementById('addOptionBtn');
 
+            const settingsGroups = {
+                short_text: ['text'],
+                long_text: ['text'],
+                multiple_choice: ['choice'],
+                checkboxes: ['choice'],
+                dropdown: ['choice'],
+                rating: ['rating'],
+                number: ['number'],
+                email: [],
+                date: ['date']
+            };
+
             const setActiveType = (type, hasOptions) => {
                 typeInput.value = type;
                 typeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.type === type));
                 optionsWrapper.style.display = hasOptions ? 'block' : 'none';
                 optionList.querySelectorAll('input').forEach((input) => {
                     input.disabled = !hasOptions;
+                });
+                const activeGroups = settingsGroups[type] || [];
+                document.querySelectorAll('[data-setting-group]').forEach((el) => {
+                    el.style.display = activeGroups.includes(el.dataset.settingGroup) ? 'block' : 'none';
+                    const input = el.querySelector('input');
+                    if (input) {
+                        input.disabled = !activeGroups.includes(el.dataset.settingGroup);
+                    }
                 });
             };
 

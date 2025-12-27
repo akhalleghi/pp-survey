@@ -46,6 +46,7 @@ class SurveyQuestionController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
             'is_required' => ['nullable', 'boolean'],
+            'settings' => ['nullable', 'array'],
             'options' => ['nullable', 'array'],
             'options.*.label' => ['nullable', 'string', 'max:255'],
             'options.*.value' => ['nullable', 'string', 'max:255'],
@@ -67,7 +68,7 @@ class SurveyQuestionController extends Controller
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'is_required' => $request->boolean('is_required'),
-            'settings' => [],
+            'settings' => $validated['settings'] ?? [],
         ]);
 
         if (!empty($validated['options'])) {
