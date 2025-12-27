@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\PositionController;
 use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\UnitSupervisorController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SurveyController;
+use App\Http\Controllers\Admin\SurveyQuestionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,6 +30,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('personnel/bulk-import', [PersonnelController::class, 'bulkImport'])->name('personnel.bulk-import');
         Route::get('personnel/template/download', [PersonnelController::class, 'downloadTemplate'])->name('personnel.template');
         Route::resource('unit-supervisors', UnitSupervisorController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::get('surveys/{survey}/settings', [SurveyController::class, 'edit'])->name('surveys.edit');
+        Route::resource('surveys', SurveyController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::get('surveys/{survey}/questions', [SurveyQuestionController::class, 'index'])->name('surveys.questions.index');
+        Route::post('surveys/{survey}/questions', [SurveyQuestionController::class, 'store'])->name('surveys.questions.store');
+        Route::delete('surveys/{survey}/questions/{question}', [SurveyQuestionController::class, 'destroy'])->name('surveys.questions.destroy');
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
         Route::post('settings/branding', [SettingsController::class, 'updateBranding'])->name('settings.branding');

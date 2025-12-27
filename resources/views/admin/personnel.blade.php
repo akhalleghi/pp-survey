@@ -18,7 +18,7 @@
 @endphp
 
 @section('content')
-    <link rel="stylesheet" href="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.css">
+    <link rel="stylesheet" href="{{ asset('vendor/jalalidatepicker/jalalidatepicker.min.css') }}">
     <style>
         .personnel-wrapper {
             display: flex;
@@ -841,7 +841,7 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.js"></script>
+    <script src="{{ asset('vendor/jalalidatepicker/jalalidatepicker.min.js') }}"></script>
     <script>
         const gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         const jDaysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];

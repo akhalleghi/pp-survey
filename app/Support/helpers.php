@@ -113,3 +113,62 @@ if (!function_exists('gregorian_to_jalali')) {
         return [$jy, $jm, $jd];
     }
 }
+
+if (!function_exists('jalali_to_gregorian')) {
+    /**
+     * Convert a Jalali date to Gregorian.
+     *
+     * @return array<int, int>
+     */
+    function jalali_to_gregorian(int $jy, int $jm, int $jd): array
+    {
+        $gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        $jDaysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
+
+        $jy -= 979;
+        $gy = 1600;
+        $days = (365 * $jy)
+            + intdiv($jy, 33) * 8
+            + intdiv(($jy % 33) + 3, 4)
+            + $jd
+            - 1;
+
+        for ($i = 0; $i < $jm - 1; $i++) {
+            $days += $jDaysInMonth[$i];
+        }
+
+        $gy += 400 * intdiv($days, 146097);
+        $days %= 146097;
+
+        if ($days > 36524) {
+            $gy += 100 * intdiv(--$days, 36524);
+            $days %= 36524;
+            if ($days >= 365) {
+                $days++;
+            }
+        }
+
+        $gy += 4 * intdiv($days, 1461);
+        $days %= 1461;
+
+        if ($days > 365) {
+            $gy += intdiv($days - 1, 365);
+            $days = ($days - 1) % 365;
+        }
+
+        $gm = 0;
+        while ($gm < 12) {
+            $leapAdd = ($gm === 1 && (($gy % 4 === 0 && $gy % 100 !== 0) || ($gy % 400 === 0))) ? 1 : 0;
+            $monthLength = $gDaysInMonth[$gm] + $leapAdd;
+            if ($days < $monthLength) {
+                break;
+            }
+            $days -= $monthLength;
+            $gm++;
+        }
+
+        $gd = $days + 1;
+
+        return [$gy, $gm + 1, $gd];
+    }
+}
