@@ -431,7 +431,7 @@
                     </svg>
                     افزودن نظرسنجی
                 </button>
-                <button type="button" class="ghost">راهنمای ساخت</button>
+                <button type="button" class="outline">راهنمای ساخت</button>
             </div>
         </section>
 
@@ -533,7 +533,7 @@
                                     <div class="survey-actions">
                                         <button type="button" class="outline">مشاهده گزارش</button>
                                         <a href="{{ route('admin.surveys.edit', $survey) }}" class="outline">تنظیمات</a>
-                                        <a href="{{ route('admin.surveys.questions.index', $survey) }}" class="ghost">طراحی سوالات</a>
+                                        <a href="{{ route('admin.surveys.questions.index', $survey) }}" class="outline">طراحی سوالات</a>
                                         <form method="POST" action="{{ route('admin.surveys.generate-link', $survey) }}" style="display:inline;">
                                             @csrf
                                             <button type="submit" class="outline">ایجاد لینک</button>

@@ -36,6 +36,7 @@ class Survey extends Model
         'start_at',
         'end_at',
         'thank_you_message',
+        'background_image',
         'notification_emails',
     ];
 

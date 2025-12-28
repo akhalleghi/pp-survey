@@ -103,6 +103,47 @@
         .pwt-datepicker {
             z-index: 1200;
         }
+        .bg-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.85rem;
+        }
+        .bg-option {
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 16px;
+            padding: 0.6rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            background: #fff;
+        }
+        .bg-option img {
+            width: 100%;
+            height: 110px;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+        .bg-option input {
+            margin-left: 0.4rem;
+        }
+        .bg-upload {
+            border: 1px dashed rgba(15, 23, 42, 0.2);
+            border-radius: 16px;
+            padding: 1rem;
+        }
+        .bg-preview {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .bg-preview img {
+            width: 140px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+        }
     </style>
 
     <div class="settings-wrapper">
@@ -118,7 +159,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('admin.surveys.update', $survey) }}" data-jalali-form>
+            <form method="POST" action="{{ route('admin.surveys.update', $survey) }}" data-jalali-form enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
 
@@ -308,6 +349,44 @@
                     @enderror
                 </div>
 
+
+                <div class="settings-section" id="survey-style-section">
+                    <h3>استایل نظرسنجی</h3>
+                    <div class="settings-grid" style="grid-template-columns: 1fr;">
+                        <div class="form-field">
+                            <span>انتخاب پس‌زمینه</span>
+                            <div class="bg-grid">
+                                <label class="bg-option">
+                                    <div class="helper-text">بدون تصویر</div>
+                                    <input type="radio" name="background_preset" value="none"
+                                        @checked(old('background_preset') === "none" || empty($survey->background_image))>
+                                </label>
+                                @foreach ($backgroundImages ?? [] as $image)
+                                    <label class="bg-option">
+                                        <img src="{{ asset('bg-images/' . $image) }}" alt="{{ $image }}">
+                                        <div class="helper-text">{{ $image }}</div>
+                                        <input type="radio" name="background_preset" value="{{ $image }}"
+                                            @checked(old('background_preset', $survey->background_image === "bg-images/" . $image ? $image : "") === $image)>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                        <div class="form-field bg-upload">
+                            <span>آپلود پس‌زمینه دلخواه</span>
+                            <input type="file" name="background_upload" accept="image/*">
+                            <small class="helper-text">حداکثر ۵ مگابایت، فرمت‌های JPG/PNG/WEBP</small>
+                            @error('background_upload', 'updateSurvey')
+                                <small class="helper-text" style="color: #dc2626;">{{ $message }}</small>
+                            @enderror
+                        </div>
+                        @if (!empty($survey->background_image))
+                            <div class="bg-preview">
+                                <span class="helper-text">پس‌زمینه فعلی:</span>
+                                <img src="{{ asset($survey->background_image) }}" alt="پس‌زمینه نظرسنجی">
+                            </div>
+                        @endif
+                    </div>
+                </div>
                 <div class="actions">
                     <button type="submit" class="primary">ذخیره تنظیمات</button>
                     <a href="{{ route('admin.surveys.index') }}" class="ghost">بازگشت</a>

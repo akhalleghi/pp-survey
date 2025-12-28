@@ -92,11 +92,22 @@ class SurveyController extends Controller
         $statusOptions = ['draft' => 'در حال آماده سازی', 'active' => 'فعال', 'closed' => 'بسته شده'];
         $resultVisibilityOptions = ['private' => 'خصوصی', 'public' => 'عمومی', 'after_close' => 'پس از بسته شدن'];
 
-        return view('admin.surveys-settings', compact('survey', 'audiencePresets', 'statusOptions', 'resultVisibilityOptions'));
+        $backgroundImages = collect(glob(public_path('bg-images/*.{jpg,jpeg,png,webp,gif}'), GLOB_BRACE))
+            ->map(fn ($path) => basename($path))
+            ->values()
+            ->all();
+
+        return view('admin.surveys-settings', compact('survey', 'audiencePresets', 'statusOptions', 'resultVisibilityOptions', 'backgroundImages'));
     }
 
     public function update(Request $request, Survey $survey): RedirectResponse
     {
+        $backgroundPresets = collect(glob(public_path('bg-images/*.{jpg,jpeg,png,webp,gif}'), GLOB_BRACE))
+            ->map(fn ($path) => basename($path))
+            ->values()
+            ->all();
+        $backgroundPresetOptions = array_merge(['none'], $backgroundPresets);
+
         $normalizeDateInput = function (?string $value): ?string {
             if (!$value) {
                 return null;
@@ -160,6 +171,8 @@ class SurveyController extends Controller
             'audience_filters.*' => ['string', 'max:255'],
             'thank_you_message' => ['nullable', 'string', 'max:255'],
             'notification_emails' => ['nullable', 'string', 'max:1000'],
+            'background_preset' => ['nullable', Rule::in($backgroundPresetOptions)],
+            'background_upload' => ['nullable', 'file', 'image', 'max:5120'],
         ]);
 
         $notificationEmails = [];
@@ -195,6 +208,26 @@ class SurveyController extends Controller
             'thank_you_message' => $validated['thank_you_message'] ?? null,
             'notification_emails' => $notificationEmails,
         ]);
+
+        if ($request->hasFile('background_upload')) {
+            $file = $request->file('background_upload');
+            $destination = public_path('bg-images/custom');
+            if (!is_dir($destination)) {
+                mkdir($destination, 0775, true);
+            }
+            $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
+            $file->move($destination, $fileName);
+            $survey->update([
+                'background_image' => 'bg-images/custom/' . $fileName,
+            ]);
+        } else {
+            $preset = $validated['background_preset'] ?? null;
+            if ($preset === 'none') {
+                $survey->update(['background_image' => null]);
+            } elseif ($preset && in_array($preset, $backgroundPresets, true)) {
+                $survey->update(['background_image' => 'bg-images/' . $preset]);
+            }
+        }
 
         return redirect()
             ->route('admin.surveys.index')
