@@ -585,7 +585,7 @@
 
                         <div class="survey-thumbnail h-48 rounded-xl mb-6 flex items-center justify-center relative overflow-hidden">
 
-                            <img src="https://images.unsplash.com/photo-1608197280556-22abc656c779"
+                            <img src="{{ asset('images/welcome/unsplash-1608197280556-22abc656c779.jpg') }}"
 
                                  alt="ارزیابی خدمات پشتیبانی"
 
@@ -677,7 +677,7 @@
 
                         <div class="survey-thumbnail h-48 rounded-xl mb-6 flex items-center justify-center relative overflow-hidden">
 
-                            <img src="https://images.unsplash.com/photo-1690191793785-2607c27d5c20"
+                            <img src="{{ asset('images/welcome/unsplash-1690191793785-2607c27d5c20.jpg') }}"
 
                                  alt="بررسی پیشنهادهای توسعه محصول"
 
@@ -833,7 +833,7 @@
 
                 <div class="floating-element">
 
-                    <img src="https://images.unsplash.com/photo-1542744095-fcf48d80b0fd" 
+                    <img src="{{ asset('images/welcome/unsplash-1542744095-fcf48d80b0fd.jpg') }}" 
 
                          alt="تیم IT در حال کار روی پروژه‌های فناوری در محیط مدرن دفتر کار" 
 

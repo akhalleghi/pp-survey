@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>ورود ناحیه مدیریت</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{{ asset('fonts/vazirmatn/vazirmatn.css') }}" rel="stylesheet">
     @php
         $themeColors = $appSettings['colors'] ?? \App\Support\AppSettings::get('colors', []);
         $primaryHex = ltrim($themeColors['primary'] ?? '#D61119', '#');

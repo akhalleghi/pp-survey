@@ -12,7 +12,7 @@
 @endphp
 
 @section('content')
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+    <link rel="stylesheet" href="{{ asset('vendor/select2/select2.min.css') }}">
     <style>
         .supervisors-wrapper {
             display: flex;
@@ -521,8 +521,8 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="{{ asset('vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('vendor/select2/select2.min.js') }}"></script>
     <script>
         const initSupervisorSelect2 = () => {
             if (!window.jQuery || !jQuery().select2) {
