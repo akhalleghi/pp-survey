@@ -18,7 +18,7 @@
 @endphp
 
 @section('content')
-    <link rel="stylesheet" href="{{ asset('vendor/jalalidatepicker/jalalidatepicker.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/persian-datepicker-behzadi/persianDatepicker-default.css') }}">
     <style>
         .personnel-wrapper {
             display: flex;
@@ -329,17 +329,7 @@
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(214, 17, 25, 0.15);
         }
-        .jalali-date-input {
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-        }
-        .jalali-date-input input[type="text"] {
-            border: 1px solid rgba(15,23,42,0.15);
-            border-radius: 16px;
-            padding: 0.85rem 1rem;
-            font-size: 0.95rem;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+        .jalali-picker-input {
             direction: rtl;
         }
         .error-text {
@@ -678,10 +668,8 @@
                     </div>
                     <div class="field">
                         <label for="create-birth-date">تاریخ تولد</label>
-                        <div class="jalali-date-input" data-jalali-input>
-                            <input id="create-birth-date-display" type="text" placeholder="مثلاً 1400/01/12" data-jdp data-jalali-display value="{{ $shouldOpenCreateModal ? jalali_date(old('birth_date')) : '' }}">
-                            <input id="create-birth-date" type="hidden" name="birth_date" data-jalali-hidden value="{{ $shouldOpenCreateModal ? old('birth_date') : '' }}">
-                        </div>
+                        <input id="create-birth-date-display" class="jalali-picker-input" type="text" placeholder="مثلاً 1404/12/01">
+                        <input id="create-birth-date" type="hidden" name="birth_date" value="{{ $shouldOpenCreateModal ? old('birth_date') : '' }}">
                         @if ($errors->createPersonnel->has('birth_date'))
                             <span class="error-text">{{ $errors->createPersonnel->first('birth_date') }}</span>
                         @endif
@@ -784,10 +772,8 @@
                     </div>
                     <div class="field">
                         <label for="edit-birth-date">تاریخ تولد</label>
-                        <div class="jalali-date-input" data-jalali-input>
-                            <input id="edit-birth-date-display" type="text" placeholder="مثلاً 1400/01/12" data-jdp data-jalali-display value="{{ $shouldOpenEditModal ? jalali_date(old('birth_date')) : '' }}">
-                            <input id="edit-birth-date" type="hidden" name="birth_date" data-jalali-hidden value="{{ $shouldOpenEditModal ? old('birth_date') : '' }}">
-                        </div>
+                        <input id="edit-birth-date-display" class="jalali-picker-input" type="text" placeholder="مثلاً 1404/12/01">
+                        <input id="edit-birth-date" type="hidden" name="birth_date" value="{{ $shouldOpenEditModal ? old('birth_date') : '' }}">
                         @if ($errors->updatePersonnel->has('birth_date'))
                             <span class="error-text">{{ $errors->updatePersonnel->first('birth_date') }}</span>
                         @endif
@@ -841,17 +827,12 @@
         </div>
     </div>
 
-    <script src="{{ asset('vendor/jalalidatepicker/jalalidatepicker.min.js') }}"></script>
+    <script src="{{ asset('vendor/persian-datepicker-behzadi/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ asset('vendor/persian-datepicker-behzadi/persianDatepicker.min.js') }}"></script>
     <script>
         const gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         const jDaysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
-        const persianDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
-
         const pad2 = (num) => String(num).padStart(2, '0');
-        const normalizeDigits = (value) => {
-            if (!value) return '';
-            return value.replace(/[۰-۹]/g, (d) => String(persianDigits.indexOf(d)));
-        };
 
         const isLeapGregorian = (year) => {
             return ((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0);
@@ -862,7 +843,6 @@
             gm = parseInt(gm, 10);
             gd = parseInt(gd, 10);
             let jy;
-
             if (gy > 1600) {
                 jy = 979;
                 gy -= 1600;
@@ -878,21 +858,17 @@
                 + Math.floor((gy2 + 399) / 400)
                 - 80
                 + gd;
-
             for (let i = 0; i < gm - 1; i++) {
                 days += gDaysInMonth[i];
             }
-
             if (gm > 2 && isLeapGregorian(gy2)) {
                 days++;
             }
 
             jy += 33 * Math.floor(days / 12053);
             days %= 12053;
-
             jy += 4 * Math.floor(days / 1461);
             days %= 1461;
-
             if (days > 365) {
                 jy += Math.floor((days - 1) / 365);
                 days = (days - 1) % 365;
@@ -903,117 +879,74 @@
                 days -= jDaysInMonth[jm];
             }
 
-            const jd = days + 1;
-
-            return [jy, jm + 1, jd];
+            return `${jy}/${pad2(jm + 1)}/${pad2(days + 1)}`;
         };
 
-        const jalaliToGregorian = (jy, jm, jd) => {
-            jy = parseInt(jy, 10);
-            jm = parseInt(jm, 10);
-            jd = parseInt(jd, 10);
-
-            jy -= 979;
-            let gy = 1600;
-            let days = (365 * jy)
-                + Math.floor(jy / 33) * 8
-                + Math.floor(((jy % 33) + 3) / 4)
-                + jd - 1;
-
-            for (let i = 0; i < jm - 1; i++) {
-                days += jDaysInMonth[i];
-            }
-
-            gy += 400 * Math.floor(days / 146097);
-            days %= 146097;
-
-            if (days > 36524) {
-                gy += 100 * Math.floor(--days / 36524);
-                days %= 36524;
-                if (days >= 365) {
-                    days++;
-                }
-            }
-
-            gy += 4 * Math.floor(days / 1461);
-            days %= 1461;
-
-            if (days > 365) {
-                gy += Math.floor((days - 1) / 365);
-                days = (days - 1) % 365;
-            }
-
-            let gm = 0;
-            while (gm < 12) {
-                const leapAdd = (gm === 1 && isLeapGregorian(gy)) ? 1 : 0;
-                const monthLength = gDaysInMonth[gm] + leapAdd;
-                if (days < monthLength) {
-                    break;
-                }
-                days -= monthLength;
-                gm++;
-            }
-
-            const gd = days + 1;
-
-            return [gy, gm + 1, gd];
-        };
-
-        const initJalaliInputs = () => {
-            if (!window.jalaliDatepicker) {
-                console.warn('jalaliDatepicker library not loaded.');
+        const syncJalaliDisplayFromHidden = (displayInput, hiddenInput) => {
+            if (!displayInput || !hiddenInput) {
                 return;
             }
-            window.jalaliDatepicker.startWatch({ time: false });
-            document.querySelectorAll('[data-jalali-input]').forEach((wrapper) => {
-                const displayInput = wrapper.querySelector('[data-jalali-display]');
-                const hiddenInput = wrapper.querySelector('[data-jalali-hidden]');
-                if (!displayInput || !hiddenInput) {
+            if (!hiddenInput.value) {
+                displayInput.value = '';
+                return;
+            }
+            const parts = hiddenInput.value.split('-').map((part) => parseInt(part, 10));
+            if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) {
+                displayInput.value = '';
+                return;
+            }
+            displayInput.value = gregorianToJalali(parts[0], parts[1], parts[2]);
+        };
+
+        const initPersianDatepickerInputs = () => {
+            if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.persianDatepicker) {
+                console.error('persianDatepicker is not available.');
+                return;
+            }
+
+            const pairs = [
+                {
+                    display: document.getElementById('create-birth-date-display'),
+                    hidden: document.getElementById('create-birth-date'),
+                },
+                {
+                    display: document.getElementById('edit-birth-date-display'),
+                    hidden: document.getElementById('edit-birth-date'),
+                },
+            ];
+
+            pairs.forEach(({ display, hidden }) => {
+                if (!display || !hidden) {
                     return;
                 }
 
-                const updateDisplay = () => {
-                    if (!hiddenInput.value) {
-                        displayInput.value = '';
-                        return;
-                    }
-                    const parts = hiddenInput.value.split('-').map((part) => parseInt(part, 10));
-                    if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) {
-                        displayInput.value = '';
-                        return;
-                    }
-                    const [jy, jm, jd] = gregorianToJalali(parts[0], parts[1], parts[2]);
-                    displayInput.value = `${jy}/${pad2(jm)}/${pad2(jd)}`;
-                };
+                syncJalaliDisplayFromHidden(display, hidden);
 
-                const updateHidden = () => {
-                    const normalized = normalizeDigits(displayInput.value.trim());
-                    const matches = normalized.match(/^(\d{3,4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
-                    if (!matches) {
-                        hiddenInput.value = '';
-                        return;
-                    }
-                    const jy = parseInt(matches[1], 10);
-                    const jm = parseInt(matches[2], 10);
-                    const jd = parseInt(matches[3], 10);
-                    if (!jy || jm < 1 || jm > 12 || jd < 1 || jd > 31) {
-                        hiddenInput.value = '';
-                        return;
-                    }
-                    const [gy, gm, gd] = jalaliToGregorian(jy, jm, jd);
-                    hiddenInput.value = `${gy}-${pad2(gm)}-${pad2(gd)}`;
-                };
+                window.jQuery(display).persianDatepicker({
+                    formatDate: 'YYYY/0M/0D',
+                    closeOnBlur: true,
+                    selectedBefore: !!display.value,
+                    selectedDate: display.value || null,
+                    onSelect: function () {
+                        const gDate = display.getAttribute('data-gdate') || display.getAttribute('data-gDate') || '';
+                        hidden.value = gDate;
+                    },
+                });
 
-                displayInput.addEventListener('change', updateHidden);
-                displayInput.addEventListener('blur', updateHidden);
-                hiddenInput.addEventListener('refreshJalaliDisplay', updateDisplay);
+                display.addEventListener('input', () => {
+                    if (!display.value.trim()) {
+                        hidden.value = '';
+                    }
+                });
 
-                updateDisplay();
+                hidden.addEventListener('syncJalaliDisplay', () => {
+                    syncJalaliDisplayFromHidden(display, hidden);
+                });
             });
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            initJalaliInputs();
+            initPersianDatepickerInputs();
             const body = document.body;
             const createModal = document.getElementById('createPersonnelModal');
             const editModal = document.getElementById('editPersonnelModal');
@@ -1080,7 +1013,7 @@
                 if (editFields.mobile) editFields.mobile.value = data.mobile || '';
                 if (editFields.birth_date) {
                     editFields.birth_date.value = data.birthDate || '';
-                    editFields.birth_date.dispatchEvent(new Event('refreshJalaliDisplay'));
+                    editFields.birth_date.dispatchEvent(new Event('syncJalaliDisplay'));
                 }
                 if (editFields.position_id) editFields.position_id.value = data.positionId || '';
                 if (editFields.unit_id) editFields.unit_id.value = data.unitId || '';

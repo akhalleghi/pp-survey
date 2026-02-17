@@ -431,7 +431,7 @@
         @endif
     </div>
 
-    <div class="modal {{ $shouldOpenCreateModal ? 'open' : '' }}" id="createSupervisorModal" data-open="{{ $shouldOpenCreateModal ? 'true' : 'false' }}">
+    <div class="modal {{ $shouldOpenCreateModal ? 'open' : '' }}" id="createSupervisorModal" data-open="{{ $shouldOpenCreateModal ? 'true' : 'false' }}" data-keep-latin-numbers>
         <div class="modal-dialog">
             <div class="modal-header">
                 <h3>تخصیص ناظر جدید</h3>
@@ -475,7 +475,7 @@
         </div>
     </div>
 
-    <div class="modal {{ $shouldOpenEditModal ? 'open' : '' }}" id="editSupervisorModal" data-open="{{ $shouldOpenEditModal ? 'true' : 'false' }}" data-old-edit-id="{{ $shouldOpenEditModal ? $editingSupervisorId : '' }}">
+    <div class="modal {{ $shouldOpenEditModal ? 'open' : '' }}" id="editSupervisorModal" data-open="{{ $shouldOpenEditModal ? 'true' : 'false' }}" data-old-edit-id="{{ $shouldOpenEditModal ? $editingSupervisorId : '' }}" data-keep-latin-numbers>
         <div class="modal-dialog">
             <div class="modal-header">
                 <h3>ویرایش ناظر واحد</h3>
@@ -525,15 +525,16 @@
     <script src="{{ asset('vendor/select2/select2.min.js') }}"></script>
     <script>
         const initSupervisorSelect2 = () => {
-            if (!window.jQuery || !jQuery().select2) {
+            if (!window.jQuery || !window.jQuery.fn || typeof window.jQuery.fn.select2 !== 'function') {
                 return;
             }
             jQuery('.supervisor-select').each(function () {
-                const parentModal = jQuery(this).closest('.modal');
-                if (jQuery(this).data('select2')) {
-                    jQuery(this).select2('destroy');
+                const $select = jQuery(this);
+                if ($select.data('select2-initialized')) {
+                    return;
                 }
-                jQuery(this).select2({
+                const parentModal = $select.closest('.modal');
+                $select.select2({
                     width: '100%',
                     dir: 'rtl',
                     dropdownParent: parentModal.length ? parentModal : undefined,
@@ -541,6 +542,10 @@
                         noResults: () => 'نتیجه‌ای یافت نشد',
                     },
                 });
+                const $container = $select.next('.select2-container');
+                $container.attr('data-keep-latin-numbers', '');
+                jQuery(document.body).find('.select2-dropdown').attr('data-keep-latin-numbers', '');
+                $select.data('select2-initialized', true);
             });
         };
 
@@ -555,7 +560,6 @@
                 if (!modal) return;
                 modal.classList.add('open');
                 body.classList.add('modal-open');
-                initSupervisorSelect2();
             };
 
             const closeModal = (modal) => {
@@ -595,9 +599,11 @@
                 }
                 if (editPersonnel) {
                     editPersonnel.value = personnelCode || '';
+                    jQuery(editPersonnel).trigger('change.select2');
                 }
                 if (editUnit) {
                     editUnit.value = unitId || '';
+                    jQuery(editUnit).trigger('change.select2');
                 }
                 openModal(editModal);
             };
@@ -626,9 +632,6 @@
                 }
             }
 
-            document.querySelectorAll('.modal').forEach((modal) => {
-                modal.addEventListener('transitionend', () => initSupervisorSelect2());
-            });
         });
     </script>
 @endsection
