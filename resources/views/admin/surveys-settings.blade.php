@@ -1,141 +1,232 @@
 ﻿@extends('admin.layouts.app')
 
 @section('page-title', 'تنظیمات نظرسنجی')
-@section('page-description', 'ویرایش وضعیت، زمان بندی و تنظیمات دسترسی نظرسنجی.')
+@section('page-description', 'ویرایش تجربه مخاطب، زمان‌بندی، محدودیت‌ها و ظاهر نظرسنجی.')
 
 @section('content')
+    @php
+        $audienceConfig = $audienceConfig ?? [];
+        $selectedModes = old('audience_modes', $audienceConfig['modes'] ?? []);
+        $selectedUnits = old('audience_unit_ids', $audienceConfig['unit_ids'] ?? []);
+        $selectedPositions = old('audience_position_ids', $audienceConfig['position_ids'] ?? []);
+        $selectedGenders = old('audience_genders', $audienceConfig['genders'] ?? []);
+        $selectedPersonnel = old('audience_personnel_ids', $audienceConfig['personnel_ids'] ?? []);
+        $selectedIdentityMode = old('access_identity_mode', $audienceConfig['identity_mode'] ?? 'none');
+    @endphp
     <link rel="stylesheet" href="{{ asset('vendor/persian-datepicker/persian-datepicker.min.css') }}">
     <style>
-        .settings-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-        .settings-card {
-            background: #fff;
-            border-radius: 24px;
-            border: 1px solid rgba(15, 23, 42, 0.08);
-            padding: 1.5rem;
-        }
-        .settings-header {
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-            margin-bottom: 1.25rem;
-        }
-        .settings-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1rem;
-        }
-        .settings-section {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-        .settings-section h3 {
+        .survey-settings {
+            width: 100%;
+            max-width: 100%;
             margin: 0;
-            font-size: 1.1rem;
-        }
-        .form-field {
             display: flex;
             flex-direction: column;
-            gap: 0.4rem;
+            gap: 1.25rem;
         }
-        .form-field input,
-        .form-field select,
-        .form-field textarea {
-            border: 1px solid rgba(15, 23, 42, 0.16);
+        .survey-settings-top {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .survey-settings-top h2 {
+            margin: 0 0 0.35rem;
+            font-size: clamp(1.15rem, 2.5vw, 1.45rem);
+        }
+        .survey-settings-top .lead {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.7;
+            max-width: 36rem;
+        }
+        .survey-settings-nav {
+            display: inline-flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .survey-settings-nav a {
             border-radius: 14px;
-            padding: 0.85rem 1rem;
-            font-family: inherit;
+            padding: 0.55rem 1rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+            background: rgba(15, 23, 42, 0.07);
+            color: var(--slate);
         }
-        .jalali-date-input {
+        .survey-settings-nav a:hover {
+            background: rgba(15, 23, 42, 0.11);
+        }
+        .survey-settings-form {
             display: flex;
             flex-direction: column;
-            gap: 0.4rem;
+            gap: 1.25rem;
+        }
+        .ss-card {
+            background: #fff;
+            border-radius: 22px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            padding: clamp(1.1rem, 2vw, 1.6rem) clamp(1rem, 2.2vw, 1.8rem);
+            box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+        }
+        .ss-card-head {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            margin-bottom: 1.1rem;
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+        }
+        .ss-card-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            background: rgba(214, 17, 25, 0.1);
+        }
+        .ss-card-head h3 {
+            margin: 0;
+            font-size: 1.05rem;
+        }
+        .ss-card-head p {
+            margin: 0.35rem 0 0;
+            font-size: 0.82rem;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+        .ss-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+        .ss-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+        .ss-field > span:first-child,
+        .ss-field > label > span:first-child {
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: var(--slate);
+        }
+        .ss-field .hint {
+            font-size: 0.8rem;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+        .ss-field input[type="text"],
+        .ss-field input[type="number"],
+        .ss-field select,
+        .ss-field textarea {
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            border-radius: 14px;
+            padding: 0.75rem 0.9rem;
+            font-family: inherit;
+            font-size: 0.92rem;
+        }
+        .ss-field textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        .ss-field textarea.ss-textarea-sm {
+            min-height: 72px;
         }
         .jalali-date-input input[type="text"] {
-            border: 1px solid rgba(15, 23, 42, 0.16);
+            border: 1px solid rgba(15, 23, 42, 0.14);
             border-radius: 14px;
-            padding: 0.85rem 1rem;
-            font-size: 0.95rem;
+            padding: 0.75rem 0.9rem;
+            font-size: 0.92rem;
             font-family: inherit;
             direction: rtl;
         }
-        .toggle {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-        }
-        .actions {
+        .ss-toggle-grid {
             display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+        .ss-toggle {
+            display: flex;
+            align-items: flex-start;
             gap: 0.75rem;
-            flex-wrap: wrap;
-            margin-top: 1.5rem;
-        }
-        .actions button,
-        .actions a {
-            border: none;
-            border-radius: 14px;
-            padding: 0.85rem 1.6rem;
-            font-weight: 600;
+            padding: 0.75rem 0.85rem;
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(15, 23, 42, 0.02);
             cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
         }
-        .actions .primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: #fff;
+        .ss-toggle:has(input:disabled) {
+            opacity: 0.65;
+            cursor: default;
         }
-        .actions .ghost {
-            background: rgba(15, 23, 42, 0.08);
-            color: var(--slate);
+        .ss-toggle input {
+            width: 18px;
+            height: 18px;
+            margin-top: 0.15rem;
+            flex-shrink: 0;
+            accent-color: var(--primary, #d61119);
         }
-        .helper-text {
+        .ss-toggle div {
+            flex: 1;
+            min-width: 0;
+        }
+        .ss-toggle strong {
+            display: block;
+            font-size: 0.88rem;
+            margin-bottom: 0.2rem;
+        }
+        .ss-toggle span.desc {
+            font-size: 0.78rem;
             color: var(--muted);
-            font-size: 0.85rem;
-        }
-        .pwt-datepicker {
-            z-index: 1200;
+            line-height: 1.55;
         }
         .bg-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 0.85rem;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.75rem;
         }
         .bg-option {
             border: 1px solid rgba(15, 23, 42, 0.12);
             border-radius: 16px;
-            padding: 0.6rem;
+            padding: 0.55rem;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.45rem;
             background: #fff;
+            cursor: pointer;
+        }
+        .bg-option:has(input:checked) {
+            border-color: rgba(214, 17, 25, 0.45);
+            box-shadow: 0 0 0 1px rgba(214, 17, 25, 0.12);
         }
         .bg-option img {
             width: 100%;
-            height: 110px;
+            height: 96px;
             object-fit: cover;
             border-radius: 12px;
         }
-        .bg-option input {
-            margin-left: 0.4rem;
+        .bg-option .cap {
+            font-size: 0.75rem;
+            color: var(--muted);
+            word-break: break-word;
         }
         .bg-upload {
-            border: 1px dashed rgba(15, 23, 42, 0.2);
+            border: 1px dashed rgba(15, 23, 42, 0.22);
             border-radius: 16px;
             padding: 1rem;
+            margin-top: 0.5rem;
         }
         .bg-preview {
             display: flex;
             align-items: center;
             gap: 0.75rem;
             flex-wrap: wrap;
+            margin-top: 0.75rem;
         }
         .bg-preview img {
             width: 140px;
@@ -144,256 +235,509 @@
             border-radius: 12px;
             border: 1px solid rgba(15, 23, 42, 0.12);
         }
+        .ss-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.65rem;
+            justify-content: flex-end;
+            margin-top: 0.25rem;
+        }
+        @media (min-width: 1280px) {
+            .ss-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 768px) {
+            .survey-settings-top {
+                flex-direction: column;
+            }
+            .survey-settings-nav {
+                width: 100%;
+            }
+        }
+        .ss-actions button,
+        .ss-actions a {
+            border: none;
+            border-radius: 14px;
+            padding: 0.8rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+        .ss-actions .primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+        }
+        .ss-actions .ghost {
+            background: rgba(15, 23, 42, 0.08);
+            color: var(--slate);
+        }
+        .ss-alert {
+            padding: 0.75rem 1rem;
+            border-radius: 14px;
+            background: rgba(220, 38, 38, 0.08);
+            color: #b91c1c;
+            font-size: 0.88rem;
+        }
+        .pwt-datepicker {
+            z-index: 1200;
+        }
+        select[multiple] {
+            min-height: 160px;
+        }
+        .audience-mode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.35rem;
+        }
+        .audience-mode-option {
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 14px;
+            padding: 0.7rem 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(15, 23, 42, 0.02);
+        }
+        .audience-mode-option:has(input:checked) {
+            border-color: rgba(214, 17, 25, 0.45);
+            background: rgba(214, 17, 25, 0.06);
+        }
+        .audience-target {
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            border-radius: 16px;
+            padding: 0.9rem;
+            background: rgba(15, 23, 42, 0.02);
+            margin-top: 0.75rem;
+        }
+        .audience-target.is-hidden {
+            display: none;
+        }
     </style>
 
-    <div class="settings-wrapper">
-        <div class="settings-card">
-            <div class="settings-header">
-                <h2>تنظیمات نظرسنجی: {{ $survey->title }}</h2>
-                <p class="helper-text">در این صفحه وضعیت، زمان بندی و دسترسی نظرسنجی را تنظیم کنید.</p>
+    <div class="survey-settings">
+        <div class="survey-settings-top">
+            <div>
+                <h2>{{ $survey->title }}</h2>
+                <p class="lead">تغییرات این صفحه روی لینک عمومی و تجربه پاسخ‌دهنده اعمال می‌شود. پس از ویرایش، «ذخیره تنظیمات» را بزنید.</p>
             </div>
+            <div class="survey-settings-nav">
+                <a href="{{ route('admin.surveys.index') }}">← فهرست نظرسنجی‌ها</a>
+                <a href="{{ route('admin.surveys.questions.index', $survey) }}">طراحی سوالات</a>
+            </div>
+        </div>
 
-            @if ($errors->updateSurvey->any())
-                <div class="helper-text" style="color: #dc2626; margin-bottom: 1rem;">
-                    لطفا خطاهای فرم را بررسی کنید.
-                </div>
-            @endif
+        @if ($errors->updateSurvey->any())
+            <div class="ss-alert">برخی فیلدها نیاز به اصلاح دارند؛ پیام‌های قرمز زیر هر بخش را ببینید.</div>
+        @endif
 
-            <form method="POST" action="{{ route('admin.surveys.update', $survey) }}" data-jalali-form enctype="multipart/form-data">
-                @csrf
-                @method('PUT')
+        <form class="survey-settings-form" method="POST" action="{{ route('admin.surveys.update', $survey) }}" data-jalali-form enctype="multipart/form-data">
+            @csrf
+            @method('PUT')
 
-                <div class="settings-section">
-                    <h3>زمان بندی و وضعیت</h3>
-                    <div class="settings-grid">
-                        <label class="form-field">
-                            <span>وضعیت</span>
-                            <select name="status">
-                                @foreach ($statusOptions as $key => $label)
-                                    <option value="{{ $key }}" @selected(old('status', $survey->status) === $key)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @error('status', 'updateSurvey')
-                                <small class="helper-text" style="color: #dc2626;">{{ $message }}</small>
-                            @enderror
-                        </label>
-                        <label class="form-field">
-                            <span>شروع انتشار</span>
-                            <div class="jalali-date-input" data-jalali-input>
-                                <input id="start-at" type="text" name="start_at" placeholder="مثلاً 1403/01/12"
-                                       value="{{ old('start_at', $survey->start_at ? jalali_date($survey->start_at) : '') }}">
-                            </div>
-                            @error('start_at', 'updateSurvey')
-                                <small class="helper-text" style="color: #dc2626;">{{ $message }}</small>
-                            @enderror
-                        </label>
-                        <label class="form-field">
-                            <span>پایان انتشار</span>
-                            <div class="jalali-date-input" data-jalali-input>
-                                <input id="end-at" type="text" name="end_at" placeholder="مثلاً 1403/02/01"
-                                       value="{{ old('end_at', $survey->end_at ? jalali_date($survey->end_at) : '') }}">
-                            </div>
-                            @error('end_at', 'updateSurvey')
-                                <small class="helper-text" style="color: #dc2626;">{{ $message }}</small>
-                            @enderror
-                        </label>
+            <section class="ss-card">
+                <div class="ss-card-head">
+                    <div class="ss-card-icon" aria-hidden="true">👋</div>
+                    <div>
+                        <h3>شروع برای مخاطب (لینک عمومی)</h3>
+                        <p>اگر متن آغاز را پر کنید، مخاطب ابتدا این متن را می‌خواند و با دکمه «شروع نظرسنجی» وارد سوالات می‌شود. اگر خالی بماند، مستقیم به سوالات می‌رود.</p>
                     </div>
                 </div>
+                <div class="ss-field">
+                    <label for="intro_text">
+                        <span>متن آغاز نظرسنجی</span>
+                    </label>
+                    <textarea id="intro_text" name="intro_text" rows="6" placeholder="مثلاً هدف نظرسنجی، نحوه پاسخ‌دهی، حدود زمان تخمینی و هر نکته‌ای که باید قبل از شروع خوانده شود...">{{ old('intro_text', $survey->intro_text) }}</textarea>
+                    <span class="hint">این متن روی صفحه عمومی با قالب ساده نمایش داده می‌شود (خط جدید حفظ می‌شود).</span>
+                    @error('intro_text', 'updateSurvey')
+                        <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                    @enderror
+                </div>
+            </section>
 
-                <div class="settings-section">
-                    <h3>محدودیت پاسخ</h3>
-                    <div class="settings-grid">
-                        <label class="form-field">
-                            <span>بازه زمانی پاسخ (ساعت)</span>
-                            <input type="number" name="response_window_hours" min="1" max="720"
-                                   value="{{ old('response_window_hours', $survey->response_window_hours) }}">
-                            @error('response_window_hours', 'updateSurvey')
-                                <small class="helper-text" style="color: #dc2626;">{{ $message }}</small>
-                            @enderror
-                        </label>
-                        <label class="form-field">
-                            <span>سقف تعداد پاسخ</span>
-                            <input type="number" name="response_limit" min="1"
-                                   value="{{ old('response_limit', $survey->response_limit) }}">
-                            @error('response_limit', 'updateSurvey')
-                                <small class="helper-text" style="color: #dc2626;">{{ $message }}</small>
-                            @enderror
-                        </label>
-                        <label class="form-field">
-                            <span>بازه ویرایش پاسخ (ساعت)</span>
-                            <input type="number" name="response_edit_window_hours" min="1" max="720"
-                                   value="{{ old('response_edit_window_hours', $survey->response_edit_window_hours) }}">
-                            @error('response_edit_window_hours', 'updateSurvey')
-                                <small class="helper-text" style="color: #dc2626;">{{ $message }}</small>
-                            @enderror
-                        </label>
+            <section class="ss-card">
+                <div class="ss-card-head">
+                    <div class="ss-card-icon" aria-hidden="true">📅</div>
+                    <div>
+                        <h3>زمان‌بندی و وضعیت انتشار</h3>
+                        <p>وضعیت «فعال» یعنی لینک عمومی در بازه تاریخ (در صورت تعیین) قابل استفاده است. تاریخ‌ها را شمسی وارد کنید.</p>
                     </div>
                 </div>
+                <div class="ss-grid">
+                    <label class="ss-field">
+                        <span>وضعیت</span>
+                        <select name="status">
+                            @foreach ($statusOptions as $key => $label)
+                                <option value="{{ $key }}" @selected(old('status', $survey->status) === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('status', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                    </label>
+                    <label class="ss-field">
+                        <span>شروع انتشار</span>
+                        <div class="jalali-date-input" data-jalali-input>
+                            <input id="start-at" type="text" name="start_at" placeholder="مثلاً 1403/01/12"
+                                   value="{{ old('start_at', $survey->start_at ? jalali_date($survey->start_at) : '') }}">
+                        </div>
+                        <span class="hint">خالی = بدون محدودیت شروع.</span>
+                        @error('start_at', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                    </label>
+                    <label class="ss-field">
+                        <span>پایان انتشار</span>
+                        <div class="jalali-date-input" data-jalali-input>
+                            <input id="end-at" type="text" name="end_at" placeholder="مثلاً 1403/02/01"
+                                   value="{{ old('end_at', $survey->end_at ? jalali_date($survey->end_at) : '') }}">
+                        </div>
+                        <span class="hint">خالی = بدون تاریخ پایان.</span>
+                        @error('end_at', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                    </label>
+                </div>
+            </section>
 
-                <div class="settings-section">
-                    <h3>حریم خصوصی و دسترسی</h3>
-                    <div class="settings-grid">
-                        <label class="toggle">
-                            <input type="hidden" name="require_auth" value="0">
-                            <input type="checkbox" name="require_auth" value="1"
-                                   @checked(old('require_auth', $survey->require_auth))>
-                            فقط کاربران وارد شده بتوانند پاسخ بدهند
-                        </label>
-                        <label class="toggle">
-                            <input type="hidden" name="is_anonymous" value="0">
-                            <input type="checkbox" name="is_anonymous" value="1"
-                                   @checked(old('is_anonymous', $survey->is_anonymous))>
-                            پاسخ ها ناشناس ثبت شوند
-                        </label>
-                        <label class="toggle">
-                            <input type="hidden" name="track_location" value="0">
-                            <input type="checkbox" name="track_location" value="1"
-                                   @checked(old('track_location', $survey->track_location))>
-                            ثبت موقعیت جغرافیایی پاسخ دهنده
-                        </label>
-                        <label class="toggle">
-                            <input type="hidden" name="prevent_multiple_submissions" value="0">
-                            <input type="checkbox" name="prevent_multiple_submissions" value="1"
-                                   @checked(old('prevent_multiple_submissions', $survey->prevent_multiple_submissions))>
-                            جلوگیری از ارسال چندباره
-                        </label>
+            <section class="ss-card">
+                <div class="ss-card-head">
+                    <div class="ss-card-icon" aria-hidden="true">⏱️</div>
+                    <div>
+                        <h3>محدودیت پاسخ</h3>
+                        <p>سقف تعداد پاسخ و بازه ویرایش اختیاری هستند؛ خالی بگذارید یعنی بدون سقف یا بدون محدودیت ویرایش جداگانه.</p>
                     </div>
                 </div>
+                <div class="ss-grid">
+                    <label class="ss-field">
+                        <span>بازه زمانی پاسخ (ساعت)</span>
+                        <input type="number" name="response_window_hours" min="1" max="720"
+                               value="{{ old('response_window_hours', $survey->response_window_hours) }}">
+                        <span class="hint">حداکثر زمان پیشنهادی برای تکمیل یک بار پاسخ‌دهی (۱ تا ۷۲۰ ساعت).</span>
+                        @error('response_window_hours', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                    </label>
+                    <label class="ss-field">
+                        <span>سقف تعداد پاسخ</span>
+                        <input type="number" name="response_limit" min="1"
+                               value="{{ old('response_limit', $survey->response_limit) }}"
+                               placeholder="نامحدود">
+                        <span class="hint">خالی = بدون سقف.</span>
+                        @error('response_limit', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                    </label>
+                    <label class="ss-field">
+                        <span>بازه ویرایش پاسخ (ساعت)</span>
+                        <input type="number" name="response_edit_window_hours" min="1" max="720"
+                               value="{{ old('response_edit_window_hours', $survey->response_edit_window_hours) }}"
+                               placeholder="مثلاً ۲۴">
+                        <span class="hint">پس از ارسال، تا چند ساعت امکان ویرایش باشد (در صورت فعال بودن گزینه زیر).</span>
+                        @error('response_edit_window_hours', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                    </label>
+                </div>
+            </section>
 
-                <div class="settings-section">
-                    <h3>تجربه کاربر</h3>
-                    <div class="settings-grid">
-                        <label class="toggle">
-                            <input type="hidden" name="allow_edit" value="0">
-                            <input type="checkbox" name="allow_edit" value="1"
-                                   @checked(old('allow_edit', $survey->allow_edit))>
-                            اجازه ویرایش پاسخ
-                        </label>
-                        <label class="toggle">
-                            <input type="hidden" name="allow_partial" value="0">
-                            <input type="checkbox" name="allow_partial" value="1"
-                                   @checked(old('allow_partial', $survey->allow_partial))>
-                            ذخیره پاسخ های ناقص
-                        </label>
-                        <label class="toggle">
-                            <input type="hidden" name="shuffle_questions" value="0">
-                            <input type="checkbox" name="shuffle_questions" value="1"
-                                   @checked(old('shuffle_questions', $survey->shuffle_questions))>
-                            جابجایی ترتیب سوالات
-                        </label>
-                        <label class="toggle">
-                            <input type="hidden" name="shuffle_options" value="0">
-                            <input type="checkbox" name="shuffle_options" value="1"
-                                   @checked(old('shuffle_options', $survey->shuffle_options))>
-                            جابجایی ترتیب گزینه ها
-                        </label>
+            <section class="ss-card">
+                <div class="ss-card-head">
+                    <div class="ss-card-icon" aria-hidden="true">🔒</div>
+                    <div>
+                        <h3>حریم خصوصی و کنترل تکرار</h3>
+                        <p>این گزینه‌ها رفتار سیستم را مشخص می‌کنند؛ بخشی از آن‌ها نیاز به ماژول‌های دیگر (ورود کاربر، ثبت پاسخ در پایگاه) دارند.</p>
                     </div>
                 </div>
+                <div class="ss-toggle-grid">
+                    <label class="ss-toggle">
+                        <input type="hidden" name="require_auth" value="0">
+                        <input type="checkbox" name="require_auth" value="1" @checked(old('require_auth', $survey->require_auth))>
+                        <div>
+                            <strong>فقط کاربران واردشده</strong>
+                            <span class="desc">در صورت فعال بودن، بازدیدکننده بدون ورود به حساب نمی‌تواند به فرم عمومی دسترسی بگیرد (نیازمند سیستم ورود کاربر عادی).</span>
+                        </div>
+                    </label>
+                    <label class="ss-toggle">
+                        <input type="hidden" name="is_anonymous" value="0">
+                        <input type="checkbox" name="is_anonymous" value="1" @checked(old('is_anonymous', $survey->is_anonymous))>
+                        <div>
+                            <strong>پاسخ‌های ناشناس</strong>
+                            <span class="desc">برای ذخیره بدون شناسه شخصی (زمانی که ثبت پاسخ در سرور پیاده شود).</span>
+                        </div>
+                    </label>
+                    <label class="ss-toggle">
+                        <input type="hidden" name="track_location" value="0">
+                        <input type="checkbox" name="track_location" value="1" @checked(old('track_location', $survey->track_location))>
+                        <div>
+                            <strong>ثبت موقعیت جغرافیایی</strong>
+                            <span class="desc">در صورت پیاده‌سازی سمت مرورگر، موقعیت تقریبی با رضایت کاربر ذخیره می‌شود.</span>
+                        </div>
+                    </label>
+                    <label class="ss-toggle">
+                        <input type="hidden" name="prevent_multiple_submissions" value="0">
+                        <input type="checkbox" name="prevent_multiple_submissions" value="1" @checked(old('prevent_multiple_submissions', $survey->prevent_multiple_submissions))>
+                        <div>
+                            <strong>جلوگیری از ارسال چندباره</strong>
+                            <span class="desc">برای نظرسنجی‌های یک‌بارمصرف؛ نیازمند منطق ثبت پاسخ در بک‌اند.</span>
+                        </div>
+                    </label>
+                </div>
+            </section>
 
-                <div class="settings-section">
-                    <h3>نمایش نتایج</h3>
-                    <div class="settings-grid">
-                        <label class="toggle">
-                            <input type="hidden" name="show_results_after_submit" value="0">
-                            <input type="checkbox" name="show_results_after_submit" value="1"
-                                   @checked(old('show_results_after_submit', $survey->show_results_after_submit))>
-                            نمایش نتایج بعد از ارسال
-                        </label>
-                        <label class="form-field">
-                            <span>دسترسی نتایج</span>
-                            <select name="result_visibility">
-                                @foreach ($resultVisibilityOptions as $key => $label)
-                                    <option value="{{ $key }}" @selected(old('result_visibility', $survey->result_visibility) === $key)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @error('result_visibility', 'updateSurvey')
-                                <small class="helper-text" style="color: #dc2626;">{{ $message }}</small>
-                            @enderror
-                        </label>
+            <section class="ss-card">
+                <div class="ss-card-head">
+                    <div class="ss-card-icon" aria-hidden="true">✨</div>
+                    <div>
+                        <h3>تجربه پاسخ‌دهی</h3>
+                        <p>ترتیب سوالات و گزینه‌ها در صورت فعال بودن، هنگام باز شدن لینک عمومی به‌صورت تصادفی اعمال می‌شود.</p>
                     </div>
                 </div>
+                <div class="ss-toggle-grid">
+                    <label class="ss-toggle">
+                        <input type="hidden" name="allow_edit" value="0">
+                        <input type="checkbox" name="allow_edit" value="1" @checked(old('allow_edit', $survey->allow_edit))>
+                        <div>
+                            <strong>اجازه ویرایش پاسخ</strong>
+                            <span class="desc">در بازه ویرایش (در صورت تعیین)، امکان اصلاح پاسخ وجود داشته باشد.</span>
+                        </div>
+                    </label>
+                    <label class="ss-toggle">
+                        <input type="hidden" name="allow_partial" value="0">
+                        <input type="checkbox" name="allow_partial" value="1" @checked(old('allow_partial', $survey->allow_partial))>
+                        <div>
+                            <strong>ذخیره پاسخ ناقص</strong>
+                            <span class="desc">اجازه ذخیره میان‌باره قبل از ارسال نهایی.</span>
+                        </div>
+                    </label>
+                    <label class="ss-toggle">
+                        <input type="hidden" name="shuffle_questions" value="0">
+                        <input type="checkbox" name="shuffle_questions" value="1" @checked(old('shuffle_questions', $survey->shuffle_questions))>
+                        <div>
+                            <strong>ترتیب تصادفی سوالات</strong>
+                            <span class="desc">در لینک عمومی، هر بار ترتیب سوالات متفاوت دیده می‌شود.</span>
+                        </div>
+                    </label>
+                    <label class="ss-toggle">
+                        <input type="hidden" name="shuffle_options" value="0">
+                        <input type="checkbox" name="shuffle_options" value="1" @checked(old('shuffle_options', $survey->shuffle_options))>
+                        <div>
+                            <strong>ترتیب تصادفی گزینه‌ها</strong>
+                            <span class="desc">برای سوالات چندگزینه‌ای، ترتیب گزینه‌ها تصادفی می‌شود.</span>
+                        </div>
+                    </label>
+                </div>
+            </section>
 
-                <div class="settings-section">
-                    <h3>اعلان و پیام</h3>
-                    <div class="settings-grid">
-                        <label class="form-field">
-                            <span>ایمیل های دریافت اعلان</span>
-                            <input type="text" name="notification_emails"
-                                   value="{{ old('notification_emails', implode(', ', $survey->notification_emails ?? [])) }}"
-                                   placeholder="example@domain.com, ops@domain.com">
-                            <small class="helper-text">چند ایمیل را با کاما جدا کنید.</small>
-                            @error('notification_emails', 'updateSurvey')
-                                <small class="helper-text" style="color: #dc2626;">{{ $message }}</small>
-                            @enderror
-                        </label>
-                        <label class="form-field">
-                            <span>پیام تشکر بعد از ثبت</span>
-                            <input type="text" name="thank_you_message"
-                                   value="{{ old('thank_you_message', $survey->thank_you_message) }}">
-                        </label>
+            <section class="ss-card">
+                <div class="ss-card-head">
+                    <div class="ss-card-icon" aria-hidden="true">📊</div>
+                    <div>
+                        <h3>نمایش نتایج</h3>
+                        <p>تنظیمات نمایش نتایج پس از ارسال؛ بخش نمایش به کاربر نهایی در فرانت در آینده کامل می‌شود.</p>
                     </div>
                 </div>
+                <div class="ss-grid">
+                    <label class="ss-toggle" style="grid-column: 1 / -1;">
+                        <input type="hidden" name="show_results_after_submit" value="0">
+                        <input type="checkbox" name="show_results_after_submit" value="1" @checked(old('show_results_after_submit', $survey->show_results_after_submit))>
+                        <div>
+                            <strong>نمایش نتایج بعد از ارسال</strong>
+                            <span class="desc">در صورت پیاده‌سازی صفحه خلاصه، نتایج تجمیعی به پاسخ‌دهنده نشان داده شود.</span>
+                        </div>
+                    </label>
+                    <label class="ss-field">
+                        <span>دسترسی به نتایج</span>
+                        <select name="result_visibility">
+                            @foreach ($resultVisibilityOptions as $key => $label)
+                                <option value="{{ $key }}" @selected(old('result_visibility', $survey->result_visibility) === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('result_visibility', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                    </label>
+                </div>
+            </section>
 
-                <div class="form-field" style="margin-top: 1.25rem;">
-                    <span>گروه های مخاطب</span>
-                    <select name="audience_filters[]" multiple size="6">
-                        @foreach ($audiencePresets as $preset)
-                            <option value="{{ $preset }}" @selected(in_array($preset, old('audience_filters', $survey->audience_filters ?? []), true))>
-                                {{ $preset }}
-                            </option>
+            <section class="ss-card">
+                <div class="ss-card-head">
+                    <div class="ss-card-icon" aria-hidden="true">💬</div>
+                    <div>
+                        <h3>پیام پایان و اعلان</h3>
+                        <p>پیام تشکر بعد از اتمام مراحل در صفحه عمومی نمایش داده می‌شود. ایمیل‌ها برای اعلان‌های آینده ذخیره می‌شوند.</p>
+                    </div>
+                </div>
+                <div class="ss-grid">
+                    <label class="ss-field" style="grid-column: 1 / -1;">
+                        <span>پیام تشکر بعد از ثبت</span>
+                        <textarea class="ss-textarea-sm" name="thank_you_message" rows="3" maxlength="255" placeholder="مثلاً: از وقتی که گذاشتید متشکریم.">{{ old('thank_you_message', $survey->thank_you_message) }}</textarea>
+                        <span class="hint">حداکثر ۲۵۵ کاراکتر (مطابق محدودیت پایگاه داده).</span>
+                        @error('thank_you_message', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                    </label>
+                    <label class="ss-field" style="grid-column: 1 / -1;">
+                        <span>ایمیل‌های اعلان</span>
+                        <input type="text" name="notification_emails"
+                               value="{{ old('notification_emails', implode(', ', $survey->notification_emails ?? [])) }}"
+                               placeholder="example@domain.com, ops@domain.com">
+                        <span class="hint">چند ایمیل را با ویرگول انگلیسی جدا کنید.</span>
+                        @error('notification_emails', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                    </label>
+                </div>
+            </section>
+
+            <section class="ss-card">
+                <div class="ss-card-head">
+                    <div class="ss-card-icon" aria-hidden="true">👥</div>
+                    <div>
+                        <h3>فیلتر مخاطب و احراز هویت پرسنلی</h3>
+                        <p>مدیر می‌تواند مشخص کند کاربر با کد پرسنلی یا کد ملی وارد شود و فقط گروه‌های مجاز امکان شرکت داشته باشند.</p>
+                    </div>
+                </div>
+                <div class="ss-grid">
+                    <label class="ss-field">
+                        <span>روش احراز هویت در لینک عمومی</span>
+                        <select name="access_identity_mode" id="accessIdentityMode">
+                            @foreach ($identityModeOptions as $key => $label)
+                                <option value="{{ $key }}" @selected($selectedIdentityMode === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <span class="hint">اگر فیلتر مخاطب فعال باشد، این گزینه نباید روی «بدون احراز هویت» بماند.</span>
+                        @error('access_identity_mode', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                    </label>
+                </div>
+                <div class="ss-field" style="margin-top: 0.65rem;">
+                    <span>گروه‌های هدف</span>
+                    <div class="audience-mode-grid" id="audienceModesWrap">
+                        @foreach ($audiencePresets as $modeKey => $modeLabel)
+                            <label class="audience-mode-option">
+                                <input type="checkbox" name="audience_modes[]" value="{{ $modeKey }}"
+                                    @checked(in_array($modeKey, $selectedModes, true))
+                                    data-audience-toggle="{{ $modeKey }}">
+                                <span>{{ $modeLabel }}</span>
+                            </label>
                         @endforeach
-                    </select>
-                    <small class="helper-text">برای انتخاب چند مورد، کلید Ctrl را نگه دارید.</small>
-                    @error('audience_filters', 'updateSurvey')
-                        <small class="helper-text" style="color: #dc2626;">{{ $message }}</small>
+                    </div>
+                    @error('audience_modes', 'updateSurvey')
+                        <span class="hint" style="color: #dc2626;">{{ $message }}</span>
                     @enderror
                 </div>
 
+                <div class="audience-target" data-audience-target="unit">
+                    <label class="ss-field">
+                        <span>واحدهای مجاز</span>
+                        <select name="audience_unit_ids[]" multiple size="6">
+                            @foreach ($units as $unit)
+                                <option value="{{ $unit->id }}" @selected(in_array((string) $unit->id, array_map('strval', $selectedUnits), true))>
+                                    {{ $unit->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <span class="hint">فقط پرسنل واحدهای انتخاب‌شده مجاز خواهند بود.</span>
+                    </label>
+                </div>
+                <div class="audience-target" data-audience-target="gender">
+                    <label class="ss-field">
+                        <span>جنسیت‌های مجاز</span>
+                        <select name="audience_genders[]" multiple size="4">
+                            @foreach ($genderOptions as $genderKey => $genderLabel)
+                                <option value="{{ $genderKey }}" @selected(in_array($genderKey, $selectedGenders, true))>
+                                    {{ $genderLabel }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <span class="hint">برای «هر دو» زن و مرد، هر دو مورد را انتخاب کنید.</span>
+                    </label>
+                </div>
+                <div class="audience-target" data-audience-target="position">
+                    <label class="ss-field">
+                        <span>سمت‌های مجاز</span>
+                        <select name="audience_position_ids[]" multiple size="6">
+                            @foreach ($positions as $position)
+                                <option value="{{ $position->id }}" @selected(in_array((string) $position->id, array_map('strval', $selectedPositions), true))>
+                                    {{ $position->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+                </div>
+                <div class="audience-target" data-audience-target="personnel">
+                    <label class="ss-field">
+                        <span>افراد مجاز (انتخابی)</span>
+                        <select name="audience_personnel_ids[]" multiple size="8">
+                            @foreach ($personnelOptions as $person)
+                                @php
+                                    $fullName = trim($person->first_name . ' ' . $person->last_name);
+                                @endphp
+                                <option value="{{ $person->id }}" @selected(in_array((string) $person->id, array_map('strval', $selectedPersonnel), true))>
+                                    {{ $fullName }} - پرسنلی: {{ $person->personnel_code }} - ملی: {{ $person->national_code }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+                </div>
+            </section>
 
-                <div class="settings-section" id="survey-style-section">
-                    <h3>استایل نظرسنجی</h3>
-                    <div class="settings-grid" style="grid-template-columns: 1fr;">
-                        <div class="form-field">
-                            <span>انتخاب پس‌زمینه</span>
-                            <div class="bg-grid">
-                                <label class="bg-option">
-                                    <div class="helper-text">بدون تصویر</div>
-                                    <input type="radio" name="background_preset" value="none"
-                                        @checked(old('background_preset') === "none" || empty($survey->background_image))>
-                                </label>
-                                @foreach ($backgroundImages ?? [] as $image)
-                                    <label class="bg-option">
-                                        <img src="{{ asset('bg-images/' . $image) }}" alt="{{ $image }}">
-                                        <div class="helper-text">{{ $image }}</div>
-                                        <input type="radio" name="background_preset" value="{{ $image }}"
-                                            @checked(old('background_preset', $survey->background_image === "bg-images/" . $image ? $image : "") === $image)>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-                        <div class="form-field bg-upload">
-                            <span>آپلود پس‌زمینه دلخواه</span>
-                            <input type="file" name="background_upload" accept="image/*">
-                            <small class="helper-text">حداکثر ۵ مگابایت، فرمت‌های JPG/PNG/WEBP</small>
-                            @error('background_upload', 'updateSurvey')
-                                <small class="helper-text" style="color: #dc2626;">{{ $message }}</small>
-                            @enderror
-                        </div>
-                        @if (!empty($survey->background_image))
-                            <div class="bg-preview">
-                                <span class="helper-text">پس‌زمینه فعلی:</span>
-                                <img src="{{ asset($survey->background_image) }}" alt="پس‌زمینه نظرسنجی">
-                            </div>
-                        @endif
+            <section class="ss-card" id="survey-style-section">
+                <div class="ss-card-head">
+                    <div class="ss-card-icon" aria-hidden="true">🎨</div>
+                    <div>
+                        <h3>ظاهر صفحه عمومی</h3>
+                        <p>پس‌زمینه لینک عمومی؛ در صورت آپلود، فایل جدید جایگزین می‌شود مگر اینکه از پیش‌تنظیم‌ها یکی را انتخاب کنید.</p>
                     </div>
                 </div>
-                <div class="actions">
-                    <button type="submit" class="primary">ذخیره تنظیمات</button>
-                    <a href="{{ route('admin.surveys.index') }}" class="ghost">بازگشت</a>
+                <div class="ss-field">
+                    <span>پس‌زمینه</span>
+                    <div class="bg-grid">
+                        <label class="bg-option">
+                            <span class="cap">بدون تصویر</span>
+                            <input type="radio" name="background_preset" value="none"
+                                @checked(old('background_preset') === 'none' || (empty(old('background_preset')) && empty($survey->background_image))))>
+                        </label>
+                        @foreach ($backgroundImages ?? [] as $image)
+                            <label class="bg-option">
+                                <img src="{{ asset('bg-images/' . $image) }}" alt="">
+                                <span class="cap">{{ $image }}</span>
+                                <input type="radio" name="background_preset" value="{{ $image }}"
+                                    @checked(old('background_preset', str_starts_with((string) $survey->background_image, 'bg-images/') && ! str_contains((string) $survey->background_image, '/custom/') ? basename((string) $survey->background_image) : '') === $image)>
+                            </label>
+                        @endforeach
+                    </div>
                 </div>
-            </form>
-        </div>
+                <div class="bg-upload ss-field">
+                    <span>آپلود تصویر اختصاصی</span>
+                    <input type="file" name="background_upload" accept="image/*">
+                    <span class="hint">حداکثر حدود ۵ مگابایت؛ JPG، PNG یا WEBP.</span>
+                    @error('background_upload', 'updateSurvey')
+                        <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                    @enderror
+                </div>
+                @if (!empty($survey->background_image))
+                    <div class="bg-preview">
+                        <span class="hint">پیش‌نمایش فعلی:</span>
+                        <img src="{{ asset($survey->background_image) }}" alt="">
+                    </div>
+                @endif
+            </section>
+
+            <div class="ss-actions">
+                <button type="submit" class="primary">ذخیره تنظیمات</button>
+                <a href="{{ route('admin.surveys.index') }}" class="ghost">انصراف و بازگشت</a>
+            </div>
+        </form>
     </div>
+
     <script src="{{ asset('vendor/persian-datepicker/jquery.min.js') }}"></script>
     <script src="{{ asset('vendor/persian-datepicker/persian-date.min.js') }}"></script>
     <script src="{{ asset('vendor/persian-datepicker/persian-datepicker.min.js') }}"></script>
@@ -413,6 +757,21 @@
                     calendarSwitch: false
                 }
             });
+
+            const modeCheckboxes = Array.from(document.querySelectorAll('[data-audience-toggle]'));
+            const identityMode = document.getElementById('accessIdentityMode');
+            const syncAudienceTargets = () => {
+                const activeModes = modeCheckboxes.filter((input) => input.checked).map((input) => input.value);
+                document.querySelectorAll('[data-audience-target]').forEach((section) => {
+                    const target = section.getAttribute('data-audience-target');
+                    section.classList.toggle('is-hidden', !activeModes.includes(target));
+                });
+                if (activeModes.length === 0 && identityMode && identityMode.value !== 'none') {
+                    identityMode.value = 'none';
+                }
+            };
+            modeCheckboxes.forEach((checkbox) => checkbox.addEventListener('change', syncAudienceTargets));
+            syncAudienceTargets();
         });
     </script>
 @endsection

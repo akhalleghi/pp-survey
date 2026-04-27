@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Personnel;
+use App\Models\Position;
 use App\Models\Survey;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
@@ -64,7 +66,7 @@ class SurveyController extends Controller
             'response_edit_window_hours' => null,
             'is_active' => false,
             'is_anonymous' => true,
-            'require_auth' => true,
+            'require_auth' => false,
             'track_location' => false,
             'prevent_multiple_submissions' => true,
             'allow_edit' => true,
@@ -78,6 +80,7 @@ class SurveyController extends Controller
             'start_at' => null,
             'end_at' => null,
             'thank_you_message' => null,
+            'intro_text' => null,
             'notification_emails' => [],
         ]);
 
@@ -88,16 +91,55 @@ class SurveyController extends Controller
 
     public function edit(Survey $survey): View
     {
-        $audiencePresets = ['همه کاربران', 'واحد سازمانی', 'واحد فروش', 'واحد مالی', 'واحد منابع انسانی', 'فقط مدیران'];
+        $audiencePresets = [
+            'unit' => 'براساس واحد',
+            'gender' => 'براساس جنسیت',
+            'position' => 'براساس سمت',
+            'personnel' => 'انتخابی توسط ادمین',
+        ];
         $statusOptions = ['draft' => 'در حال آماده سازی', 'active' => 'فعال', 'closed' => 'بسته شده'];
         $resultVisibilityOptions = ['private' => 'خصوصی', 'public' => 'عمومی', 'after_close' => 'پس از بسته شدن'];
+        $identityModeOptions = [
+            'none' => 'بدون احراز هویت پرسنلی',
+            'personnel_code' => 'فقط کد پرسنلی',
+            'national_code' => 'فقط کد ملی',
+            'either' => 'کد پرسنلی یا کد ملی',
+        ];
+        $genderOptions = [
+            'male' => 'مرد',
+            'female' => 'زن',
+            'other' => 'سایر',
+        ];
 
         $backgroundImages = collect(glob(public_path('bg-images/*.{jpg,jpeg,png,webp,gif}'), GLOB_BRACE))
             ->map(fn ($path) => basename($path))
             ->values()
             ->all();
+        $units = Unit::query()->orderBy('name')->get(['id', 'name']);
+        $positions = Position::query()->orderBy('name')->get(['id', 'name']);
+        $personnelOptions = Personnel::query()
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get(['id', 'first_name', 'last_name', 'personnel_code', 'national_code']);
 
-        return view('admin.surveys-settings', compact('survey', 'audiencePresets', 'statusOptions', 'resultVisibilityOptions', 'backgroundImages'));
+        $audienceConfig = $this->normalizeAudienceConfig($survey->audience_filters);
+
+        return view(
+            'admin.surveys-settings',
+            compact(
+                'survey',
+                'audiencePresets',
+                'statusOptions',
+                'resultVisibilityOptions',
+                'identityModeOptions',
+                'genderOptions',
+                'backgroundImages',
+                'units',
+                'positions',
+                'personnelOptions',
+                'audienceConfig'
+            )
+        );
     }
 
     public function update(Request $request, Survey $survey): RedirectResponse
@@ -145,9 +187,13 @@ class SurveyController extends Controller
             return null;
         };
 
+        $blankToNull = static fn ($v) => ($v === '' || $v === null) ? null : $v;
+
         $request->merge([
             'start_at' => $normalizeDateInput($request->input('start_at')),
             'end_at' => $normalizeDateInput($request->input('end_at')),
+            'response_limit' => $blankToNull($request->input('response_limit')),
+            'response_edit_window_hours' => $blankToNull($request->input('response_edit_window_hours')),
         ]);
 
         $validated = $request->validateWithBag('updateSurvey', [
@@ -167,13 +213,42 @@ class SurveyController extends Controller
             'result_visibility' => ['required', Rule::in(['private', 'public', 'after_close'])],
             'is_anonymous' => ['nullable', 'boolean'],
             'require_auth' => ['nullable', 'boolean'],
-            'audience_filters' => ['nullable', 'array'],
-            'audience_filters.*' => ['string', 'max:255'],
+            'audience_modes' => ['nullable', 'array'],
+            'audience_modes.*' => ['string', Rule::in(['unit', 'gender', 'position', 'personnel'])],
+            'access_identity_mode' => ['required', Rule::in(['none', 'personnel_code', 'national_code', 'either'])],
+            'audience_unit_ids' => ['nullable', 'array'],
+            'audience_unit_ids.*' => ['integer', 'exists:units,id'],
+            'audience_genders' => ['nullable', 'array'],
+            'audience_genders.*' => ['string', Rule::in(['male', 'female', 'other'])],
+            'audience_position_ids' => ['nullable', 'array'],
+            'audience_position_ids.*' => ['integer', 'exists:positions,id'],
+            'audience_personnel_ids' => ['nullable', 'array'],
+            'audience_personnel_ids.*' => ['integer', 'exists:personnel,id'],
             'thank_you_message' => ['nullable', 'string', 'max:255'],
+            'intro_text' => ['nullable', 'string', 'max:8000'],
             'notification_emails' => ['nullable', 'string', 'max:1000'],
             'background_preset' => ['nullable', Rule::in($backgroundPresetOptions)],
             'background_upload' => ['nullable', 'file', 'image', 'max:5120'],
         ]);
+
+        $selectedModes = collect($validated['audience_modes'] ?? [])
+            ->unique()
+            ->values()
+            ->all();
+        if (!empty($selectedModes) && ($validated['access_identity_mode'] ?? 'none') === 'none') {
+            return back()
+                ->withErrors(['access_identity_mode' => 'برای اعمال فیلتر مخاطب، نوع احراز هویت پرسنلی را مشخص کنید.'], 'updateSurvey')
+                ->withInput();
+        }
+
+        $audienceFilters = [
+            'identity_mode' => $validated['access_identity_mode'] ?? 'none',
+            'modes' => $selectedModes,
+            'unit_ids' => in_array('unit', $selectedModes, true) ? array_values(array_unique(array_map('intval', $validated['audience_unit_ids'] ?? []))) : [],
+            'genders' => in_array('gender', $selectedModes, true) ? array_values(array_unique($validated['audience_genders'] ?? [])) : [],
+            'position_ids' => in_array('position', $selectedModes, true) ? array_values(array_unique(array_map('intval', $validated['audience_position_ids'] ?? []))) : [],
+            'personnel_ids' => in_array('personnel', $selectedModes, true) ? array_values(array_unique(array_map('intval', $validated['audience_personnel_ids'] ?? []))) : [],
+        ];
 
         $notificationEmails = [];
         if (!empty($validated['notification_emails'])) {
@@ -182,7 +257,7 @@ class SurveyController extends Controller
         $invalidEmails = array_filter($notificationEmails, fn ($email) => filter_var($email, FILTER_VALIDATE_EMAIL) === false);
         if (!empty($invalidEmails)) {
             return back()
-                ->withErrors(['notification_emails' => 'فرمت ایمیل ها معتبر نیست.'])
+                ->withErrors(['notification_emails' => 'فرمت ایمیل‌ها معتبر نیست.'], 'updateSurvey')
                 ->withInput();
         }
 
@@ -204,8 +279,9 @@ class SurveyController extends Controller
             'shuffle_options' => $request->boolean('shuffle_options'),
             'show_results_after_submit' => $request->boolean('show_results_after_submit'),
             'result_visibility' => $validated['result_visibility'],
-            'audience_filters' => $validated['audience_filters'] ?? [],
+            'audience_filters' => $audienceFilters,
             'thank_you_message' => $validated['thank_you_message'] ?? null,
+            'intro_text' => $validated['intro_text'] ?? null,
             'notification_emails' => $notificationEmails,
         ]);
 
@@ -253,7 +329,40 @@ class SurveyController extends Controller
 
         return redirect()
             ->route('admin.surveys.index')
-            ->with('status', '???? ??????? ????? ??.');
+            ->with('status', 'لینک عمومی نظرسنجی آماده است.');
+    }
+
+    private function normalizeAudienceConfig(mixed $value): array
+    {
+        $fallback = [
+            'identity_mode' => 'none',
+            'modes' => [],
+            'unit_ids' => [],
+            'genders' => [],
+            'position_ids' => [],
+            'personnel_ids' => [],
+        ];
+
+        if (!is_array($value)) {
+            return $fallback;
+        }
+
+        // Backward compatibility: old format was a list of labels.
+        $isList = array_keys($value) === range(0, count($value) - 1);
+        if ($isList) {
+            return $fallback;
+        }
+
+        return [
+            'identity_mode' => in_array($value['identity_mode'] ?? 'none', ['none', 'personnel_code', 'national_code', 'either'], true)
+                ? $value['identity_mode']
+                : 'none',
+            'modes' => array_values(array_filter((array) ($value['modes'] ?? []), fn ($mode) => in_array($mode, ['unit', 'gender', 'position', 'personnel'], true))),
+            'unit_ids' => array_values(array_map('intval', (array) ($value['unit_ids'] ?? []))),
+            'genders' => array_values(array_filter((array) ($value['genders'] ?? []), fn ($gender) => in_array($gender, ['male', 'female', 'other'], true))),
+            'position_ids' => array_values(array_map('intval', (array) ($value['position_ids'] ?? []))),
+            'personnel_ids' => array_values(array_map('intval', (array) ($value['personnel_ids'] ?? []))),
+        ];
     }
 
 }
