@@ -365,6 +365,22 @@
                                 @endif
                             </div>
                             <div class="form-control">
+                                <label for="survey-footer-text">متن فوتر فرم نظرسنجی</label>
+                                <input
+                                    id="survey-footer-text"
+                                    type="text"
+                                    name="survey_footer_text"
+                                    value="{{ old('survey_footer_text', $appSettings['survey_footer_text'] ?? 'طراحی و توسعه توسط واحد فناوری اطلاعات توسعه نرم افزار') }}"
+                                    class="{{ $brandingErrors->has('survey_footer_text') ? 'error' : '' }}"
+                                    placeholder="متن پایین فرم عمومی نظرسنجی"
+                                >
+                                @if ($brandingErrors->has('survey_footer_text'))
+                                    <span class="error-text">{{ $brandingErrors->first('survey_footer_text') }}</span>
+                                @else
+                                    <span class="error-text" style="color: var(--muted);">این متن در پایین صفحه تکمیل فرم نظرسنجی نمایش داده می‌شود.</span>
+                                @endif
+                            </div>
+                            <div class="form-control">
                                 <label for="logo-upload">لوگوی جدید (PNG یا JPG)</label>
                                 <input
                                     id="logo-upload"

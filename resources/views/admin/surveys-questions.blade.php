@@ -4,6 +4,7 @@
 @section('page-description', 'مدیریت و طراحی انواع سوالات برای این نظرسنجی.')
 
 @section('content')
+    <link rel="stylesheet" href="{{ asset('vendor/persian-datepicker-behzadi/persianDatepicker-default.css') }}">
     <style>
         :root {
             --panel: #fff;
@@ -75,6 +76,17 @@
             cursor: pointer;
             font-size: 0.8rem;
         }
+        .question-actions a {
+            border: none;
+            border-radius: 12px;
+            padding: 0.45rem 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
         .question-actions .danger {
             background: rgba(220, 38, 38, 0.15);
             color: #b91c1c;
@@ -82,6 +94,12 @@
         .question-actions .ghost {
             background: rgba(15, 23, 42, 0.08);
             color: var(--slate);
+        }
+        .question-actions .disabled {
+            background: rgba(148, 163, 184, 0.25);
+            color: #64748b;
+            cursor: not-allowed;
+            pointer-events: none;
         }
         .question-options {
             display: flex;
@@ -168,6 +186,9 @@
             gap: 0.5rem;
             align-items: center;
         }
+        .option-row input {
+            font-size: 0.86rem;
+        }
         .option-row button {
             border: none;
             background: rgba(15, 23, 42, 0.08);
@@ -192,11 +213,27 @@
             .designer-side {
                 position: static;
             }
+            .type-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 640px) {
+            .type-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .option-row {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 
     <div class="designer-wrap">
         <section class="designer-canvas">
+            @if (session('status'))
+                <div style="border:1px solid rgba(22,163,74,.28); background:rgba(22,163,74,.08); color:#166534; border-radius:14px; padding:.7rem .9rem; font-size:.9rem;">
+                    {{ session('status') }}
+                </div>
+            @endif
             <div class="survey-header">
                 <div>
                     <h2>طراحی سوالات: {{ $survey->title }}</h2>
@@ -219,6 +256,14 @@
                             </div>
                         </div>
                         <div class="question-actions">
+                            @php
+                                $hasAnswers = $question->answers->isNotEmpty();
+                            @endphp
+                            @if ($hasAnswers)
+                                <a class="ghost disabled" title="به دلیل ثبت پاسخ، ویرایش این سوال غیرفعال است.">ویرایش</a>
+                            @else
+                                <a class="ghost" href="{{ route('admin.surveys.questions.edit', [$survey, $question]) }}">ویرایش</a>
+                            @endif
                             <form method="POST" action="{{ route('admin.surveys.questions.destroy', [$survey, $question]) }}">
                                 @csrf
                                 @method('DELETE')
@@ -279,10 +324,10 @@
                             @endforeach
                         </div>
                     @endif
-                    @if (in_array($question->type, ['multiple_choice', 'checkboxes', 'dropdown'], true))
+                    @if (in_array($question->type, ['multiple_choice', 'checkboxes', 'dropdown', 'rating', 'yes_no', 'linear_scale'], true))
                         <div class="question-options">
                             @foreach ($question->options as $option)
-                                <span>{{ $option->label }}</span>
+                                <span>{{ $option->label }} <small style="color:var(--muted)">({{ $option->value }})</small></span>
                             @endforeach
                         </div>
                     @endif
@@ -366,10 +411,10 @@
                             <input type="number" min="1" name="settings[rating_step]" placeholder="گام امتیاز">
                         </div>
                         <div data-setting-group="date">
-                            <input type="text" name="settings[min_date]" placeholder="حداقل تاریخ (مثلاً 1403/01/01)">
+                            <input type="text" class="jalali-picker-input" name="settings[min_date]" placeholder="حداقل تاریخ (مثلاً 1403/01/01)">
                         </div>
                         <div data-setting-group="date">
-                            <input type="text" name="settings[max_date]" placeholder="حداکثر تاریخ (مثلاً 1403/12/29)">
+                            <input type="text" class="jalali-picker-input" name="settings[max_date]" placeholder="حداکثر تاریخ (مثلاً 1403/12/29)">
                         </div>
                         <div data-setting-group="choice">
                             <input type="number" min="1" name="settings[min_choices]" placeholder="حداقل انتخاب">
@@ -381,16 +426,16 @@
                 </div>
 
                 <div class="form-field" id="optionsWrapper" style="display:none;">
-                    <label>گزینه ها</label>
+                    <label>گزینه‌ها (متن قابل نمایش + مقدار ذخیره‌سازی)</label>
                     <div class="option-list" id="optionList">
                         <div class="option-row">
-                            <input type="text" name="options[0][label]" placeholder="گزینه ۱">
-                            <input type="text" name="options[0][value]" placeholder="مقدار">
+                            <input type="text" name="options[0][label]" placeholder="مثلاً خیلی خوب">
+                            <input type="text" name="options[0][value]" placeholder="مثلاً 1">
                             <button type="button" class="remove-option">حذف</button>
                         </div>
                         <div class="option-row">
-                            <input type="text" name="options[1][label]" placeholder="گزینه ۲">
-                            <input type="text" name="options[1][value]" placeholder="مقدار">
+                            <input type="text" name="options[1][label]" placeholder="مثلاً خوب">
+                            <input type="text" name="options[1][value]" placeholder="مثلاً 2">
                             <button type="button" class="remove-option">حذف</button>
                         </div>
                     </div>
@@ -405,8 +450,27 @@
         </aside>
     </div>
 
+    <script src="{{ asset('vendor/persian-datepicker-behzadi/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ asset('vendor/persian-datepicker-behzadi/persianDatepicker.min.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const initPersianDatepickerInputs = () => {
+                if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.persianDatepicker) {
+                    return;
+                }
+
+                window.jQuery('.jalali-picker-input').each(function () {
+                    window.jQuery(this).persianDatepicker({
+                        formatDate: 'YYYY/0M/0D',
+                        closeOnBlur: true,
+                        selectedBefore: !!this.value,
+                        selectedDate: this.value || null,
+                    });
+                });
+            };
+
+            initPersianDatepickerInputs();
+
             const typeButtons = document.querySelectorAll('.type-btn[data-type]');
             const typeInput = document.getElementById('questionTypeInput');
             const optionsWrapper = document.getElementById('optionsWrapper');
@@ -419,10 +483,14 @@
                 multiple_choice: ['choice'],
                 checkboxes: ['choice'],
                 dropdown: ['choice'],
-                rating: ['rating'],
+                rating: ['choice', 'rating'],
                 number: ['number'],
                 email: [],
-                date: ['date']
+                date: ['date'],
+                phone: ['text'],
+                url: ['text'],
+                yes_no: ['choice'],
+                linear_scale: ['choice', 'rating']
             };
 
             const setActiveType = (type, hasOptions) => {
@@ -431,6 +499,7 @@
                 optionsWrapper.style.display = hasOptions ? 'block' : 'none';
                 optionList.querySelectorAll('input').forEach((input) => {
                     input.disabled = !hasOptions;
+                    input.required = hasOptions;
                 });
                 const activeGroups = settingsGroups[type] || [];
                 document.querySelectorAll('[data-setting-group]').forEach((el) => {
@@ -468,8 +537,8 @@
                 const row = document.createElement('div');
                 row.className = 'option-row';
                 row.innerHTML = `
-                    <input type="text" name="options[0][label]" placeholder="گزینه جدید">
-                    <input type="text" name="options[0][value]" placeholder="مقدار">
+                    <input type="text" name="options[0][label]" placeholder="متن گزینه" required>
+                    <input type="text" name="options[0][value]" placeholder="مقدار ذخیره" required>
                     <button type="button" class="remove-option">حذف</button>
                 `;
                 optionList.appendChild(row);

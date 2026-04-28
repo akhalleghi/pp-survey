@@ -33,4 +33,9 @@ class SurveyQuestion extends Model
     {
         return $this->hasMany(SurveyQuestionOption::class, 'question_id')->orderBy('position');
     }
+
+    public function answers()
+    {
+        return $this->hasMany(SurveyResponseAnswer::class, 'question_id');
+    }
 }

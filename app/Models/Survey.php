@@ -68,4 +68,9 @@ class Survey extends Model
     {
         return $this->hasMany(SurveyQuestion::class)->orderBy('position');
     }
+
+    public function responses()
+    {
+        return $this->hasMany(SurveyResponse::class)->latest();
+    }
 }

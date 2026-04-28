@@ -17,6 +17,8 @@ Route::get('/', function () {
 });
 
 Route::get('surveys/public/{token}', [PublicSurveyController::class, 'show'])->name('surveys.public.show');
+Route::post('surveys/public/{token}/draft', [PublicSurveyController::class, 'saveDraft'])->name('surveys.public.draft');
+Route::post('surveys/public/{token}/submit', [PublicSurveyController::class, 'submit'])->name('surveys.public.submit');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -36,8 +38,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('surveys/{survey}/settings', [SurveyController::class, 'edit'])->name('surveys.edit');
         Route::resource('surveys', SurveyController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::post('surveys/{survey}/generate-link', [SurveyController::class, 'generateLink'])->name('surveys.generate-link');
+        Route::get('surveys/{survey}/report', [SurveyController::class, 'report'])->name('surveys.report');
+        Route::get('surveys/{survey}/report/export/excel', [SurveyController::class, 'exportReportExcel'])->name('surveys.report.export.excel');
+        Route::get('surveys/{survey}/report/{response}/edit', [SurveyController::class, 'editResponse'])->name('surveys.report.responses.edit');
+        Route::put('surveys/{survey}/report/{response}', [SurveyController::class, 'updateResponse'])->name('surveys.report.responses.update');
+        Route::delete('surveys/{survey}/report/{response}', [SurveyController::class, 'destroyResponse'])->name('surveys.report.responses.destroy');
         Route::get('surveys/{survey}/questions', [SurveyQuestionController::class, 'index'])->name('surveys.questions.index');
         Route::post('surveys/{survey}/questions', [SurveyQuestionController::class, 'store'])->name('surveys.questions.store');
+        Route::get('surveys/{survey}/questions/{question}/edit', [SurveyQuestionController::class, 'edit'])->name('surveys.questions.edit');
+        Route::put('surveys/{survey}/questions/{question}', [SurveyQuestionController::class, 'update'])->name('surveys.questions.update');
         Route::delete('surveys/{survey}/questions/{question}', [SurveyQuestionController::class, 'destroy'])->name('surveys.questions.destroy');
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');

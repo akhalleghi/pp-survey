@@ -6,12 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Models\Personnel;
 use App\Models\Position;
 use App\Models\Survey;
+use App\Models\SurveyResponse;
+use App\Models\SurveyResponseAnswer;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SurveyController extends Controller
 {
@@ -22,6 +31,9 @@ class SurveyController extends Controller
         $statusFilter = in_array($request->query('status'), $allowedStatuses, true) ? $request->query('status') : null;
 
         $surveys = Survey::with('unit')
+            ->withCount([
+                'responses as submitted_responses_count' => fn ($q) => $q->where('status', 'submitted'),
+            ])
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($nested) use ($search) {
                     $nested->where('title', 'like', "%{$search}%")
@@ -38,7 +50,7 @@ class SurveyController extends Controller
         $avgQuestions = Survey::avg('questions_count') ?? 0;
         $metrics = [
             'active' => Survey::where('status', 'active')->count(),
-            'responses' => Survey::sum('responses_count'),
+            'responses' => SurveyResponse::where('status', 'submitted')->count(),
             'avg_questions' => round($avgQuestions, 1),
             'closed' => Survey::where('status', 'closed')->count(),
         ];
@@ -330,6 +342,342 @@ class SurveyController extends Controller
         return redirect()
             ->route('admin.surveys.index')
             ->with('status', 'لینک عمومی نظرسنجی آماده است.');
+    }
+
+    public function report(Survey $survey): View
+    {
+        $survey->load('unit');
+
+        $responses = SurveyResponse::query()
+            ->where('survey_id', $survey->id)
+            ->where('status', 'submitted')
+            ->with([
+                'personnel.unit',
+                'personnel.position',
+                'answers.question.options',
+                'answers.option',
+            ])
+            ->latest('submitted_at')
+            ->paginate(20);
+
+        return view('admin.surveys-report', compact('survey', 'responses'));
+    }
+
+    public function exportReportExcel(Survey $survey): BinaryFileResponse
+    {
+        $survey->load(['unit', 'questions.options']);
+        $responses = SurveyResponse::query()
+            ->where('survey_id', $survey->id)
+            ->where('status', 'submitted')
+            ->with([
+                'personnel.unit',
+                'personnel.position',
+                'answers.question.options',
+                'answers.option',
+            ])
+            ->latest('submitted_at')
+            ->get();
+
+        $questions = $survey->questions->sortBy('position')->values();
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('گزارش نظرسنجی');
+        $sheet->setRightToLeft(true);
+
+        $headers = [
+            'شناسه پاسخ',
+            'نام پاسخ‌دهنده',
+            'وضعیت',
+            'کد پرسنلی',
+            'کد ملی',
+            'واحد',
+            'سمت',
+            'زمان ثبت',
+        ];
+        foreach ($questions as $question) {
+            $headers[] = $question->title;
+        }
+
+        foreach ($headers as $index => $header) {
+            $cell = Coordinate::stringFromColumnIndex($index + 1) . '1';
+            $sheet->setCellValue($cell, $header);
+        }
+
+        $row = 2;
+        foreach ($responses as $response) {
+            $answersByQuestionId = $response->answers->keyBy('question_id');
+            $baseCells = [
+                $response->id,
+                $response->respondent_name ?: ($response->personnel ? trim($response->personnel->first_name . ' ' . $response->personnel->last_name) : 'ناشناس'),
+                $response->status === 'submitted' ? 'ثبت نهایی' : 'پیش‌نویس',
+                $response->personnel?->personnel_code ?: '-',
+                $response->personnel?->national_code ?: '-',
+                $response->personnel?->unit?->name ?: '-',
+                $response->personnel?->position?->name ?: '-',
+                $response->submitted_at ? jalali_date($response->submitted_at, 'Y/m/d H:i') : '-',
+            ];
+
+            foreach ($baseCells as $index => $value) {
+                $cell = Coordinate::stringFromColumnIndex($index + 1) . $row;
+                $sheet->setCellValue($cell, (string) $value);
+            }
+
+            $col = count($baseCells) + 1;
+            foreach ($questions as $question) {
+                /** @var SurveyResponseAnswer|null $answer */
+                $answer = $answersByQuestionId->get($question->id);
+                $cell = Coordinate::stringFromColumnIndex($col) . $row;
+                $sheet->setCellValue($cell, $answer ? $this->resolveAnswerDisplayValue($answer) : '-');
+                $col++;
+            }
+            $row++;
+        }
+
+        $lastColumn = Coordinate::stringFromColumnIndex(count($headers));
+        $lastRow = max(1, $row - 1);
+        $sheet->getStyle("A1:{$lastColumn}1")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '1F2937'],
+            ],
+        ]);
+
+        $sheet->getStyle("A2:{$lastColumn}{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+        $sheet->getStyle("A2:{$lastColumn}{$lastRow}")->getAlignment()->setWrapText(true);
+        $sheet->getStyle("A1:{$lastColumn}{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(
+            \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN
+        );
+        $sheet->freezePane('A2');
+        $sheet->setAutoFilter("A1:{$lastColumn}1");
+
+        for ($column = 1; $column <= count($headers); $column++) {
+            $columnLetter = Coordinate::stringFromColumnIndex($column);
+            $sheet->getColumnDimension($columnLetter)->setAutoSize(true);
+        }
+
+        $fileName = 'survey-report-' . ($survey->id) . '-' . now()->format('Ymd-His') . '.xlsx';
+        $tempPath = storage_path('app/' . Str::random(24) . '-' . $fileName);
+        (new Xlsx($spreadsheet))->save($tempPath);
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
+
+        return response()->download($tempPath, $fileName)->deleteFileAfterSend(true);
+    }
+
+    public function editResponse(Survey $survey, SurveyResponse $response): View
+    {
+        if ($response->survey_id !== $survey->id || $response->status !== 'submitted') {
+            abort(404);
+        }
+
+        $survey->load(['questions.options']);
+        $response->load([
+            'personnel.unit',
+            'personnel.position',
+            'answers.question.options',
+            'answers.option',
+        ]);
+
+        $existingAnswers = [];
+        foreach ($response->answers as $answer) {
+            $existingAnswers[(string) $answer->question_id] = [
+                'option_id' => $answer->option_id,
+                'option_ids' => $answer->answer_json['option_ids'] ?? [],
+                'text' => $answer->answer_text,
+                'number' => $answer->answer_number,
+                'date' => $answer->answer_date?->format('Y-m-d'),
+            ];
+        }
+
+        return view('admin.surveys-report-edit', compact('survey', 'response', 'existingAnswers'));
+    }
+
+    public function updateResponse(Request $request, Survey $survey, SurveyResponse $response): RedirectResponse
+    {
+        if ($response->survey_id !== $survey->id || $response->status !== 'submitted') {
+            abort(404);
+        }
+
+        $survey->load(['questions.options']);
+        $answersInput = $request->input('answers', []);
+        if (!is_array($answersInput)) {
+            return back()->withErrors(['answers' => 'فرمت پاسخ‌ها معتبر نیست.'])->withInput();
+        }
+
+        DB::transaction(function () use ($response, $survey, $answersInput) {
+            $saved = 0;
+            foreach ($survey->questions as $question) {
+                $raw = $answersInput[$question->id] ?? null;
+                $normalized = $this->normalizeResponseAnswer($question, $raw);
+                if ($normalized === null) {
+                    SurveyResponseAnswer::where('response_id', $response->id)
+                        ->where('question_id', $question->id)
+                        ->delete();
+                    continue;
+                }
+                SurveyResponseAnswer::updateOrCreate(
+                    ['response_id' => $response->id, 'question_id' => $question->id],
+                    $normalized
+                );
+                $saved++;
+            }
+
+            $response->update([
+                'answers_count' => $saved,
+                'last_seen_at' => now(),
+            ]);
+        });
+
+        return redirect()
+            ->route('admin.surveys.report', $survey)
+            ->with('status', 'پاسخ انتخاب‌شده با موفقیت ویرایش شد.');
+    }
+
+    public function destroyResponse(Survey $survey, SurveyResponse $response): RedirectResponse
+    {
+        if ($response->survey_id !== $survey->id || $response->status !== 'submitted') {
+            abort(404);
+        }
+
+        $response->delete();
+        $survey->update([
+            'responses_count' => SurveyResponse::where('survey_id', $survey->id)
+                ->where('status', 'submitted')
+                ->count(),
+        ]);
+
+        return redirect()
+            ->route('admin.surveys.report', $survey)
+            ->with('status', 'پاسخ با موفقیت حذف شد.');
+    }
+
+    private function normalizeResponseAnswer($question, mixed $raw): ?array
+    {
+        $base = [
+            'option_id' => null,
+            'answer_text' => null,
+            'answer_number' => null,
+            'answer_date' => null,
+            'answer_json' => null,
+        ];
+
+        if ($raw === null || $raw === '' || $raw === []) {
+            return null;
+        }
+
+        if (in_array($question->type, ['multiple_choice', 'dropdown', 'rating', 'yes_no', 'linear_scale'], true)) {
+            $optionId = (int) (is_array($raw) ? ($raw['option_id'] ?? 0) : $raw);
+            if ($optionId <= 0) {
+                return null;
+            }
+
+            return array_merge($base, ['option_id' => $optionId]);
+        }
+
+        if ($question->type === 'checkboxes') {
+            $optionIds = is_array($raw) ? ($raw['option_ids'] ?? $raw) : [];
+            $optionIds = array_values(array_unique(array_filter(array_map('intval', (array) $optionIds), fn ($id) => $id > 0)));
+            if (empty($optionIds)) {
+                return null;
+            }
+
+            return array_merge($base, ['answer_json' => ['option_ids' => $optionIds]]);
+        }
+
+        if ($question->type === 'number') {
+            $value = is_array($raw) ? ($raw['value'] ?? null) : $raw;
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            return array_merge($base, ['answer_number' => (float) $value]);
+        }
+
+        if ($question->type === 'date') {
+            $value = is_array($raw) ? ($raw['value'] ?? null) : $raw;
+            $value = trim((string) $value);
+            if ($value === '') {
+                return null;
+            }
+            $dateValue = preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) ? $value : null;
+
+            return array_merge($base, ['answer_date' => $dateValue, 'answer_text' => $value]);
+        }
+
+        $value = is_array($raw) ? ($raw['value'] ?? null) : $raw;
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        return array_merge($base, ['answer_text' => $value]);
+    }
+
+    private function resolveAnswerDisplayValue(SurveyResponseAnswer $answer): string
+    {
+        if ($answer->option) {
+            return (string) $answer->option->label;
+        }
+
+        if (!empty($answer->answer_json['option_ids'])) {
+            $optionLabels = collect($answer->question?->options ?? [])
+                ->whereIn('id', $answer->answer_json['option_ids'])
+                ->pluck('label')
+                ->values()
+                ->all();
+
+            return !empty($optionLabels) ? implode('، ', $optionLabels) : 'چندگزینه‌ای';
+        }
+
+        if (
+            in_array($answer->question?->type, ['multiple_choice', 'dropdown', 'checkboxes'], true) &&
+            !is_null($answer->answer_number) &&
+            $answer->question?->options?->isNotEmpty()
+        ) {
+            $rawNumber = (int) $answer->answer_number;
+            $byId = $answer->question->options->firstWhere('id', $rawNumber);
+            if ($byId) {
+                return (string) $byId->label;
+            }
+            $byPosition = $answer->question->options->firstWhere('position', $rawNumber);
+            return (string) ($byPosition?->label ?? $rawNumber);
+        }
+
+        if ($answer->question?->type === 'date') {
+            if ($answer->answer_date) {
+                return (string) jalali_date($answer->answer_date, 'Y/m/d');
+            }
+            if (filled($answer->answer_text)) {
+                return (string) jalali_date($answer->answer_text, 'Y/m/d');
+            }
+        }
+
+        if (filled($answer->answer_text)) {
+            $text = trim((string) $answer->answer_text);
+            if (preg_match('/^\d{4}[-\/]\d{2}[-\/]\d{2}/', $text)) {
+                return (string) jalali_date($text, 'Y/m/d');
+            }
+            return $text;
+        }
+
+        if (!is_null($answer->answer_number)) {
+            if ($answer->question?->type === 'rating') {
+                return 'امتیاز ' . $answer->answer_number . ' از 5';
+            }
+            return (string) $answer->answer_number;
+        }
+
+        if ($answer->answer_date) {
+            return (string) jalali_date($answer->answer_date, 'Y/m/d');
+        }
+
+        return '-';
     }
 
     private function normalizeAudienceConfig(mixed $value): array

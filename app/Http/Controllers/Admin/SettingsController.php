@@ -51,11 +51,13 @@ class SettingsController extends Controller
     {
         $validated = $request->validateWithBag('updateBranding', [
             'app_name' => ['required', 'string', 'max:255'],
+            'survey_footer_text' => ['nullable', 'string', 'max:255'],
             'logo' => ['nullable', 'image', 'max:2048'],
         ]);
 
         $payload = [
             'app_name' => $validated['app_name'],
+            'survey_footer_text' => $validated['survey_footer_text'] ?? null,
         ];
 
         if ($request->hasFile('logo')) {

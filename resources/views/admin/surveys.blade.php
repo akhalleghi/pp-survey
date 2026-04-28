@@ -685,7 +685,11 @@
                                         <div class="survey-actions-menu" id="survey-actions-menu-{{ $survey->id }}"
                                             role="menu" aria-label="اقدامات نظرسنجی">
                                             <div class="survey-actions-menu-item" role="none">
-                                                <button type="button" role="menuitem" class="is-muted" disabled>مشاهده گزارش</button>
+                                                @if (($survey->submitted_responses_count ?? $survey->responses_count ?? 0) > 0)
+                                                    <a href="{{ route('admin.surveys.report', $survey) }}" role="menuitem">مشاهده گزارش</a>
+                                                @else
+                                                    <button type="button" role="menuitem" class="is-muted" disabled>مشاهده گزارش</button>
+                                                @endif
                                             </div>
                                             <div class="survey-actions-menu-item" role="none">
                                                 <a href="{{ route('admin.surveys.edit', $survey) }}" role="menuitem">تنظیمات</a>
