@@ -937,7 +937,7 @@
                 <h3>افزودن نظرسنجی جدید</h3>
                 <button class="modal-close" type="button" data-close-modal>&times;</button>
             </div>
-            <p>نام نظرسنجی را درج کنید و در صورت تمایل واحد مرتبط و یادداشت کوتاه را اضافه کنید.</p>
+            <p>نام نظرسنجی و واحد مربوطه را مشخص کنید؛ یادداشت کوتاه اختیاری است.</p>
             <div class="form-field">
                 <label for="surveyNameInput">نام نظرسنجی</label>
                 <input type="text" id="surveyNameInput" name="title" value="{{ old('title') }}"
@@ -947,8 +947,8 @@
                 @enderror
             </div>
             <div class="form-field">
-                <label for="surveyUnitSelect">واحد مربوطه</label>
-                <select id="surveyUnitSelect" name="unit_id">
+                <label for="surveyUnitSelect">واحد مربوطه <span style="color:#dc2626">*</span></label>
+                <select id="surveyUnitSelect" name="unit_id" required>
                     <option value="">انتخاب واحد</option>
                     @foreach ($units as $unit)
                         <option value="{{ $unit->id }}" @selected(old('unit_id') == $unit->id)>{{ $unit->name }}</option>

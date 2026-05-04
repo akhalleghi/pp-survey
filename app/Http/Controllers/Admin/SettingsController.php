@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
+use App\Services\AdminLoginSecurityService;
 use App\Support\AppSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,13 +26,16 @@ class SettingsController extends Controller
     {
         $admin = AdminUser::findOrFail($request->session()->get('admin_id'));
 
+        $minLen = AdminLoginSecurityService::adminPasswordMinLength();
         $validated = $request->validateWithBag('updatePassword', [
             'current_password' => ['required', 'string'],
-            'new_password' => ['required', 'string', 'min:8', 'max:64'],
+            'new_password' => ['required', 'string', 'min:'.$minLen, 'max:128'],
             'new_password_confirmation' => ['required', 'same:new_password'],
+        ], [
+            'new_password.min' => 'رمز عبور باید حداقل '.$minLen.' کاراکتر باشد.',
         ]);
 
-        if (!Hash::check($validated['current_password'], $admin->password)) {
+        if (! Hash::check($validated['current_password'], $admin->password)) {
             return back()
                 ->withErrors(['current_password' => 'رمز عبور فعلی صحیح نیست.'], 'updatePassword')
                 ->with('settings_active_tab', 'password');
@@ -62,7 +66,7 @@ class SettingsController extends Controller
 
         if ($request->hasFile('logo')) {
             $path = $request->file('logo')->storeAs('', 'logo.png', ['disk' => 'public']);
-            $payload['logo_path'] = 'storage/' . $path;
+            $payload['logo_path'] = 'storage/'.$path;
         }
 
         AppSettings::update($payload);
@@ -99,5 +103,35 @@ class SettingsController extends Controller
             ->route('admin.settings.index')
             ->with('status', 'رنگ‌بندی سامانه با موفقیت ذخیره شد.')
             ->with('settings_active_tab', 'colors');
+    }
+
+    public function updateSecurity(Request $request): RedirectResponse
+    {
+        $defaults = AppSettings::all();
+        $sec = $defaults['security'] ?? [];
+
+        $validated = $request->validateWithBag('updateSecurity', [
+            'max_login_attempts' => ['required', 'integer', 'min:1', 'max:100'],
+            'lockout_minutes' => ['required', 'integer', 'min:1', 'max:10080'],
+            'log_retention_days' => ['required', 'integer', 'min:1', 'max:3650'],
+            'session_idle_timeout_minutes' => ['required', 'integer', 'min:0', 'max:10080'],
+            'admin_password_min_length' => ['required', 'integer', 'min:8', 'max:128'],
+        ]);
+
+        $merged = array_merge($sec, [
+            'max_login_attempts' => (int) $validated['max_login_attempts'],
+            'lockout_minutes' => (int) $validated['lockout_minutes'],
+            'log_retention_days' => (int) $validated['log_retention_days'],
+            'session_idle_timeout_minutes' => (int) $validated['session_idle_timeout_minutes'],
+            'admin_password_min_length' => (int) $validated['admin_password_min_length'],
+        ]);
+
+        AppSettings::update(['security' => $merged]);
+        AdminLoginSecurityService::pruneOldLogsIfNeeded();
+
+        return redirect()
+            ->route('admin.settings.index')
+            ->with('status', 'تنظیمات امنیتی ذخیره شد.')
+            ->with('settings_active_tab', 'security');
     }
 }

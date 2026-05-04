@@ -13,6 +13,21 @@ class AppSettings
             'logo_path' => 'storage/logo.png',
             'survey_footer_text' => 'طراحی و توسعه توسط واحد فناوری اطلاعات توسعه نرم افزار',
             'colors' => self::defaultColors(),
+            'security' => self::defaultSecurity(),
+        ];
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    protected static function defaultSecurity(): array
+    {
+        return [
+            'max_login_attempts' => 5,
+            'lockout_minutes' => 15,
+            'log_retention_days' => 90,
+            'session_idle_timeout_minutes' => 0,
+            'admin_password_min_length' => 8,
         ];
     }
 
@@ -34,7 +49,7 @@ class AppSettings
 
     protected static function path(): string
     {
-        return storage_path('app/' . self::FILE_NAME);
+        return storage_path('app/'.self::FILE_NAME);
     }
 
     public static function all(): array
@@ -42,7 +57,7 @@ class AppSettings
         $defaults = self::defaults();
         $path = self::path();
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             return $defaults;
         }
 
@@ -52,11 +67,21 @@ class AppSettings
             return $defaults;
         }
 
-        if (!is_array($data)) {
+        if (! is_array($data)) {
             return $defaults;
         }
 
-        return array_merge($defaults, $data);
+        $merged = array_merge($defaults, $data);
+
+        if (isset($defaults['colors']) && isset($merged['colors']) && is_array($merged['colors'])) {
+            $merged['colors'] = array_merge($defaults['colors'], $merged['colors']);
+        }
+
+        if (isset($defaults['security']) && isset($merged['security']) && is_array($merged['security'])) {
+            $merged['security'] = array_merge($defaults['security'], $merged['security']);
+        }
+
+        return $merged;
     }
 
     public static function update(array $values): void
@@ -64,7 +89,7 @@ class AppSettings
         $current = self::all();
         $updated = array_merge($current, array_filter($values, fn ($value) => $value !== null));
 
-        if (!is_dir(dirname(self::path()))) {
+        if (! is_dir(dirname(self::path()))) {
             mkdir(dirname(self::path()), 0755, true);
         }
 

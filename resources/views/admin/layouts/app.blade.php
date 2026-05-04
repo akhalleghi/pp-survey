@@ -43,6 +43,14 @@
 
         }
 
+        html {
+
+            overflow-x: hidden;
+
+            max-width: 100%;
+
+        }
+
         body {
 
             margin: 0;
@@ -74,6 +82,10 @@
         .dashboard-shell {
 
             width: 100%;
+
+            max-width: 100%;
+
+            min-width: 0;
 
             display: flex;
 
@@ -358,6 +370,10 @@
 
             flex-direction: column;
 
+            position: relative;
+
+            isolation: isolate;
+
         }
 
         .topbar {
@@ -380,7 +396,9 @@
 
             top: 0;
 
-            z-index: 10;
+            z-index: 100;
+
+            overflow: visible;
 
         }
 
@@ -420,6 +438,10 @@
 
             flex-wrap: nowrap;
 
+            overflow: visible;
+
+            flex-shrink: 0;
+
         }
 
         .user-name {
@@ -427,6 +449,390 @@
             font-weight: 600;
 
             color: var(--slate);
+
+        }
+
+        .admin-notify-wrap {
+
+            position: relative;
+
+            z-index: 40;
+
+        }
+
+        .admin-notify-trigger {
+
+            position: relative;
+
+            -webkit-tap-highlight-color: transparent;
+
+            touch-action: manipulation;
+
+            border: 1px solid rgba(15, 23, 42, 0.1);
+
+            background: #fff;
+
+            color: var(--slate);
+
+            width: 42px;
+
+            height: 42px;
+
+            border-radius: 14px;
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            cursor: pointer;
+
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+        }
+
+        .admin-notify-trigger:hover,
+
+        .admin-notify-wrap:focus-within .admin-notify-trigger {
+
+            background: rgba(214, 17, 25, 0.08);
+
+            border-color: rgba(214, 17, 25, 0.25);
+
+            color: var(--primary);
+
+        }
+
+        .admin-notify-trigger svg {
+
+            width: 22px;
+
+            height: 22px;
+
+        }
+
+        .admin-notify-badge {
+
+            position: absolute;
+
+            top: 4px;
+
+            inset-inline-start: 4px;
+
+            min-width: 18px;
+
+            height: 18px;
+
+            padding: 0 5px;
+
+            border-radius: 999px;
+
+            background: var(--primary);
+
+            color: #fff;
+
+            font-size: 10px;
+
+            font-weight: 700;
+
+            line-height: 18px;
+
+            text-align: center;
+
+            box-shadow: 0 2px 6px rgba(214, 17, 25, 0.35);
+
+        }
+
+        .admin-notify-dropdown {
+
+            position: absolute;
+
+            z-index: 50;
+
+            top: calc(100% + 8px);
+
+            inset-inline-end: 0;
+
+            inset-inline-start: auto;
+
+            width: min(22.5rem, calc(100vw - 1.5rem));
+
+            max-width: min(22.5rem, calc(100vw - 1.5rem));
+
+            max-height: min(70vh, 420px);
+
+            overflow: hidden;
+
+            display: flex;
+
+            flex-direction: column;
+
+            background: #fff;
+
+            border: 1px solid rgba(15, 23, 42, 0.1);
+
+            border-radius: 18px;
+
+            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
+
+            box-sizing: border-box;
+
+            opacity: 0;
+
+            visibility: hidden;
+
+            transform: translateY(-6px);
+
+            transition: opacity 0.18s ease, visibility 0.18s ease, transform 0.18s ease;
+
+            pointer-events: none;
+
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+
+            .admin-notify-wrap:hover .admin-notify-dropdown {
+
+                opacity: 1;
+
+                visibility: visible;
+
+                transform: translateY(0);
+
+                pointer-events: auto;
+
+            }
+
+        }
+
+        .admin-notify-wrap:focus-within .admin-notify-dropdown {
+
+            opacity: 1;
+
+            visibility: visible;
+
+            transform: translateY(0);
+
+            pointer-events: auto;
+
+        }
+
+        .admin-notify-wrap.is-open .admin-notify-dropdown {
+
+            opacity: 1;
+
+            visibility: visible;
+
+            transform: translateY(0);
+
+            pointer-events: auto;
+
+        }
+
+        .admin-notify-backdrop {
+
+            position: fixed;
+
+            inset: 0;
+
+            z-index: 50;
+
+            background: rgba(15, 23, 42, 0.18);
+
+            -webkit-tap-highlight-color: transparent;
+
+        }
+
+        /*
+         * موبایل: فقط کلاس is-open (جاوااسکریپت) منو را نشان می‌دهد.
+         * focus-within/hover با قوانین سراسری تداخل می‌کرد و منو نامرئی می‌شد — از !important برای رفع قطعی استفاده شده.
+         */
+        @media (max-width: 992px) {
+
+            .admin-notify-wrap {
+
+                position: relative;
+
+                z-index: 1;
+
+            }
+
+            .admin-notify-dropdown {
+
+                position: fixed !important;
+
+                z-index: 300 !important;
+
+                top: max(4rem, calc(env(safe-area-inset-top, 0px) + 3.25rem)) !important;
+
+                left: 50% !important;
+
+                right: auto !important;
+
+                inset-inline-start: auto !important;
+
+                inset-inline-end: auto !important;
+
+                margin-inline: 0 !important;
+
+                width: min(22.5rem, calc(100vw - 2rem)) !important;
+
+                max-width: min(22.5rem, calc(100vw - 2rem)) !important;
+
+                box-sizing: border-box !important;
+
+                max-height: min(75vh, 480px) !important;
+
+                display: flex !important;
+
+                flex-direction: column !important;
+
+                opacity: 0 !important;
+
+                visibility: hidden !important;
+
+                pointer-events: none !important;
+
+                transform: translate3d(-50%, -8px, 0) !important;
+
+                transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease !important;
+
+            }
+
+            .admin-notify-wrap.is-open .admin-notify-dropdown {
+
+                opacity: 1 !important;
+
+                visibility: visible !important;
+
+                pointer-events: auto !important;
+
+                transform: translate3d(-50%, 0, 0) !important;
+
+            }
+
+        }
+
+        .admin-notify-head {
+
+            padding: 0.85rem 1rem;
+
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+
+            font-weight: 700;
+
+            font-size: 0.92rem;
+
+            color: var(--slate);
+
+        }
+
+        .admin-notify-list {
+
+            overflow-y: auto;
+
+            max-height: min(58vh, 360px);
+
+            padding: 0.35rem 0;
+
+        }
+
+        .admin-notify-item {
+
+            display: block;
+
+            padding: 0.65rem 1rem;
+
+            text-decoration: none;
+
+            color: inherit;
+
+            border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+
+            transition: background 0.12s ease;
+
+        }
+
+        .admin-notify-item:last-child {
+
+            border-bottom: none;
+
+        }
+
+        .admin-notify-item:hover {
+
+            background: rgba(214, 17, 25, 0.05);
+
+        }
+
+        .admin-notify-item strong {
+
+            display: block;
+
+            font-size: 0.86rem;
+
+            margin-bottom: 0.25rem;
+
+            color: var(--slate);
+
+        }
+
+        .admin-notify-item p {
+
+            margin: 0;
+
+            font-size: 0.8rem;
+
+            line-height: 1.55;
+
+            color: var(--muted);
+
+        }
+
+        .admin-notify-item time {
+
+            display: block;
+
+            margin-top: 0.35rem;
+
+            font-size: 0.72rem;
+
+            color: rgba(107, 114, 128, 0.95);
+
+        }
+
+        .admin-notify-item--warning {
+
+            border-inline-end: 3px solid rgba(217, 119, 6, 0.85);
+
+        }
+
+        .admin-notify-item--info {
+
+            border-inline-end: 3px solid rgba(37, 99, 235, 0.75);
+
+        }
+
+        .admin-notify-item--danger {
+
+            border-inline-end: 3px solid rgba(220, 38, 38, 0.85);
+
+        }
+
+        .admin-notify-empty {
+
+            margin: 0;
+
+            padding: 1.5rem 1rem;
+
+            text-align: center;
+
+            font-size: 0.86rem;
+
+            color: var(--muted);
+
+            line-height: 1.7;
 
         }
 
@@ -702,9 +1108,28 @@
 
         @media (max-width: 992px) {
 
+            body {
+
+                overflow-x: hidden;
+
+                max-width: 100%;
+
+            }
+
+            .dashboard-shell {
+
+                overflow-x: hidden;
+
+                min-width: 0;
+
+            }
+
+            /* سایدبار باید بالاتر از نوار چسبان باشد وگرنه منو زیر هدر گیر می‌کند */
             .sidebar {
 
                 transform: translateX(110%);
+
+                z-index: 280;
 
             }
 
@@ -714,49 +1139,77 @@
 
             }
 
+            .sidebar-overlay {
+
+                z-index: 270;
+
+            }
+
             .main-shell {
 
                 margin-right: 0;
 
+                min-width: 0;
+
+                max-width: 100%;
+
+                overflow-x: hidden;
+
             }
 
-            .menu-toggle {
+            .content {
 
-                display: flex;
+                min-width: 0;
+
+                max-width: 100%;
+
+                overflow-x: hidden;
 
             }
-
-        }
-
-        @media (max-width: 640px) {
 
             .topbar {
 
-                display: flex;
+                display: grid;
 
-                justify-content: center;
+                grid-template-columns: auto minmax(0, 1fr) auto;
+
+                grid-template-areas: 'actions title userzone';
 
                 align-items: center;
 
-                padding: 1rem 1.25rem;
+                gap: 0.5rem 0.65rem;
 
-                position: relative;
+                padding: 0.6rem 0.85rem;
 
-                min-height: 88px;
+                min-height: 3.5rem;
+
+            }
+
+            .action-buttons {
+
+                grid-area: actions;
+
+                position: static;
+
+                transform: none;
+
+                margin: 0;
 
             }
 
             .page-meta {
 
-                position: absolute;
+                grid-area: title;
 
-                left: 50%;
+                position: static;
 
-                transform: translateX(-50%);
+                transform: none;
 
                 text-align: center;
 
-                align-items: center;
+                min-width: 0;
+
+                max-width: 100%;
 
             }
 
@@ -768,7 +1221,33 @@
 
             .page-meta h1 {
 
-                font-size: 1.05rem;
+                font-size: clamp(0.9rem, 3.2vw, 1.1rem);
+
+                line-height: 1.3;
+
+                white-space: nowrap;
+
+                overflow: hidden;
+
+                text-overflow: ellipsis;
+
+                max-width: 100%;
+
+            }
+
+            .user-actions {
+
+                grid-area: userzone;
+
+                position: static;
+
+                transform: none;
+
+                gap: 0.4rem;
+
+                margin: 0;
+
+                flex-shrink: 0;
 
             }
 
@@ -778,27 +1257,9 @@
 
             }
 
-            .action-buttons,
+            .menu-toggle {
 
-            .user-actions {
-
-                position: absolute;
-
-                top: 50%;
-
-                transform: translateY(-50%);
-
-            }
-
-            .action-buttons {
-
-                right: 1rem;
-
-            }
-
-            .user-actions {
-
-                left: 1rem;
+                display: flex;
 
             }
 
@@ -825,6 +1286,20 @@
                 align-items: center;
 
                 justify-content: center;
+
+            }
+
+            .admin-notify-trigger {
+
+                width: 44px;
+
+                height: 44px;
+
+                min-width: 44px;
+
+                min-height: 44px;
+
+                border-radius: 12px;
 
             }
 
@@ -1014,6 +1489,52 @@
                         @endif
                     </span>
 
+                    <div class="admin-notify-wrap">
+                        <button type="button" class="admin-notify-trigger" aria-label="اعلان‌ها" aria-haspopup="true"
+                            aria-expanded="false" id="adminNotifyTrigger">
+                            @if (($headerNotificationCount ?? 0) > 0)
+                                <span class="admin-notify-badge" aria-hidden="true">
+                                    {{ ($headerNotificationCount ?? 0) > 9 ? '9+' : $headerNotificationCount }}
+                                </span>
+                            @endif
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
+                                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                        </button>
+                        <div class="admin-notify-dropdown" role="region" aria-labelledby="adminNotifyTrigger" id="adminNotifyPanel">
+                            <div class="admin-notify-head">اعلان‌ها</div>
+                            @php
+                                $notes = $headerNotifications ?? [];
+                            @endphp
+                            @if (count($notes) === 0)
+                                <p class="admin-notify-empty">اعلان جدیدی برای شما ثبت نشده است.</p>
+                            @else
+                                <div class="admin-notify-list">
+                                    @foreach ($notes as $note)
+                                        @php
+                                            $tone = $note['tone'] ?? 'info';
+                                            $toneClass =
+                                                match ($tone) {
+                                                    'danger' => 'admin-notify-item--danger',
+                                                    'warning' => 'admin-notify-item--warning',
+                                                    default => 'admin-notify-item--info',
+                                                };
+                                        @endphp
+                                        <a href="{{ $note['href'] ?? '#' }}" class="admin-notify-item {{ $toneClass }}">
+                                            <strong>{{ $note['title'] ?? '' }}</strong>
+                                            <p>{{ $note['body'] ?? '' }}</p>
+                                            @if (!empty($note['at']))
+                                                <time
+                                                    datetime="{{ $note['at']->toIso8601String() }}">{{ $note['at']->format('Y/m/d H:i') }}</time>
+                                            @endif
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
                     <form method="POST" action="{{ route('admin.logout') }}" class="logout-form">
 
                         @csrf
@@ -1158,6 +1679,144 @@
             }
 
         });
+
+        (function () {
+
+            const wrap = document.querySelector('.admin-notify-wrap');
+
+            const trigger = document.getElementById('adminNotifyTrigger');
+
+            if (!wrap || !trigger) {
+
+                return;
+
+            }
+
+            let backdropEl = null;
+
+            let suppressOutsideUntil = 0;
+
+            const MOBILE_MAX = 992;
+
+            function removeBackdrop() {
+
+                if (backdropEl) {
+
+                    backdropEl.remove();
+
+                    backdropEl = null;
+
+                }
+
+            }
+
+            function addBackdrop() {
+
+                if (backdropEl || window.innerWidth > MOBILE_MAX) {
+
+                    return;
+
+                }
+
+                backdropEl = document.createElement('div');
+
+                backdropEl.className = 'admin-notify-backdrop';
+
+                backdropEl.setAttribute('aria-hidden', 'true');
+
+                backdropEl.addEventListener('click', () => setOpen(false));
+
+                const shell = document.querySelector('.main-shell');
+
+                if (shell) {
+
+                    shell.insertBefore(backdropEl, shell.firstChild);
+
+                } else {
+
+                    document.body.appendChild(backdropEl);
+
+                }
+
+            }
+
+            function setOpen(open) {
+
+                wrap.classList.toggle('is-open', open);
+
+                trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+                if (open && window.innerWidth <= MOBILE_MAX) {
+
+                    addBackdrop();
+
+                } else {
+
+                    removeBackdrop();
+
+                }
+
+            }
+
+            trigger.addEventListener('click', (e) => {
+
+                e.preventDefault();
+
+                e.stopPropagation();
+
+                suppressOutsideUntil = Date.now() + 450;
+
+                setOpen(!wrap.classList.contains('is-open'));
+
+            });
+
+            document.addEventListener('click', (e) => {
+
+                if (Date.now() < suppressOutsideUntil) {
+
+                    return;
+
+                }
+
+                if (!wrap.contains(e.target)) {
+
+                    setOpen(false);
+
+                }
+
+            });
+
+            document.addEventListener('keydown', (e) => {
+
+                if (e.key === 'Escape') {
+
+                    setOpen(false);
+
+                }
+
+            });
+
+            wrap.querySelectorAll('a.admin-notify-item').forEach((a) => {
+
+                a.addEventListener('click', () => setOpen(false));
+
+            });
+
+            window.addEventListener('resize', () => {
+
+                removeBackdrop();
+
+                if (window.innerWidth > MOBILE_MAX) {
+
+                    wrap.classList.remove('is-open');
+
+                    trigger.setAttribute('aria-expanded', 'false');
+
+                }
+
+            });
+
+        })();
     </script>
 
     @include('components.persian-digits-script')

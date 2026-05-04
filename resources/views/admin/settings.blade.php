@@ -8,6 +8,8 @@
     $passwordErrors = $errors->updatePassword ?? $errors;
     $brandingErrors = $errors->updateBranding ?? $errors;
     $colorErrors = $errors->updateColors ?? $errors;
+    $securityErrors = $errors->updateSecurity ?? $errors;
+    $securityCfg = $appSettings['security'] ?? [];
     $tabs = [
         [
             'id' => 'password',
@@ -23,6 +25,11 @@
             'id' => 'colors',
             'label' => 'رنگ‌بندی سامانه',
             'subtitle' => 'سفارشی‌سازی رنگ‌های پنل، لاگین و خوش‌آمد',
+        ],
+        [
+            'id' => 'security',
+            'label' => 'امنیت ورود',
+            'subtitle' => 'قفل موقت، نشست و نگهداری گزارش ورود',
         ],
         [
             'id' => 'profile',
@@ -294,7 +301,7 @@
             <div class="tab-panels">
                 <section class="tab-panel {{ $activeTab === 'password' ? 'active' : '' }}" data-tab-panel="password">
                     <h3>به‌روزرسانی رمز عبور مدیر</h3>
-                    <p>لطفاً برای امنیت بیشتر از رمزهای عبور حداقل ۸ کاراکتری با ترکیب حروف و اعداد استفاده کنید.</p>
+                    <p>حداقل طول رمز طبق تب «امنیت ورود» (اکنون {{ (int) ($securityCfg['admin_password_min_length'] ?? 8) }} کاراکتر) اعمال می‌شود. از ترکیب حروف و اعداد استفاده کنید.</p>
                     <form method="POST" action="{{ route('admin.settings.password') }}" class="password-form">
                         @csrf
                         <div class="form-grid">
@@ -469,6 +476,102 @@
                         <div class="form-actions">
                             <button type="submit" class="primary-btn">ذخیره رنگ‌ها</button>
                             <button type="reset" class="ghost-btn">بازنشانی فرم</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="tab-panel {{ $activeTab === 'security' ? 'active' : '' }}" data-tab-panel="security">
+                    <h3>سیاست امنیتی ورود به پنل</h3>
+                    <p>محدودیت تلاش ورود، مدت مسدودسازی، طول نگهداری گزارش رویدادهای ورود و زمان بی‌حرکتی نشست را از اینجا مدیریت کنید. این مقادیر بلافاصله روی فرم ورود مدیر اعمال می‌شوند.</p>
+                    <form method="POST" action="{{ route('admin.settings.security') }}" class="security-form">
+                        @csrf
+                        <div class="form-grid">
+                            <div class="form-control">
+                                <label for="max-login-attempts">حداکثر تلاش ناموفق (نام کاربری و رمز)</label>
+                                <input
+                                    id="max-login-attempts"
+                                    type="number"
+                                    name="max_login_attempts"
+                                    min="1"
+                                    max="100"
+                                    value="{{ old('max_login_attempts', $securityCfg['max_login_attempts'] ?? 5) }}"
+                                    class="{{ $securityErrors->has('max_login_attempts') ? 'error' : '' }}"
+                                >
+                                @if ($securityErrors->has('max_login_attempts'))
+                                    <span class="error-text">{{ $securityErrors->first('max_login_attempts') }}</span>
+                                @else
+                                    <span class="error-text" style="color: var(--muted);">پس از رسیدن به این تعداد، ورود با همان نام کاربری موقتاً مسدود می‌شود. کپچای اشتباه جداگانه شمارش می‌شود.</span>
+                                @endif
+                            </div>
+                            <div class="form-control">
+                                <label for="lockout-minutes">مدت مسدودسازی (دقیقه)</label>
+                                <input
+                                    id="lockout-minutes"
+                                    type="number"
+                                    name="lockout_minutes"
+                                    min="1"
+                                    max="10080"
+                                    value="{{ old('lockout_minutes', $securityCfg['lockout_minutes'] ?? 15) }}"
+                                    class="{{ $securityErrors->has('lockout_minutes') ? 'error' : '' }}"
+                                >
+                                @if ($securityErrors->has('lockout_minutes'))
+                                    <span class="error-text">{{ $securityErrors->first('lockout_minutes') }}</span>
+                                @endif
+                            </div>
+                            <div class="form-control">
+                                <label for="log-retention-days">نگهداری گزارش ورود (روز)</label>
+                                <input
+                                    id="log-retention-days"
+                                    type="number"
+                                    name="log_retention_days"
+                                    min="1"
+                                    max="3650"
+                                    value="{{ old('log_retention_days', $securityCfg['log_retention_days'] ?? 90) }}"
+                                    class="{{ $securityErrors->has('log_retention_days') ? 'error' : '' }}"
+                                >
+                                @if ($securityErrors->has('log_retention_days'))
+                                    <span class="error-text">{{ $securityErrors->first('log_retention_days') }}</span>
+                                @else
+                                    <span class="error-text" style="color: var(--muted);">رکوردهای قدیمی‌تر به‌صورت خودکار حذف می‌شوند.</span>
+                                @endif
+                            </div>
+                            <div class="form-control">
+                                <label for="session-idle">زمان بی‌حرکتی نشست (دقیقه)</label>
+                                <input
+                                    id="session-idle"
+                                    type="number"
+                                    name="session_idle_timeout_minutes"
+                                    min="0"
+                                    max="10080"
+                                    value="{{ old('session_idle_timeout_minutes', $securityCfg['session_idle_timeout_minutes'] ?? 0) }}"
+                                    class="{{ $securityErrors->has('session_idle_timeout_minutes') ? 'error' : '' }}"
+                                >
+                                @if ($securityErrors->has('session_idle_timeout_minutes'))
+                                    <span class="error-text">{{ $securityErrors->first('session_idle_timeout_minutes') }}</span>
+                                @else
+                                    <span class="error-text" style="color: var(--muted);">مقدار ۰ یعنی غیرفعال (فقط محدودیت نشست لاراول).</span>
+                                @endif
+                            </div>
+                            <div class="form-control">
+                                <label for="admin-pwd-min">حداقل طول رمز مدیر (کاراکتر)</label>
+                                <input
+                                    id="admin-pwd-min"
+                                    type="number"
+                                    name="admin_password_min_length"
+                                    min="8"
+                                    max="128"
+                                    value="{{ old('admin_password_min_length', $securityCfg['admin_password_min_length'] ?? 8) }}"
+                                    class="{{ $securityErrors->has('admin_password_min_length') ? 'error' : '' }}"
+                                >
+                                @if ($securityErrors->has('admin_password_min_length'))
+                                    <span class="error-text">{{ $securityErrors->first('admin_password_min_length') }}</span>
+                                @else
+                                    <span class="error-text" style="color: var(--muted);">هنگام تغییر رمز در همین صفحه اعمال می‌شود.</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="primary-btn">ذخیره تنظیمات امنیتی</button>
                         </div>
                     </form>
                 </section>

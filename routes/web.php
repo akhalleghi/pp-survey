@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\LoginAuditController;
 use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\PositionController;
+use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SurveyController;
 use App\Http\Controllers\Admin\SurveyQuestionController;
@@ -25,7 +27,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
     Route::post('/captcha-refresh', [AuthController::class, 'refreshCaptcha'])->name('captcha.refresh');
 
-    Route::middleware('admin.auth')->group(function () {
+    Route::middleware(['admin.auth', 'admin.session_idle'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -53,6 +55,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
             Route::post('settings/branding', [SettingsController::class, 'updateBranding'])->name('settings.branding');
             Route::post('settings/colors', [SettingsController::class, 'updateColors'])->name('settings.colors');
+            Route::post('settings/security', [SettingsController::class, 'updateSecurity'])->name('settings.security');
+            Route::get('login-audit', [LoginAuditController::class, 'index'])->name('login-audit.index');
+            Route::post('login-audit/clear-lock', [LoginAuditController::class, 'clearLock'])->name('login-audit.clear-lock');
+        });
+
+        Route::middleware('admin.permission:reports')->group(function () {
+            Route::get('reports', [ReportsController::class, 'index'])->name('reports.index');
         });
 
         Route::middleware('admin.permission:surveys')->group(function () {

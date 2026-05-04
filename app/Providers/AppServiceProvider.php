@@ -3,10 +3,11 @@
 namespace App\Providers;
 
 use App\Models\AdminUser;
+use App\Support\AdminInboxNotifications;
 use App\Support\AdminPermissions;
+use App\Support\AppSettings;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
-use App\Support\AppSettings;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,11 +28,14 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer('admin.layouts.app', function ($view) {
             $admin = request()->attributes->get('current_admin');
-            if (!$admin instanceof AdminUser) {
+            if (! $admin instanceof AdminUser) {
                 $admin = null;
             }
             $view->with('admin', $admin);
             $view->with('navItems', AdminPermissions::navigationFor($admin));
+            $headerNotifications = AdminInboxNotifications::collect($admin);
+            $view->with('headerNotifications', $headerNotifications);
+            $view->with('headerNotificationCount', count($headerNotifications));
         });
     }
 }

@@ -22,6 +22,9 @@ final class AdminPermissions
 
     public const SURVEYS = 'surveys';
 
+    /** گزارشات جامع (داشبورد تحلیلی) — مستقل از لیست نظرسنجی‌ها */
+    public const REPORTS = 'reports';
+
     /**
      * عنوان فارسی هر کلید دسترسی (منبع اصلی برای نمایش در پنل).
      * هنگام افزودن بخش جدید، ثابت را بالا تعریف کنید و اینجا عنوان بگذارید؛
@@ -39,6 +42,7 @@ final class AdminPermissions
             self::ORG_SUPERVISORS => 'سرپرستان واحدها',
             self::SETTINGS => 'تنظیمات سازمان',
             self::SURVEYS => 'نظرسنجی‌ها',
+            self::REPORTS => 'گزارشات',
         ];
     }
 
@@ -76,7 +80,7 @@ final class AdminPermissions
     {
         $merged = self::labels();
         foreach (self::permissionLabelsFromNavigation() as $key => $label) {
-            if (!isset($merged[$key])) {
+            if (! isset($merged[$key])) {
                 $merged[$key] = $label;
             }
         }
@@ -204,11 +208,27 @@ final class AdminPermissions
                 ],
             ],
             [
-                'label' => 'تنظیمات',
-                'permission' => self::SETTINGS,
-                'href' => route('admin.settings.index'),
+                'label' => 'تنظیمات سامانه',
+                'permission' => null,
+                'href' => null,
                 'icon' => 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l.149.457a1 1 0 00.95.69h.48c.969 0 1.371 1.24.588 1.81l-.39.284a1 1 0 000 1.62l.39.284c.783.57.38 1.81-.588 1.81h-.48a1 1 0 00-.95.69l-.149.457c-.3.921-1.603.921-1.902 0l-.149-.457a1 1 0 00-.95-.69h-.48c-.969 0-1.371-1.24-.588-1.81l.39-.284a1 1 0 000-1.62l-.39-.284c-.783-.57-.38-1.81.588-1.81h.48a1 1 0 00.95-.69l.149-.457zM12 15.5a3 3 0 100 6 3 3 0 000-6z',
-                'route' => 'admin.settings.index',
+                'route' => null,
+                'children' => [
+                    [
+                        'label' => 'عمومی و ظاهر',
+                        'permission' => self::SETTINGS,
+                        'href' => route('admin.settings.index'),
+                        'icon' => 'M4 6h16v12H4zM8 6V4h8v2M10 10h4M10 14h4',
+                        'route' => 'admin.settings.index',
+                    ],
+                    [
+                        'label' => 'گزارش ورود',
+                        'permission' => self::SETTINGS,
+                        'href' => route('admin.login-audit.index'),
+                        'icon' => 'M12 11c1.657 0 3-1.79 3-4 0-3.314-1.343-4-3-4s-3 1.686-3 4c0 2.21 1.343 4 3 4zm0 2c-2.67 0-8 1.337-8 4v2h16v-2c0-2.663-5.33-4-8-4z',
+                        'route' => 'admin.login-audit.index',
+                    ],
+                ],
             ],
             [
                 'label' => 'نظرسنجی‌ها',
@@ -219,28 +239,20 @@ final class AdminPermissions
             ],
             [
                 'label' => 'گزارشات',
-                'href' => '#',
-                'permission' => null,
+                'permission' => self::REPORTS,
+                'href' => route('admin.reports.index'),
                 'icon' => 'M5 9h3v8H5zM10.5 5h3v12h-3zM16 11h3v6h-3z',
-                'route' => null,
-            ],
-            [
-                'label' => 'پروفایل کاربر',
-                'href' => '#',
-                'permission' => null,
-                'icon' => 'M12 12a4 4 0 100-8 4 4 0 000 8zm-6 7c0-2.761 3.134-5 6-5s6 2.239 6 5v1H6z',
-                'route' => null,
+                'route' => 'admin.reports.index',
             ],
         ];
     }
 
     /**
-     * @param  \App\Models\AdminUser|null  $admin
      * @return list<array<string, mixed>>
      */
     public static function navigationFor(?\App\Models\AdminUser $admin): array
     {
-        if (!$admin) {
+        if (! $admin) {
             return [];
         }
 
@@ -253,7 +265,7 @@ final class AdminPermissions
                 $filteredChildren = [];
                 foreach ($children as $child) {
                     $p = $child['permission'] ?? null;
-                    if ($p && !$admin->hasPermission($p)) {
+                    if ($p && ! $admin->hasPermission($p)) {
                         continue;
                     }
                     $filteredChildren[] = $child;
@@ -263,11 +275,12 @@ final class AdminPermissions
                 }
                 $item['children'] = $filteredChildren;
                 $out[] = $item;
+
                 continue;
             }
 
             $p = $item['permission'] ?? null;
-            if ($p && !$admin->hasPermission($p)) {
+            if ($p && ! $admin->hasPermission($p)) {
                 continue;
             }
             $out[] = $item;
