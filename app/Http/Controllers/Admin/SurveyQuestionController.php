@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Admin\Concerns\AuthorizesSurveyAccess;
 use App\Models\Survey;
 use App\Models\SurveyQuestion;
 use App\Models\SurveyQuestionOption;
@@ -14,6 +15,8 @@ use Illuminate\View\View;
 
 class SurveyQuestionController extends Controller
 {
+    use AuthorizesSurveyAccess;
+
     private const OPTION_BASED_TYPES = [
         'multiple_choice',
         'checkboxes',
@@ -41,6 +44,8 @@ class SurveyQuestionController extends Controller
 
     public function index(Survey $survey): View
     {
+        $this->authorizeSurveyAccess($survey);
+
         $survey->load(['questions.options', 'questions.answers']);
         $questionTypes = $this->questionTypes();
 
@@ -49,6 +54,8 @@ class SurveyQuestionController extends Controller
 
     public function store(Request $request, Survey $survey): RedirectResponse
     {
+        $this->authorizeSurveyAccess($survey);
+
         $validated = $this->validateQuestionPayload($request);
 
         $position = (int) $survey->questions()->max('position') + 1;
@@ -74,6 +81,8 @@ class SurveyQuestionController extends Controller
 
     public function edit(Survey $survey, SurveyQuestion $question): View
     {
+        $this->authorizeSurveyAccess($survey);
+
         if ($question->survey_id !== $survey->id) {
             abort(404);
         }
@@ -92,6 +101,8 @@ class SurveyQuestionController extends Controller
 
     public function update(Request $request, Survey $survey, SurveyQuestion $question): RedirectResponse
     {
+        $this->authorizeSurveyAccess($survey);
+
         if ($question->survey_id !== $survey->id) {
             abort(404);
         }
@@ -121,6 +132,8 @@ class SurveyQuestionController extends Controller
 
     public function destroy(Survey $survey, SurveyQuestion $question): RedirectResponse
     {
+        $this->authorizeSurveyAccess($survey);
+
         if ($question->survey_id !== $survey->id) {
             abort(404);
         }

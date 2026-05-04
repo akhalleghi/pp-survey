@@ -172,3 +172,12 @@ if (!function_exists('jalali_to_gregorian')) {
         return [$gy, $gm + 1, $gd];
     }
 }
+
+if (!function_exists('current_admin')) {
+    function current_admin(): ?\App\Models\AdminUser
+    {
+        $admin = request()->attributes->get('current_admin');
+
+        return $admin instanceof \App\Models\AdminUser ? $admin : null;
+    }
+}

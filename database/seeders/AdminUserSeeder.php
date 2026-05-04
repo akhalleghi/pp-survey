@@ -17,7 +17,11 @@ class AdminUserSeeder extends Seeder
             ['username' => 'admin'],
             [
                 'name' => 'مدیر اصلی',
-                'password' => Hash::make('ChangeMe123!'),
+                'password' => 'ChangeMe123!',
+                'role' => AdminUser::ROLE_ADMIN,
+                'permissions' => null,
+                'personnel_code' => null,
+                'is_active' => true,
             ]
         );
     }

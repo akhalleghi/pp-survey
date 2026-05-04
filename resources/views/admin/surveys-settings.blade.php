@@ -318,19 +318,79 @@
         .audience-target.is-hidden {
             display: none;
         }
+        .theme-color-row .theme-color-inner {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+        .theme-color-picker {
+            width: 52px;
+            height: 44px;
+            padding: 2px;
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            border-radius: 12px;
+            cursor: pointer;
+            background: #fff;
+            flex-shrink: 0;
+        }
+        .theme-color-text {
+            flex: 1;
+            min-width: 0;
+        }
+        .wizard-nav-theme {
+            margin-top: 1.15rem;
+            padding: 1rem 1rem 1.05rem;
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(248, 250, 252, 0.85);
+        }
+        .wizard-nav-theme > .hint:first-of-type {
+            margin: 0 0 0.65rem;
+            font-weight: 600;
+            color: var(--slate);
+            grid-column: unset;
+        }
+        .wizard-nav-theme-demos {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.55rem;
+            margin-bottom: 0.9rem;
+        }
+        .wizard-nav-theme-demos .cap {
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+        .wizard-nav-theme-chip {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.2);
+            flex-shrink: 0;
+        }
+        .wizard-nav-theme-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
     </style>
 
     <div class="survey-settings">
         <div class="survey-settings-top">
             <div>
-                <h2>{{ $survey->title }}</h2>
+                <h2>{{ old('title', $survey->title) }}</h2>
                 <p class="lead">تغییرات این صفحه روی لینک عمومی و تجربه پاسخ‌دهنده اعمال می‌شود. پس از ویرایش، «ذخیره تنظیمات» را بزنید.</p>
             </div>
             <div class="survey-settings-nav">
                 <a href="{{ route('admin.surveys.index') }}">← فهرست نظرسنجی‌ها</a>
                 <a href="{{ route('admin.surveys.questions.index', $survey) }}">طراحی سوالات</a>
+                <a href="#appearance">تنظیمات ظاهری</a>
             </div>
         </div>
+
+        @include('admin.partials.survey-publish-rejection-notice', ['survey' => $survey])
 
         @if ($errors->updateSurvey->any())
             <div class="ss-alert">برخی فیلدها نیاز به اصلاح دارند؛ پیام‌های قرمز زیر هر بخش را ببینید.</div>
@@ -339,6 +399,27 @@
         <form class="survey-settings-form" method="POST" action="{{ route('admin.surveys.update', $survey) }}" data-jalali-form enctype="multipart/form-data">
             @csrf
             @method('PUT')
+
+            <section class="ss-card">
+                <div class="ss-card-head">
+                    <div class="ss-card-icon" aria-hidden="true">📝</div>
+                    <div>
+                        <h3>نام نظرسنجی</h3>
+                        <p>عنوانی که در فهرست مدیریت و در تجربهٔ مخاطب (صفحهٔ عمومی) دیده می‌شود را می‌توانید اینجا ویرایش کنید.</p>
+                    </div>
+                </div>
+                <div class="ss-field">
+                    <label for="survey-title">
+                        <span>نام نظرسنجی</span>
+                    </label>
+                    <input id="survey-title" type="text" name="title" maxlength="255" required
+                           value="{{ old('title', $survey->title) }}"
+                           placeholder="مثلاً نظرسنجی رضایت شغلی ۱۴۰۳">
+                    @error('title', 'updateSurvey')
+                        <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                    @enderror
+                </div>
+            </section>
 
             <section class="ss-card">
                 <div class="ss-card-head">
@@ -365,7 +446,7 @@
                     <div class="ss-card-icon" aria-hidden="true">📅</div>
                     <div>
                         <h3>زمان‌بندی و وضعیت انتشار</h3>
-                        <p>وضعیت «فعال» یعنی لینک عمومی در بازه تاریخ (در صورت تعیین) قابل استفاده است. تاریخ‌ها را شمسی وارد کنید.</p>
+                        <p>وضعیت «فعال» یعنی لینک عمومی در بازه تاریخ (در صورت تعیین) قابل استفاده است. اگر برای حساب شما «تأیید مدیر قبل از انتشار» فعال باشد، اینجا گزینهٔ «فعال» نمایش داده نمی‌شود و از لیست نظرسنجی‌ها گزینهٔ ارسال برای تأیید را می‌زنید.</p>
                     </div>
                 </div>
                 <div class="ss-grid">
@@ -379,6 +460,9 @@
                         @error('status', 'updateSurvey')
                             <span class="hint" style="color: #dc2626;">{{ $message }}</span>
                         @enderror
+                        @if (!empty($supervisorPublishRestricted))
+                            <span class="hint">انتشار نهایی فقط پس از تأیید مدیر انجام می‌شود؛ از صفحهٔ لیست نظرسنجی‌ها گزینهٔ «ارسال برای تأیید مدیر» را بزنید.</span>
+                        @endif
                     </label>
                     <label class="ss-field">
                         <span>شروع انتشار</span>
@@ -689,12 +773,12 @@
                 </div>
             </section>
 
-            <section class="ss-card" id="survey-style-section">
+            <section class="ss-card" id="appearance">
                 <div class="ss-card-head">
                     <div class="ss-card-icon" aria-hidden="true">🎨</div>
                     <div>
                         <h3>ظاهر صفحه عمومی</h3>
-                        <p>پس‌زمینه لینک عمومی؛ در صورت آپلود، فایل جدید جایگزین می‌شود مگر اینکه از پیش‌تنظیم‌ها یکی را انتخاب کنید.</p>
+                        <p>پس‌زمینهٔ تصویری و رنگ‌های کارت سوالات در لینک عمومی. برای پس‌زمینه، پیش‌تنظیم یا آپلود را انتخاب کنید؛ رنگ دکمه‌های قبلی/بعدی ویزارد و سایر رنگ‌های فرم را در همین کارت تنظیم کنید.</p>
                     </div>
                 </div>
                 <div class="ss-field">
@@ -729,6 +813,116 @@
                         <img src="{{ asset($survey->background_image) }}" alt="">
                     </div>
                 @endif
+
+                @php
+                    $appearanceTheme = $publicThemeForForm ?? \App\Models\Survey::defaultPublicTheme();
+                    $hexForColorPicker = static function (?string $css): string {
+                        $css = trim((string) $css);
+                        if (preg_match('/^#([0-9A-Fa-f]{6})$/', $css, $m)) {
+                            return '#' . strtolower($m[1]);
+                        }
+                        if (preg_match('/^#([0-9A-Fa-f]{3})$/', $css, $m)) {
+                            $h = $m[1];
+
+                            return '#' . strtolower($h[0] . $h[0] . $h[1] . $h[1] . $h[2] . $h[2]);
+                        }
+                        if (preg_match('/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/', $css, $m)) {
+                            $r = (int) round(min(255, max(0, (float) $m[1])));
+                            $g = (int) round(min(255, max(0, (float) $m[2])));
+                            $b = (int) round(min(255, max(0, (float) $m[3])));
+
+                            return sprintf('#%02x%02x%02x', $r, $g, $b);
+                        }
+
+                        return '#000000';
+                    };
+                    $appearanceNavLabels = [
+                        'nav_prev' => 'رنگ دکمهٔ قبلی (ویزارد)',
+                        'nav_next' => 'رنگ دکمهٔ بعدی (ویزارد)',
+                    ];
+                    $appearanceLabels = [
+                        'card_bg' => 'پس‌زمینهٔ کارت سوالات',
+                        'card_border' => 'حاشیهٔ کارت سوالات',
+                        'title' => 'رنگ عنوان سوال',
+                        'body' => 'رنگ متن اصلی سوال',
+                        'muted' => 'رنگ متن کم‌رنگ',
+                        'required_star' => 'رنگ ستارهٔ اجباری',
+                        'input_bg' => 'پس‌زمینهٔ ورودی',
+                        'input_border' => 'حاشیهٔ ورودی',
+                        'input_text' => 'متن داخل ورودی',
+                        'input_placeholder' => 'رنگ placeholder',
+                        'option_hover' => 'پس‌زمینهٔ هاور گزینه‌ها',
+                        'error_color' => 'رنگ پیام خطا',
+                        'rating_wrap_bg' => 'پس‌زمینهٔ بلوک امتیاز',
+                        'rating_wrap_border' => 'حاشیهٔ بلوک امتیاز',
+                        'footer_percent' => 'متن درصد پیشرفت (پایین)',
+                        'track_bg' => 'نوار پیشرفت (زمینه)',
+                        'fill' => 'نوار پیشرفت (پرشده)',
+                    ];
+                @endphp
+                <div class="wizard-nav-theme">
+                    <p class="hint">رنگ دکمه‌های قبلی و بعدی در پایین کارت سوال (لینک عمومی). دکمهٔ «پایان» روی آخرین سوال جداگانه با رنگ ثابت قرمز نمایش داده می‌شود.</p>
+                    <div class="wizard-nav-theme-demos" aria-hidden="true">
+                        <span class="cap">پیش‌نمایش</span>
+                        <span class="wizard-nav-theme-chip" title="قبلی" style="background: {{ $appearanceTheme['nav_prev'] ?? '' }}"></span>
+                        <span class="wizard-nav-theme-chip" title="بعدی" style="background: {{ $appearanceTheme['nav_next'] ?? '' }}"></span>
+                    </div>
+                    <div class="wizard-nav-theme-grid">
+                        @foreach ($appearanceNavLabels as $key => $label)
+                            <div class="ss-field theme-color-row">
+                                <span>{{ $label }}</span>
+                                <div class="theme-color-inner">
+                                    <input type="color"
+                                        class="theme-color-picker"
+                                        data-theme-pair="{{ $key }}"
+                                        value="{{ $hexForColorPicker($appearanceTheme[$key] ?? '') }}"
+                                        title="انتخاب رنگ"
+                                        aria-label="انتخاب رنگ {{ $label }}">
+                                    <input type="text"
+                                        class="theme-color-text"
+                                        name="public_theme[{{ $key }}]"
+                                        data-theme-pair="{{ $key }}"
+                                        value="{{ $appearanceTheme[$key] ?? '' }}"
+                                        dir="ltr"
+                                        autocomplete="off"
+                                        maxlength="80"
+                                        placeholder="#rrggbb یا rgba(...)">
+                                </div>
+                                @error('public_theme.' . $key, 'updateSurvey')
+                                    <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                                @enderror
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="ss-grid" style="margin-top:1.15rem;padding-top:1.1rem;border-top:1px solid rgba(15,23,42,0.08);">
+                    <p class="hint" style="grid-column:1/-1;margin:0 0 0.35rem;font-weight:600;color:var(--slate);">سایر رنگ‌های فرم عمومی (کارت، ورودی، نوار پیشرفت)</p>
+                    @foreach ($appearanceLabels as $key => $label)
+                        <div class="ss-field theme-color-row">
+                            <span>{{ $label }}</span>
+                            <div class="theme-color-inner">
+                                <input type="color"
+                                    class="theme-color-picker"
+                                    data-theme-pair="{{ $key }}"
+                                    value="{{ $hexForColorPicker($appearanceTheme[$key] ?? '') }}"
+                                    title="انتخاب رنگ"
+                                    aria-label="انتخاب رنگ {{ $label }}">
+                                <input type="text"
+                                    class="theme-color-text"
+                                    name="public_theme[{{ $key }}]"
+                                    data-theme-pair="{{ $key }}"
+                                    value="{{ $appearanceTheme[$key] ?? '' }}"
+                                    dir="ltr"
+                                    autocomplete="off"
+                                    maxlength="80"
+                                    placeholder="#rrggbb یا rgba(...)">
+                            </div>
+                            @error('public_theme.' . $key, 'updateSurvey')
+                                <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    @endforeach
+                </div>
             </section>
 
             <div class="ss-actions">
@@ -772,6 +966,41 @@
             };
             modeCheckboxes.forEach((checkbox) => checkbox.addEventListener('change', syncAudienceTargets));
             syncAudienceTargets();
+
+            const cssColorToHex6 = (raw) => {
+                const v = String(raw || '').trim();
+                if (/^#[0-9A-Fa-f]{6}$/i.test(v)) {
+                    return v.startsWith('#') ? v.toLowerCase() : `#${v.toLowerCase()}`;
+                }
+                if (/^#[0-9A-Fa-f]{3}$/i.test(v)) {
+                    const h = v.slice(1);
+                    return `#${h[0]}${h[0]}${h[1]}${h[1]}${h[2]}${h[2]}`.toLowerCase();
+                }
+                const m = v.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+                if (!m) return null;
+                const r = Math.min(255, Math.max(0, Math.round(parseFloat(m[1]))));
+                const g = Math.min(255, Math.max(0, Math.round(parseFloat(m[2]))));
+                const b = Math.min(255, Math.max(0, Math.round(parseFloat(m[3]))));
+                const x = (n) => n.toString(16).padStart(2, '0');
+                return `#${x(r)}${x(g)}${x(b)}`;
+            };
+            document.querySelectorAll('.theme-color-picker[data-theme-pair]').forEach((picker) => {
+                const key = picker.getAttribute('data-theme-pair');
+                const text = document.querySelector(`.theme-color-text[data-theme-pair="${key}"]`);
+                if (!text) return;
+                const applyHexToPicker = () => {
+                    const hex = cssColorToHex6(text.value);
+                    if (hex) {
+                        picker.value = hex;
+                    }
+                };
+                picker.addEventListener('input', () => {
+                    text.value = picker.value;
+                });
+                text.addEventListener('input', applyHexToPicker);
+                text.addEventListener('change', applyHexToPicker);
+                applyHexToPicker();
+            });
         });
     </script>
 @endsection

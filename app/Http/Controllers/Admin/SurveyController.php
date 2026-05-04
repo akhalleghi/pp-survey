@@ -3,15 +3,21 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Admin\Concerns\AuthorizesSurveyAccess;
+use App\Models\AdminUser;
 use App\Models\Personnel;
 use App\Models\Position;
 use App\Models\Survey;
+use App\Models\SurveyQuestion;
 use App\Models\SurveyResponse;
 use App\Models\SurveyResponseAnswer;
 use App\Models\Unit;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -24,16 +30,21 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SurveyController extends Controller
 {
+    use AuthorizesSurveyAccess;
+
     public function index(Request $request): View
     {
+        $admin = current_admin();
         $search = $request->query('search');
-        $allowedStatuses = ['active', 'draft', 'closed'];
+        $allowedStatuses = ['active', 'draft', 'closed', 'pending_approval'];
         $statusFilter = in_array($request->query('status'), $allowedStatuses, true) ? $request->query('status') : null;
 
-        $surveys = Survey::with('unit')
+        $surveysQuery = Survey::with(['unit', 'creator', 'publishRequestedBy'])
             ->withCount([
                 'responses as submitted_responses_count' => fn ($q) => $q->where('status', 'submitted'),
+                'responses as responses_records_count',
             ])
+            ->when($admin && $admin->isSupervisor(), fn ($q) => $q->where('created_by_admin_user_id', $admin->id))
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($nested) use ($search) {
                     $nested->where('title', 'like', "%{$search}%")
@@ -41,34 +52,61 @@ class SurveyController extends Controller
                 });
             })
             ->when($statusFilter, fn ($query) => $query->where('status', $statusFilter))
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
+            ->latest();
 
-        $units = Unit::orderBy('name')->get(['id', 'name']);
+        $surveys = $surveysQuery->paginate(10)->withQueryString();
+
+        $unitsQuery = Unit::query()->orderBy('name');
+        if ($admin && $admin->isSupervisor()) {
+            $unitsQuery->whereIn('id', $admin->supervisedUnitIds());
+        }
+        $units = $unitsQuery->get(['id', 'name']);
         $audiencePresets = ['همه کاربران', 'براساس واحد', 'براساس جنسیت', 'براساس سمت', 'براساس مدرک تحصیلی', 'انتخابی توسط ادمین'];
-        $avgQuestions = Survey::avg('questions_count') ?? 0;
-        $metrics = [
-            'active' => Survey::where('status', 'active')->count(),
-            'responses' => SurveyResponse::where('status', 'submitted')->count(),
-            'avg_questions' => round($avgQuestions, 1),
-            'closed' => Survey::where('status', 'closed')->count(),
-        ];
 
-        return view('admin.surveys', compact('surveys', 'units', 'audiencePresets', 'search', 'statusFilter', 'metrics'));
+        if ($admin && $admin->isSupervisor()) {
+            $scope = Survey::query()->where('created_by_admin_user_id', $admin->id);
+            $avgQuestions = (clone $scope)->avg('questions_count') ?? 0;
+            $surveyIds = (clone $scope)->pluck('id');
+            $metrics = [
+                'active' => (clone $scope)->where('status', 'active')->count(),
+                'pending_approval' => (clone $scope)->where('status', 'pending_approval')->count(),
+                'responses' => SurveyResponse::whereIn('survey_id', $surveyIds)->where('status', 'submitted')->count(),
+                'avg_questions' => round((float) $avgQuestions, 1),
+                'closed' => (clone $scope)->where('status', 'closed')->count(),
+            ];
+        } else {
+            $avgQuestions = Survey::avg('questions_count') ?? 0;
+            $metrics = [
+                'active' => Survey::where('status', 'active')->count(),
+                'pending_approval' => Survey::where('status', 'pending_approval')->count(),
+                'responses' => SurveyResponse::where('status', 'submitted')->count(),
+                'avg_questions' => round($avgQuestions, 1),
+                'closed' => Survey::where('status', 'closed')->count(),
+            ];
+        }
+
+        return view('admin.surveys', compact('surveys', 'units', 'audiencePresets', 'search', 'statusFilter', 'metrics', 'admin'));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validateWithBag('createSurvey', [
+        $admin = current_admin();
+        $rules = [
             'title' => ['required', 'string', 'max:255'],
             'unit_id' => ['nullable', 'exists:units,id'],
             'description' => ['nullable', 'string', 'max:1000'],
-        ]);
+        ];
+        if ($admin instanceof AdminUser && $admin->isSupervisor()) {
+            $allowedUnits = $admin->supervisedUnitIds();
+            $rules['unit_id'] = ['required', Rule::in($allowedUnits)];
+        }
+
+        $validated = $request->validateWithBag('createSurvey', $rules);
 
         Survey::create([
             'title' => $validated['title'],
             'unit_id' => $validated['unit_id'] ?? null,
+            'created_by_admin_user_id' => $admin?->id,
             'description' => $validated['description'] ?? null,
             'status' => 'draft',
             'questions_count' => 0,
@@ -103,13 +141,35 @@ class SurveyController extends Controller
 
     public function edit(Survey $survey): View
     {
+        $this->authorizeSurveyAccess($survey);
+
+        $admin = current_admin();
+
         $audiencePresets = [
             'unit' => 'براساس واحد',
             'gender' => 'براساس جنسیت',
             'position' => 'براساس سمت',
             'personnel' => 'انتخابی توسط ادمین',
         ];
-        $statusOptions = ['draft' => 'در حال آماده سازی', 'active' => 'فعال', 'closed' => 'بسته شده'];
+        $survey->load('creator');
+        $statusOptions = [
+            'draft' => 'در حال آماده سازی',
+            'pending_approval' => 'در انتظار تایید مدیر',
+            'active' => 'فعال',
+            'closed' => 'بسته شده',
+        ];
+        $supervisorPublishRestricted = $admin instanceof AdminUser
+            && $admin->isSupervisor()
+            && $survey->creator
+            && $survey->creator->isSupervisor()
+            && $survey->creator->requires_survey_publish_approval
+            && (int) $survey->created_by_admin_user_id === (int) $admin->id;
+        if ($supervisorPublishRestricted) {
+            unset($statusOptions['active']);
+            if ($survey->status !== 'pending_approval') {
+                unset($statusOptions['pending_approval']);
+            }
+        }
         $resultVisibilityOptions = ['private' => 'خصوصی', 'public' => 'عمومی', 'after_close' => 'پس از بسته شدن'];
         $identityModeOptions = [
             'none' => 'بدون احراز هویت پرسنلی',
@@ -127,7 +187,11 @@ class SurveyController extends Controller
             ->map(fn ($path) => basename($path))
             ->values()
             ->all();
-        $units = Unit::query()->orderBy('name')->get(['id', 'name']);
+        $unitsQuery = Unit::query()->orderBy('name');
+        if ($admin instanceof AdminUser && $admin->isSupervisor()) {
+            $unitsQuery->whereIn('id', $admin->supervisedUnitIds());
+        }
+        $units = $unitsQuery->get(['id', 'name']);
         $positions = Position::query()->orderBy('name')->get(['id', 'name']);
         $personnelOptions = Personnel::query()
             ->orderBy('first_name')
@@ -135,6 +199,10 @@ class SurveyController extends Controller
             ->get(['id', 'first_name', 'last_name', 'personnel_code', 'national_code']);
 
         $audienceConfig = $this->normalizeAudienceConfig($survey->audience_filters);
+        $publicThemeForForm = array_merge(Survey::defaultPublicTheme(), $survey->public_theme ?? []);
+        if (old('public_theme')) {
+            $publicThemeForForm = array_merge($publicThemeForForm, old('public_theme'));
+        }
 
         return view(
             'admin.surveys-settings',
@@ -149,13 +217,17 @@ class SurveyController extends Controller
                 'units',
                 'positions',
                 'personnelOptions',
-                'audienceConfig'
+                'audienceConfig',
+                'publicThemeForForm',
+                'supervisorPublishRestricted'
             )
         );
     }
 
     public function update(Request $request, Survey $survey): RedirectResponse
     {
+        $this->authorizeSurveyAccess($survey);
+
         $backgroundPresets = collect(glob(public_path('bg-images/*.{jpg,jpeg,png,webp,gif}'), GLOB_BRACE))
             ->map(fn ($path) => basename($path))
             ->values()
@@ -208,10 +280,27 @@ class SurveyController extends Controller
             'response_edit_window_hours' => $blankToNull($request->input('response_edit_window_hours')),
         ]);
 
-        $validated = $request->validateWithBag('updateSurvey', [
+        $publicThemeRuleKeys = collect(Survey::defaultPublicTheme())
+            ->mapWithKeys(fn ($_, $key) => ['public_theme.' . $key => ['nullable', 'string', 'max:80']])
+            ->all();
+
+        $survey->load('creator');
+        $acting = current_admin();
+        $supervisorPublishRestricted = $acting instanceof AdminUser
+            && $acting->isSupervisor()
+            && $survey->creator
+            && $survey->creator->isSupervisor()
+            && $survey->creator->requires_survey_publish_approval
+            && (int) $survey->created_by_admin_user_id === (int) $acting->id;
+        $allowedStatuses = $supervisorPublishRestricted
+            ? ['draft', 'closed', 'pending_approval']
+            : ['draft', 'active', 'closed', 'pending_approval'];
+
+        $validated = $request->validateWithBag('updateSurvey', array_merge([
+            'title' => ['required', 'string', 'max:255'],
             'response_window_hours' => ['required', 'integer', 'min:1', 'max:720'],
             'response_limit' => ['nullable', 'integer', 'min:1'],
-            'status' => ['required', Rule::in(['draft', 'active', 'closed'])],
+            'status' => ['required', Rule::in($allowedStatuses)],
             'start_at' => ['nullable', 'date'],
             'end_at' => ['nullable', 'date', 'after_or_equal:start_at'],
             'response_edit_window_hours' => ['nullable', 'integer', 'min:1', 'max:720'],
@@ -241,7 +330,8 @@ class SurveyController extends Controller
             'notification_emails' => ['nullable', 'string', 'max:1000'],
             'background_preset' => ['nullable', Rule::in($backgroundPresetOptions)],
             'background_upload' => ['nullable', 'file', 'image', 'max:5120'],
-        ]);
+            'public_theme' => ['nullable', 'array'],
+        ], $publicThemeRuleKeys));
 
         $selectedModes = collect($validated['audience_modes'] ?? [])
             ->unique()
@@ -262,6 +352,18 @@ class SurveyController extends Controller
             'personnel_ids' => in_array('personnel', $selectedModes, true) ? array_values(array_unique(array_map('intval', $validated['audience_personnel_ids'] ?? []))) : [],
         ];
 
+        $actingAdmin = current_admin();
+        if ($actingAdmin instanceof AdminUser && $actingAdmin->isSupervisor()) {
+            $allowedUnits = $actingAdmin->supervisedUnitIds();
+            foreach ($audienceFilters['unit_ids'] ?? [] as $uid) {
+                if (!in_array((int) $uid, $allowedUnits, true)) {
+                    return back()
+                        ->withErrors(['audience_unit_ids' => 'فقط واحدهای تحت سرپرستی شما را می‌توانید در مخاطب انتخاب کنید.'], 'updateSurvey')
+                        ->withInput();
+                }
+            }
+        }
+
         $notificationEmails = [];
         if (!empty($validated['notification_emails'])) {
             $notificationEmails = array_filter(array_map('trim', explode(',', $validated['notification_emails'])));
@@ -273,7 +375,16 @@ class SurveyController extends Controller
                 ->withInput();
         }
 
+        $defaults = Survey::defaultPublicTheme();
+        $themeIn = $validated['public_theme'] ?? [];
+        $publicTheme = [];
+        foreach ($defaults as $key => $def) {
+            $v = isset($themeIn[$key]) ? trim(strip_tags((string) $themeIn[$key])) : '';
+            $publicTheme[$key] = ($v !== '' && strlen($v) <= 80) ? $v : $def;
+        }
+
         $survey->update([
+            'title' => $validated['title'],
             'response_window_hours' => $validated['response_window_hours'],
             'response_limit' => $validated['response_limit'] ?? null,
             'response_edit_window_hours' => $validated['response_edit_window_hours'] ?? null,
@@ -295,6 +406,7 @@ class SurveyController extends Controller
             'thank_you_message' => $validated['thank_you_message'] ?? null,
             'intro_text' => $validated['intro_text'] ?? null,
             'notification_emails' => $notificationEmails,
+            'public_theme' => $publicTheme,
         ]);
 
         if ($request->hasFile('background_upload')) {
@@ -324,6 +436,14 @@ class SurveyController extends Controller
 
     public function destroy(Survey $survey): RedirectResponse
     {
+        $this->authorizeSurveyAccess($survey);
+
+        if ($survey->responses()->exists()) {
+            return redirect()
+                ->route('admin.surveys.index')
+                ->with('error', 'این نظرسنجی دارای پاسخ است و قابل حذف نیست.');
+        }
+
         $survey->delete();
 
         return redirect()
@@ -333,20 +453,143 @@ class SurveyController extends Controller
 
     public function generateLink(Survey $survey): RedirectResponse
     {
+        $this->authorizeSurveyAccess($survey);
+
+        $admin = current_admin();
+        $survey->load('creator');
+
         if (!$survey->public_token) {
             $survey->update([
-                'public_token' => Str::random(40),
+                'public_token' => Survey::generateUniquePublicToken(),
             ]);
         }
 
+        if ($admin instanceof AdminUser && $admin->isAdmin()) {
+            return redirect()
+                ->route('admin.surveys.index')
+                ->with('status', 'لینک عمومی نظرسنجی آماده است.');
+        }
+
+        $creator = $survey->creator;
+        $needsApproval = $creator
+            && $creator->isSupervisor()
+            && $creator->requires_survey_publish_approval;
+
+        if ($needsApproval && $admin instanceof AdminUser && (int) $survey->created_by_admin_user_id === (int) $admin->id) {
+            if ($survey->status === 'pending_approval') {
+                return redirect()
+                    ->route('admin.surveys.index')
+                    ->with('status', 'این نظرسنجی قبلاً برای تایید مدیر ارسال شده است.');
+            }
+            if ($survey->status === 'active') {
+                return redirect()
+                    ->route('admin.surveys.index')
+                    ->with('status', 'نظرسنجی از قبل فعال است.');
+            }
+            if ($survey->status === 'closed') {
+                return redirect()
+                    ->route('admin.surveys.index')
+                    ->with('error', 'نظرسنجی بسته‌شده را نمی‌توان برای انتشار ارسال کرد.');
+            }
+
+            $survey->update([
+                'status' => 'pending_approval',
+                'is_active' => false,
+                'publish_requested_by_admin_user_id' => $admin->id,
+                'publish_rejection_reason' => null,
+            ]);
+
+            return redirect()
+                ->route('admin.surveys.index')
+                ->with('status', 'نظرسنجی برای تایید نهایی مدیر ارسال شد. پس از تایید، فعال و در دسترس قرار می‌گیرد.');
+        }
+
+        if ($survey->status === 'closed') {
+            return redirect()
+                ->route('admin.surveys.index')
+                ->with('error', 'نظرسنجی بسته‌شده را نمی‌توان فعال کرد.');
+        }
+
+        $survey->update([
+            'status' => 'active',
+            'is_active' => true,
+            'publish_requested_by_admin_user_id' => null,
+        ]);
+
         return redirect()
             ->route('admin.surveys.index')
-            ->with('status', 'لینک عمومی نظرسنجی آماده است.');
+            ->with('status', 'لینک عمومی آماده است و نظرسنجی فعال شد.');
+    }
+
+    public function approvePublish(Survey $survey): RedirectResponse
+    {
+        $admin = current_admin();
+        if (!$admin instanceof AdminUser || !$admin->isAdmin()) {
+            abort(403);
+        }
+
+        if ($survey->status !== 'pending_approval') {
+            return redirect()
+                ->route('admin.surveys.index')
+                ->with('error', 'فقط نظرسنجی‌های در انتظار تایید قابل تأیید هستند.');
+        }
+
+        $survey->update([
+            'status' => 'active',
+            'is_active' => true,
+            'publish_rejection_reason' => null,
+        ]);
+
+        return redirect()
+            ->route('admin.surveys.index')
+            ->with('status', 'انتشار نظرسنجی توسط مدیر تایید شد و اکنون فعال است.');
+    }
+
+    public function rejectPublish(Request $request, Survey $survey): RedirectResponse
+    {
+        $admin = current_admin();
+        if (!$admin instanceof AdminUser || !$admin->isAdmin()) {
+            abort(403);
+        }
+
+        if ($survey->status !== 'pending_approval') {
+            return redirect()
+                ->route('admin.surveys.index')
+                ->with('error', 'این نظرسنجی در حالت انتظار تایید نیست.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'rejection_reason' => ['required', 'string', 'min:1', 'max:2000'],
+        ], [
+            'rejection_reason.required' => 'نوشتن دلیل رد الزامی است.',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()
+                ->route('admin.surveys.index')
+                ->withErrors($validator)
+                ->withInput()
+                ->with('reject_publish_survey_id', $survey->id)
+                ->with('reject_publish_action_url', route('admin.surveys.reject-publish', $survey));
+        }
+
+        $survey->update([
+            'status' => 'draft',
+            'is_active' => false,
+            'publish_requested_by_admin_user_id' => null,
+            'publish_rejection_reason' => $validator->validated()['rejection_reason'],
+        ]);
+
+        return redirect()
+            ->route('admin.surveys.index')
+            ->with('status', 'انتشار رد شد؛ نظرسنجی به حالت پیش‌نویس برگشت و دلیل برای ناظر ثبت شد.');
     }
 
     public function report(Survey $survey): View
     {
-        $survey->load('unit');
+        $this->authorizeSurveyAccess($survey);
+
+        $survey->load(['unit', 'questions.options']);
 
         $responses = SurveyResponse::query()
             ->where('survey_id', $survey->id)
@@ -360,11 +603,15 @@ class SurveyController extends Controller
             ->latest('submitted_at')
             ->paginate(20);
 
-        return view('admin.surveys-report', compact('survey', 'responses'));
+        $chartBlocks = $this->buildSurveyReportCharts($survey);
+
+        return view('admin.surveys-report', compact('survey', 'responses', 'chartBlocks'));
     }
 
     public function exportReportExcel(Survey $survey): BinaryFileResponse
     {
+        $this->authorizeSurveyAccess($survey);
+
         $survey->load(['unit', 'questions.options']);
         $responses = SurveyResponse::query()
             ->where('survey_id', $survey->id)
@@ -472,6 +719,8 @@ class SurveyController extends Controller
 
     public function editResponse(Survey $survey, SurveyResponse $response): View
     {
+        $this->authorizeSurveyAccess($survey);
+
         if ($response->survey_id !== $survey->id || $response->status !== 'submitted') {
             abort(404);
         }
@@ -500,6 +749,8 @@ class SurveyController extends Controller
 
     public function updateResponse(Request $request, Survey $survey, SurveyResponse $response): RedirectResponse
     {
+        $this->authorizeSurveyAccess($survey);
+
         if ($response->survey_id !== $survey->id || $response->status !== 'submitted') {
             abort(404);
         }
@@ -541,6 +792,8 @@ class SurveyController extends Controller
 
     public function destroyResponse(Survey $survey, SurveyResponse $response): RedirectResponse
     {
+        $this->authorizeSurveyAccess($survey);
+
         if ($response->survey_id !== $survey->id || $response->status !== 'submitted') {
             abort(404);
         }
@@ -680,6 +933,317 @@ class SurveyController extends Controller
         return '-';
     }
 
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function buildSurveyReportCharts(Survey $survey): array
+    {
+        $questions = $survey->questions->sortBy('position')->values();
+        if ($questions->isEmpty()) {
+            return [];
+        }
+
+        $answers = SurveyResponseAnswer::query()
+            ->whereHas('response', function ($q) use ($survey) {
+                $q->where('survey_id', $survey->id)->where('status', 'submitted');
+            })
+            ->get();
+
+        $byQuestion = $answers->groupBy('question_id');
+        $blocks = [];
+
+        foreach ($questions as $question) {
+            try {
+                $qAnswers = $byQuestion->get($question->id, collect());
+                $block = $this->aggregateQuestionForChart($question, $qAnswers);
+                if ($block !== null) {
+                    $blocks[] = $block;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('survey report chart skip: ' . $e->getMessage(), [
+                    'survey_id' => $survey->id,
+                    'question_id' => $question->id,
+                ]);
+            }
+        }
+
+        return $blocks;
+    }
+
+    private function aggregateQuestionForChart(SurveyQuestion $question, Collection $answers): ?array
+    {
+        return match ($question->type) {
+            'multiple_choice', 'dropdown', 'yes_no', 'linear_scale' => $this->chartBlockSingleOptionQuestion($question, $answers),
+            'checkboxes' => $this->chartBlockCheckboxes($question, $answers),
+            'rating' => $this->chartBlockRating($question, $answers),
+            'number' => $this->chartBlockNumber($question, $answers),
+            'date' => $this->chartBlockDate($question, $answers),
+            default => null,
+        };
+    }
+
+    private function chartBlockSingleOptionQuestion(SurveyQuestion $question, Collection $answers): ?array
+    {
+        $options = $question->options->sortBy('position')->values();
+        if ($options->isEmpty()) {
+            return null;
+        }
+
+        $counts = [];
+        foreach ($options as $opt) {
+            $counts[$opt->id] = 0;
+        }
+        foreach ($answers as $a) {
+            $oid = (int) $a->option_id;
+            if ($oid > 0 && array_key_exists($oid, $counts)) {
+                $counts[$oid]++;
+            }
+        }
+
+        $labels = $options->map(fn ($o) => $this->truncateChartLabel((string) $o->label))->all();
+        $data = $options->map(fn ($o) => $counts[$o->id])->all();
+
+        return $this->finalizeChartSpec($question, $labels, $data, null);
+    }
+
+    private function chartBlockCheckboxes(SurveyQuestion $question, Collection $answers): ?array
+    {
+        $options = $question->options->sortBy('position')->values();
+        if ($options->isEmpty()) {
+            return null;
+        }
+
+        $counts = [];
+        foreach ($options as $opt) {
+            $counts[$opt->id] = 0;
+        }
+        foreach ($answers as $a) {
+            $ids = $a->answer_json['option_ids'] ?? [];
+            foreach ((array) $ids as $oid) {
+                $oid = (int) $oid;
+                if ($oid > 0 && array_key_exists($oid, $counts)) {
+                    $counts[$oid]++;
+                }
+            }
+        }
+
+        $labels = $options->map(fn ($o) => $this->truncateChartLabel((string) $o->label))->all();
+        $data = $options->map(fn ($o) => $counts[$o->id])->all();
+
+        return $this->finalizeChartSpec($question, $labels, $data, 'تعداد دفعات انتخاب هر گزینه (چند انتخابی)');
+    }
+
+    private function chartBlockRating(SurveyQuestion $question, Collection $answers): ?array
+    {
+        $options = $question->options->sortBy('position')->values();
+        if ($options->isEmpty()) {
+            $values = $answers->pluck('answer_number')->filter(fn ($v) => $v !== null)->map(fn ($v) => (float) $v);
+            if ($values->isEmpty()) {
+                return null;
+            }
+            $counts = $values->countBy(fn ($v) => (string) $v)->sortKeys();
+            $labels = $counts->keys()->map(fn ($k) => 'مقدار ' . $k)->values()->all();
+            $data = $counts->values()->all();
+
+            return $this->finalizeChartSpec($question, $labels, $data, 'توزیع مقدار عددی');
+        }
+
+        $counts = [];
+        foreach ($options as $opt) {
+            $counts[$opt->id] = 0;
+        }
+        $numericExtra = [];
+        foreach ($answers as $a) {
+            if ($a->option_id && array_key_exists((int) $a->option_id, $counts)) {
+                $counts[(int) $a->option_id]++;
+            } elseif ($a->answer_number !== null) {
+                $k = (string) $a->answer_number;
+                $numericExtra[$k] = ($numericExtra[$k] ?? 0) + 1;
+            }
+        }
+
+        $labels = $options->map(fn ($o) => $this->truncateChartLabel((string) $o->label))->all();
+        $data = $options->map(fn ($o) => $counts[$o->id])->all();
+        ksort($numericExtra, SORT_NATURAL);
+        foreach ($numericExtra as $k => $c) {
+            $labels[] = 'مقدار ' . $k;
+            $data[] = $c;
+        }
+
+        return $this->finalizeChartSpec($question, $labels, $data, null);
+    }
+
+    private function chartBlockNumber(SurveyQuestion $question, Collection $answers): ?array
+    {
+        $values = $answers->pluck('answer_number')->filter(fn ($v) => $v !== null)->map(fn ($v) => (float) $v);
+        if ($values->isEmpty()) {
+            return null;
+        }
+
+        $sorted = $values->sort()->values();
+        $uniqueN = $values->unique()->count();
+        if ($uniqueN <= 15) {
+            $counts = $values->countBy(fn ($v) => (string) $v)->sortKeys();
+            $labels = $counts->keys()->map(fn ($k) => $this->truncateChartLabel($k))->values()->all();
+            $data = $counts->values()->all();
+
+            return $this->finalizeChartSpec($question, $labels, $data, 'تعداد پاسخ به تفکیک مقدار');
+        }
+
+        $min = (float) $sorted->first();
+        $max = (float) $sorted->last();
+        if ($min === $max) {
+            return $this->finalizeChartSpec(
+                $question,
+                [(string) $min],
+                [$values->count()],
+                'همه پاسخ‌ها یک مقدار'
+            );
+        }
+
+        $bins = array_fill(0, 8, 0);
+        $span = $max - $min;
+        $step = $span / 8;
+        foreach ($values as $v) {
+            $i = (int) floor(($v - $min) / $step);
+            if ($i > 7) {
+                $i = 7;
+            }
+            if ($i < 0) {
+                $i = 0;
+            }
+            $bins[$i]++;
+        }
+        $labels = [];
+        for ($b = 0; $b < 8; $b++) {
+            $lo = $min + $b * $step;
+            $hi = $b === 7 ? $max : $min + ($b + 1) * $step;
+            $labels[] = $this->truncateChartLabel(
+                sprintf('%.2f – %.2f', $lo, $hi)
+            );
+        }
+
+        return $this->finalizeChartSpec($question, $labels, $bins, '۸ بازهٔ مساوی بین کمینه و بیشینه');
+    }
+
+    private function chartBlockDate(SurveyQuestion $question, Collection $answers): ?array
+    {
+        $byDay = [];
+        foreach ($answers as $a) {
+            $key = null;
+            if ($a->answer_date) {
+                $key = $a->answer_date->format('Y-m-d');
+            } elseif (filled($a->answer_text)) {
+                $t = trim((string) $a->answer_text);
+                if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $t, $m)) {
+                    $key = $m[1];
+                }
+            }
+            if ($key) {
+                $byDay[$key] = ($byDay[$key] ?? 0) + 1;
+            }
+        }
+        if ($byDay === []) {
+            return null;
+        }
+        ksort($byDay);
+        $labels = [];
+        $data = [];
+        foreach ($byDay as $ymd => $c) {
+            $labels[] = function_exists('jalali_date')
+                ? (string) jalali_date($ymd, 'Y/m/d')
+                : $ymd;
+            $data[] = $c;
+        }
+
+        return $this->finalizeChartSpec($question, $labels, $data, 'تعداد پاسخ به تفکیک روز');
+    }
+
+    /**
+     * @param  list<string>  $labels
+     * @param  list<int|float>  $data
+     * @return array<string, mixed>|null
+     */
+    private function finalizeChartSpec(SurveyQuestion $question, array $labels, array $data, ?string $subtitle): ?array
+    {
+        $n = count($labels);
+        if ($n === 0 || $n !== count($data)) {
+            return null;
+        }
+
+        $sum = array_sum($data);
+        $colors = $this->chartPalette($n);
+
+        $kind = 'bar';
+        $indexAxis = 'x';
+        if ($question->type === 'date') {
+            $kind = 'line';
+        } elseif ($sum > 0 && $n >= 2 && $n <= 10 && in_array($question->type, [
+            'multiple_choice', 'dropdown', 'checkboxes', 'yes_no', 'linear_scale', 'rating',
+        ], true)) {
+            $kind = 'doughnut';
+        } elseif ($n > 7 && $kind === 'bar') {
+            $indexAxis = 'y';
+        }
+
+        return [
+            'question_id' => $question->id,
+            'title' => $this->truncateChartLabel((string) $question->title, 120),
+            'question_type' => $question->type,
+            'kind' => $kind,
+            'index_axis' => $indexAxis,
+            'labels' => $labels,
+            'data' => array_map(fn ($v) => (float) $v, $data),
+            'colors' => $colors,
+            'subtitle' => $subtitle,
+            'has_data' => $sum > 0,
+            'total_in_chart' => $sum,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function chartPalette(int $n): array
+    {
+        $base = [
+            'rgba(214, 17, 25, 0.88)',
+            'rgba(13, 116, 133, 0.88)',
+            'rgba(15, 118, 110, 0.88)',
+            'rgba(79, 70, 229, 0.85)',
+            'rgba(217, 119, 6, 0.88)',
+            'rgba(37, 99, 235, 0.85)',
+            'rgba(147, 51, 234, 0.82)',
+            'rgba(220, 38, 38, 0.78)',
+            'rgba(8, 145, 178, 0.88)',
+            'rgba(22, 163, 74, 0.85)',
+            'rgba(234, 88, 12, 0.85)',
+            'rgba(59, 130, 246, 0.85)',
+        ];
+        $out = [];
+        for ($i = 0; $i < $n; $i++) {
+            $out[] = $base[$i % count($base)];
+        }
+
+        return $out;
+    }
+
+    private function truncateChartLabel(string $label, int $max = 48): string
+    {
+        $label = trim($label);
+        if ($label === '') {
+            return '-';
+        }
+        if (function_exists('mb_strlen') && function_exists('mb_substr') && mb_strlen($label) > $max) {
+            return mb_substr($label, 0, $max - 1) . '…';
+        }
+        if (strlen($label) > $max) {
+            return substr($label, 0, $max - 1) . '…';
+        }
+
+        return $label;
+    }
+
     private function normalizeAudienceConfig(mixed $value): array
     {
         $fallback = [
@@ -701,9 +1265,11 @@ class SurveyController extends Controller
             return $fallback;
         }
 
+        $identityMode = $value['identity_mode'] ?? 'none';
+
         return [
-            'identity_mode' => in_array($value['identity_mode'] ?? 'none', ['none', 'personnel_code', 'national_code', 'either'], true)
-                ? $value['identity_mode']
+            'identity_mode' => in_array($identityMode, ['none', 'personnel_code', 'national_code', 'either'], true)
+                ? $identityMode
                 : 'none',
             'modes' => array_values(array_filter((array) ($value['modes'] ?? []), fn ($mode) => in_array($mode, ['unit', 'gender', 'position', 'personnel'], true))),
             'unit_ids' => array_values(array_map('intval', (array) ($value['unit_ids'] ?? []))),

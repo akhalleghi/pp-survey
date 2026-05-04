@@ -229,6 +229,8 @@
 
     <div class="designer-wrap">
         <section class="designer-canvas">
+            @include('admin.partials.survey-publish-rejection-notice', ['survey' => $survey])
+
             @if (session('status'))
                 <div style="border:1px solid rgba(22,163,74,.28); background:rgba(22,163,74,.08); color:#166534; border-radius:14px; padding:.7rem .9rem; font-size:.9rem;">
                     {{ session('status') }}

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
+use App\Support\AdminPermissions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,14 @@ class AuthController extends Controller
     public function showLoginForm(Request $request): View|RedirectResponse
     {
         if ($request->session()->has('admin_id')) {
-            return redirect()->route('admin.dashboard');
+            $existing = AdminUser::find($request->session()->get('admin_id'));
+            if ($existing && $existing->is_active) {
+                $landing = AdminPermissions::defaultLandingRouteName($existing);
+                if ($landing !== null) {
+                    return redirect()->route($landing);
+                }
+            }
+            $request->session()->forget('admin_id');
         }
 
         $captcha = $this->generateCaptcha();
@@ -49,17 +57,26 @@ class AuthController extends Controller
         }
 
         $admin = AdminUser::where('username', $validated['username'])->first();
-        if (!$admin || !Hash::check($validated['password'], $admin->password)) {
+        if (!$admin || !$admin->is_active || !Hash::check($validated['password'], $admin->password)) {
             return back()
                 ->withInput($request->only('username'))
-                ->withErrors(['username' => 'اطلاعات ورود نادرست است.']);
+                ->withErrors(['username' => 'اطلاعات ورود نادرست است یا حساب غیرفعال شده است.']);
         }
 
         $request->session()->regenerate();
         $request->session()->put('admin_id', $admin->id);
         $request->session()->forget('admin_captcha');
 
-        return redirect()->route('admin.dashboard');
+        $landing = AdminPermissions::defaultLandingRouteName($admin);
+        if ($landing === null) {
+            $request->session()->forget('admin_id');
+
+            return back()
+                ->withInput($request->only('username'))
+                ->withErrors(['username' => 'هیچ بخش مجازی برای این حساب تعریف نشده است. با مدیر تماس بگیرید.']);
+        }
+
+        return redirect()->route($landing);
     }
 
     /**

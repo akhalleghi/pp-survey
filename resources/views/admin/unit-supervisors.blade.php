@@ -8,7 +8,25 @@
     $editingSupervisorId = old('supervisor_id');
     $shouldOpenCreateModal = $errors->createSupervisor->any() || ($oldFormType === 'create');
     $shouldOpenEditModal = $errors->updateSupervisor->any() || ($oldFormType === 'update');
+    $skipPortalClientSync = $shouldOpenEditModal && $errors->updateSupervisor->any();
     $filters = $filters ?? ['search' => request('search'), 'unit' => request('unit')];
+    $assignableLabelMap = $permissionLabels ?? [];
+    $normalizePortalPermKeysForUi = static function ($perms, array $labelMap): array {
+        $flat = \Illuminate\Support\Arr::flatten(is_array($perms) ? $perms : []);
+        $out = [];
+        foreach ($flat as $pk) {
+            if ($pk === null) {
+                continue;
+            }
+            $pk = is_string($pk) ? $pk : (is_scalar($pk) ? (string) $pk : '');
+            if ($pk === '' || ! array_key_exists($pk, $labelMap)) {
+                continue;
+            }
+            $out[] = $pk;
+        }
+
+        return array_values(array_unique($out));
+    };
 @endphp
 
 @section('content')
@@ -69,7 +87,7 @@
         table.supervisors-table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 720px;
+            min-width: 920px;
         }
         table.supervisors-table th,
         table.supervisors-table td {
@@ -200,10 +218,12 @@
             background: rgba(15,23,42,0.55);
             backdrop-filter: blur(4px);
             display: none;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
-            padding: 1rem;
+            padding: max(0.5rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.65rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
             z-index: 100;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .modal.open {
             display: flex;
@@ -218,6 +238,45 @@
             display: flex;
             flex-direction: column;
             gap: 1.25rem;
+        }
+        .supervisor-modal-shell {
+            width: min(640px, 100%);
+            max-height: min(88vh, 52rem);
+            max-height: min(88dvh, 52rem);
+            margin: auto;
+            padding: 0;
+            gap: 0;
+            overflow: hidden;
+            min-height: 0;
+            flex-shrink: 0;
+        }
+        .supervisor-modal-form {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .supervisor-modal-shell .modal-header {
+            flex: 0 0 auto;
+            padding: 1.15rem 1.4rem 0.85rem;
+            border-bottom: 1px solid rgba(15,23,42,0.07);
+        }
+        .supervisor-modal-shell .modal-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            padding: 1rem 1.4rem 1.15rem;
+            overscroll-behavior: contain;
+        }
+        .supervisor-modal-shell .modal-actions {
+            flex: 0 0 auto;
+            padding: 0.85rem 1.4rem 1.15rem;
+            margin: 0;
+            border-top: 1px solid rgba(15,23,42,0.08);
+            background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, #fff 35%);
+            box-shadow: 0 -6px 24px rgba(15,23,42,0.05);
         }
         .modal-header {
             display: flex;
@@ -284,6 +343,13 @@
             .supervisor-card-grid {
                 display: grid;
             }
+            .supervisor-modal-shell {
+                max-height: min(92dvh, 100%);
+                border-radius: 22px;
+            }
+            .portal-permissions-grid {
+                grid-template-columns: 1fr;
+            }
         }
         .select2-container--default .select2-selection--single {
             border-radius: 16px;
@@ -299,6 +365,88 @@
         }
         .select2-container--default .select2-selection--single .select2-selection__arrow {
             top: 10px;
+        }
+        .error-text {
+            color: #b91c1c;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: block;
+            margin-top: 0.25rem;
+        }
+        .modal-dialog--wide:not(.supervisor-modal-shell) {
+            width: min(640px, 100%);
+        }
+        .modal-body input[type="text"],
+        .modal-body input[type="password"] {
+            border: 1px solid rgba(15,23,42,0.15);
+            border-radius: 16px;
+            padding: 0.9rem 1rem;
+            font-size: 1rem;
+            font-family: inherit;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .modal-section-title {
+            margin: 0.75rem 0 0.35rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--slate);
+            padding-top: 0.35rem;
+            border-top: 1px solid rgba(15,23,42,0.08);
+        }
+        .modal-section-title:first-of-type {
+            border-top: none;
+            padding-top: 0;
+        }
+        .modal-help {
+            font-size: 0.82rem;
+            color: var(--muted);
+            font-weight: 500;
+            margin: 0 0 0.5rem;
+            line-height: 1.45;
+        }
+        .portal-permissions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+            gap: 0.45rem 0.75rem;
+            margin-top: 0.35rem;
+        }
+        .portal-permissions-grid label {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .portal-active-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            font-weight: 600;
+        }
+        .portal-active-row input {
+            width: auto;
+        }
+        .account-badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .account-badge--ok {
+            background: rgba(21,128,61,0.12);
+            color: #166534;
+        }
+        .account-badge--off {
+            background: rgba(100,116,139,0.15);
+            color: #475569;
+        }
+        .account-badge--none {
+            background: rgba(15,23,42,0.06);
+            color: var(--muted);
         }
     </style>
 
@@ -351,17 +499,35 @@
                             <th>نام کاربر</th>
                             <th>کد پرسنلی</th>
                             <th>واحد</th>
+                            <th>نام کاربری پنل</th>
+                            <th>وضعیت حساب</th>
                             <th>تاریخ ثبت</th>
                             <th>عملیات</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($supervisors as $supervisor)
+                            @php
+                                $portalAccount = $supervisor->resolvePortalAdmin();
+                                $portalPermKeysForBtn = $normalizePortalPermKeysForUi($portalAccount?->permissions, $assignableLabelMap);
+                            @endphp
                             <tr>
                                 <td>#{{ $supervisor->id }}</td>
                                 <td>{{ trim(($supervisor->personnel->first_name ?? '') . ' ' . ($supervisor->personnel->last_name ?? '')) ?: 'نامشخص' }}</td>
                                 <td>{{ $supervisor->personnel_code }}</td>
                                 <td>{{ $supervisor->unit?->name ?? '—' }}</td>
+                                <td>{{ $portalAccount?->username ?? '—' }}</td>
+                                <td>
+                                    @if ($portalAccount)
+                                        @if ($portalAccount->is_active)
+                                            <span class="account-badge account-badge--ok">فعال</span>
+                                        @else
+                                            <span class="account-badge account-badge--off">غیرفعال</span>
+                                        @endif
+                                    @else
+                                        <span class="account-badge account-badge--none">بدون حساب</span>
+                                    @endif
+                                </td>
                                 <td>{{ jalali_date($supervisor->created_at) }}</td>
                                 <td class="actions">
                                     <button type="button"
@@ -369,7 +535,11 @@
                                             data-id="{{ $supervisor->id }}"
                                             data-personnel-code="{{ $supervisor->personnel_code }}"
                                             data-unit-id="{{ $supervisor->unit_id }}"
-                                            data-action="{{ route('admin.unit-supervisors.update', $supervisor) }}">
+                                            data-action="{{ route('admin.unit-supervisors.update', $supervisor) }}"
+                                            data-portal-username="{{ $portalAccount?->username ?? '' }}"
+                                            data-portal-active="{{ $portalAccount && $portalAccount->is_active ? '1' : '0' }}"
+                                            data-portal-permissions='@json($portalPermKeysForBtn)'
+                                            data-requires-survey-publish-approval="{{ $portalAccount && $portalAccount->requires_survey_publish_approval ? '1' : '0' }}">
                                         ویرایش
                                     </button>
                                     <form method="POST" action="{{ route('admin.unit-supervisors.destroy', $supervisor) }}" onsubmit="return confirm('از حذف ناظر مطمئن هستید؟');">
@@ -386,6 +556,10 @@
 
             <div class="supervisor-card-grid">
                 @foreach ($supervisors as $supervisor)
+                    @php
+                        $portalAccount = $supervisor->resolvePortalAdmin();
+                        $portalPermKeysForBtn = $normalizePortalPermKeysForUi($portalAccount?->permissions, $assignableLabelMap);
+                    @endphp
                     <div class="supervisor-card-item">
                         <div>
                             <span>نام کاربر</span>
@@ -399,6 +573,21 @@
                             <span>واحد</span>
                             <strong>{{ $supervisor->unit?->name ?? '—' }}</strong>
                         </div>
+                        <div>
+                            <span>پنل</span>
+                            <strong>
+                                @if ($portalAccount)
+                                    {{ $portalAccount->username }}
+                                    @if ($portalAccount->is_active)
+                                        <span class="account-badge account-badge--ok">فعال</span>
+                                    @else
+                                        <span class="account-badge account-badge--off">غیرفعال</span>
+                                    @endif
+                                @else
+                                    <span class="account-badge account-badge--none">بدون حساب</span>
+                                @endif
+                            </strong>
+                        </div>
                         <div class="card-actions">
                             <time>{{ jalali_date($supervisor->created_at) }}</time>
                             <div class="card-buttons">
@@ -407,7 +596,11 @@
                                         data-id="{{ $supervisor->id }}"
                                         data-personnel-code="{{ $supervisor->personnel_code }}"
                                         data-unit-id="{{ $supervisor->unit_id }}"
-                                        data-action="{{ route('admin.unit-supervisors.update', $supervisor) }}">
+                                        data-action="{{ route('admin.unit-supervisors.update', $supervisor) }}"
+                                        data-portal-username="{{ $portalAccount?->username ?? '' }}"
+                                        data-portal-active="{{ $portalAccount && $portalAccount->is_active ? '1' : '0' }}"
+                                        data-portal-permissions='@json($portalPermKeysForBtn)'
+                                        data-requires-survey-publish-approval="{{ $portalAccount && $portalAccount->requires_survey_publish_approval ? '1' : '0' }}">
                                     ویرایش
                                 </button>
                                 <form method="POST" action="{{ route('admin.unit-supervisors.destroy', $supervisor) }}" onsubmit="return confirm('از حذف ناظر مطمئن هستید؟');">
@@ -432,12 +625,12 @@
     </div>
 
     <div class="modal {{ $shouldOpenCreateModal ? 'open' : '' }}" id="createSupervisorModal" data-open="{{ $shouldOpenCreateModal ? 'true' : 'false' }}" data-keep-latin-numbers>
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog--wide supervisor-modal-shell">
             <div class="modal-header">
                 <h3>تخصیص ناظر جدید</h3>
                 <button type="button" class="modal-close" data-modal-close>&times;</button>
             </div>
-            <form method="POST" action="{{ route('admin.unit-supervisors.store') }}">
+            <form class="supervisor-modal-form" method="POST" action="{{ route('admin.unit-supervisors.store') }}">
                 @csrf
                 <input type="hidden" name="form" value="create">
                 <div class="modal-body">
@@ -466,6 +659,56 @@
                     @if ($errors->createSupervisor->has('unit_id'))
                         <span class="error-text">{{ $errors->createSupervisor->first('unit_id') }}</span>
                     @endif
+
+                    <p class="modal-section-title">دسترسی پنل مدیریت <span style="font-weight:500;color:var(--muted);font-size:0.85rem;">(اختیاری)</span></p>
+                    <p class="modal-help">با نام کاربری و رمز، ناظر می‌تواند وارد پنل شود؛ با تیک‌های زیر مشخص کنید کدام بخش‌ها را ببیند. خالی بگذارید اگر فقط ثبت ناظر بدون حساب ورود کافی است.</p>
+
+                    <label for="create-portal-username">نام کاربری پنل</label>
+                    <input type="text" name="portal_username" id="create-portal-username" value="{{ old('portal_username') }}" autocomplete="username" placeholder="مثال: nazer.unit1">
+                    @if ($errors->createSupervisor->has('portal_username'))
+                        <span class="error-text">{{ $errors->createSupervisor->first('portal_username') }}</span>
+                    @endif
+
+                    <label for="create-portal-password" style="margin-top:0.6rem;">رمز عبور</label>
+                    <input type="password" name="portal_password" id="create-portal-password" autocomplete="new-password" placeholder="حداقل ۸ کاراکتر">
+                    @if ($errors->createSupervisor->has('portal_password'))
+                        <span class="error-text">{{ $errors->createSupervisor->first('portal_password') }}</span>
+                    @endif
+
+                    <label for="create-portal-password-confirmation" style="margin-top:0.6rem;">تکرار رمز عبور</label>
+                    <input type="password" name="portal_password_confirmation" id="create-portal-password-confirmation" autocomplete="new-password">
+                    @if ($errors->createSupervisor->has('portal_password_confirmation'))
+                        <span class="error-text">{{ $errors->createSupervisor->first('portal_password_confirmation') }}</span>
+                    @endif
+
+                    <p class="modal-section-title" style="font-size:0.9rem;">بخش‌های قابل مشاهده در پنل</p>
+                    <p class="modal-help">این فهرست از تنظیمات دسترسی برنامه پر می‌شود؛ هر بخش جدیدی که در منوی مدیریت یا لیبل‌های دسترسی تعریف کنید، اینجا هم برای تیک زدن ظاهر می‌شود.</p>
+                    <div class="portal-permissions-grid">
+                        @foreach ($permissionLabels as $key => $label)
+                            <label>
+                                <input type="checkbox" name="portal_permissions[]" value="{{ $key }}"
+                                    @checked(in_array($key, old('portal_permissions', $defaultPortalPermissions), true))>
+                                <span>{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+
+                    <div class="portal-active-row">
+                        <input type="checkbox" name="portal_active" value="1" id="create-portal-active"
+                            @checked(!$errors->createSupervisor->any() || old('portal_active'))>
+                        <label for="create-portal-active" style="margin:0;">حساب پنل فعال باشد</label>
+                    </div>
+
+                    <p class="modal-section-title" style="font-size:0.9rem;">نیاز به تأیید انتشار نظرسنجی</p>
+                    <p class="modal-help">در صورت «بله»، پس از آماده‌سازی نظرسنجی، مدیر اصلی باید انتشار را تأیید کند؛ در غیر این صورت سرپرست با «ایجاد لینک و فعال‌سازی» خودش منتشر می‌کند.</p>
+                    @php
+                        $reqPubOld = old('requires_survey_publish_approval');
+                        $reqPubCheckedYes = $reqPubOld === true || $reqPubOld === 1 || $reqPubOld === '1';
+                    @endphp
+                    <div class="portal-active-row" style="flex-wrap:wrap; gap:0.75rem;">
+                        <label style="margin:0; font-weight:600;"><input type="radio" name="requires_survey_publish_approval" value="0" id="create-requires-approval-no" @checked(!$reqPubCheckedYes)> خیر</label>
+                        <label style="margin:0; font-weight:600;"><input type="radio" name="requires_survey_publish_approval" value="1" id="create-requires-approval-yes" @checked($reqPubCheckedYes)> بله</label>
+                    </div>
                 </div>
                 <div class="modal-actions">
                     <button type="submit" class="submit-btn">ثبت ناظر</button>
@@ -475,13 +718,13 @@
         </div>
     </div>
 
-    <div class="modal {{ $shouldOpenEditModal ? 'open' : '' }}" id="editSupervisorModal" data-open="{{ $shouldOpenEditModal ? 'true' : 'false' }}" data-old-edit-id="{{ $shouldOpenEditModal ? $editingSupervisorId : '' }}" data-keep-latin-numbers>
-        <div class="modal-dialog">
+    <div class="modal {{ $shouldOpenEditModal ? 'open' : '' }}" id="editSupervisorModal" data-open="{{ $shouldOpenEditModal ? 'true' : 'false' }}" data-old-edit-id="{{ $shouldOpenEditModal ? $editingSupervisorId : '' }}" data-skip-client-sync="{{ $skipPortalClientSync ? 'true' : 'false' }}" data-keep-latin-numbers>
+        <div class="modal-dialog modal-dialog--wide supervisor-modal-shell">
             <div class="modal-header">
                 <h3>ویرایش ناظر واحد</h3>
                 <button type="button" class="modal-close" data-modal-close>&times;</button>
             </div>
-            <form method="POST" action="#">
+            <form class="supervisor-modal-form" method="POST" action="#">
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="form" value="update">
@@ -512,6 +755,60 @@
                     @if ($errors->updateSupervisor->has('unit_id'))
                         <span class="error-text">{{ $errors->updateSupervisor->first('unit_id') }}</span>
                     @endif
+
+                    <p class="modal-section-title">دسترسی پنل مدیریت</p>
+                    <p class="modal-help">برای همان کد پرسنلی در همهٔ واحدهایی که ناظر است یک حساب مشترک استفاده می‌شود. رمز را خالی بگذارید تا رمز فعلی عوض نشود.</p>
+
+                    <label for="edit-portal-username">نام کاربری پنل</label>
+                    <input type="text" name="portal_username" id="edit-portal-username" value="{{ old('portal_username') }}" autocomplete="username" placeholder="خالی = بدون تغییر نام کاربری در صورت وجود حساب">
+                    @if ($errors->updateSupervisor->has('portal_username'))
+                        <span class="error-text">{{ $errors->updateSupervisor->first('portal_username') }}</span>
+                    @endif
+
+                    <label for="edit-portal-password" style="margin-top:0.6rem;">رمز عبور جدید</label>
+                    <input type="password" name="portal_password" id="edit-portal-password" autocomplete="new-password" placeholder="خالی = حفظ رمز فعلی">
+                    @if ($errors->updateSupervisor->has('portal_password'))
+                        <span class="error-text">{{ $errors->updateSupervisor->first('portal_password') }}</span>
+                    @endif
+
+                    <label for="edit-portal-password-confirmation" style="margin-top:0.6rem;">تکرار رمز عبور</label>
+                    <input type="password" name="portal_password_confirmation" id="edit-portal-password-confirmation" autocomplete="new-password">
+                    @if ($errors->updateSupervisor->has('portal_password_confirmation'))
+                        <span class="error-text">{{ $errors->updateSupervisor->first('portal_password_confirmation') }}</span>
+                    @endif
+
+                    <p class="modal-section-title" style="font-size:0.9rem;">بخش‌های قابل مشاهده در پنل</p>
+                    <p class="modal-help">فهرست زیر به‌صورت خودکار از تنظیمات دسترسی برنامه به‌روز می‌شود؛ بخش‌های جدید منو یا کلیدهای دسترسی جدید بدون تغییر این صفحه اینجا دیده می‌شوند.</p>
+                    <div class="portal-permissions-grid">
+                        @foreach ($permissionLabels as $key => $label)
+                            <label>
+                                <input type="checkbox" name="portal_permissions[]" value="{{ $key }}" class="edit-portal-perm"
+                                    @if ($skipPortalClientSync)
+                                        @checked(in_array($key, old('portal_permissions', []), true))
+                                    @endif>
+                                <span>{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+
+                    <div class="portal-active-row">
+                        <input type="checkbox" name="portal_active" value="1" id="edit-portal-active"
+                            @if ($skipPortalClientSync)
+                                @checked(old('portal_active'))
+                            @endif>
+                        <label for="edit-portal-active" style="margin:0;">حساب پنل فعال باشد</label>
+                    </div>
+
+                    <p class="modal-section-title" style="font-size:0.9rem;">نیاز به تأیید انتشار نظرسنجی</p>
+                    <p class="modal-help">همانند بالا؛ برای حساب‌های موجود با دکمهٔ ویرایش از مقدار ذخیره‌شده پر می‌شود.</p>
+                    @php
+                        $reqPubEditOld = old('requires_survey_publish_approval');
+                        $reqPubEditYes = $skipPortalClientSync && ($reqPubEditOld === true || $reqPubEditOld === 1 || $reqPubEditOld === '1');
+                    @endphp
+                    <div class="portal-active-row" style="flex-wrap:wrap; gap:0.75rem;">
+                        <label style="margin:0; font-weight:600;"><input type="radio" name="requires_survey_publish_approval" value="0" id="edit-requires-approval-no" @if ($skipPortalClientSync) @checked(!$reqPubEditYes) @endif> خیر</label>
+                        <label style="margin:0; font-weight:600;"><input type="radio" name="requires_survey_publish_approval" value="1" id="edit-requires-approval-yes" @if ($skipPortalClientSync) @checked($reqPubEditYes) @endif> بله</label>
+                    </div>
                 </div>
                 <div class="modal-actions">
                     <button type="submit" class="submit-btn">ثبت تغییرات</button>
@@ -589,29 +886,71 @@
             const editUnit = document.getElementById('edit-supervisor-unit');
             const editIdField = editModal?.querySelector('input[name="supervisor_id"]');
 
-            const openEditModal = (id, personnelCode, unitId, action) => {
-                if (!editModal || !editForm) return;
-                if (action) {
-                    editForm.action = action;
+            const openEditModal = (btn) => {
+                if (!editModal || !editForm || !btn) return;
+                const ds = btn.dataset;
+                if (ds.action) {
+                    editForm.action = ds.action;
                 }
                 if (editIdField) {
-                    editIdField.value = id || '';
+                    editIdField.value = ds.id || '';
                 }
                 if (editPersonnel) {
-                    editPersonnel.value = personnelCode || '';
+                    editPersonnel.value = ds.personnelCode || '';
                     jQuery(editPersonnel).trigger('change.select2');
                 }
                 if (editUnit) {
-                    editUnit.value = unitId || '';
+                    editUnit.value = ds.unitId || '';
                     jQuery(editUnit).trigger('change.select2');
                 }
+
+                const skipPortal = editModal.dataset.skipClientSync === 'true';
+                if (!skipPortal) {
+                    const userEl = document.getElementById('edit-portal-username');
+                    const passEl = document.getElementById('edit-portal-password');
+                    const passConfEl = document.getElementById('edit-portal-password-confirmation');
+                    const activeEl = document.getElementById('edit-portal-active');
+                    if (userEl) {
+                        userEl.value = ds.portalUsername || '';
+                    }
+                    if (passEl) passEl.value = '';
+                    if (passConfEl) passConfEl.value = '';
+                    if (activeEl) {
+                        activeEl.checked = ds.portalActive === '1';
+                    }
+                    const reqYes = document.getElementById('edit-requires-approval-yes');
+                    const reqNo = document.getElementById('edit-requires-approval-no');
+                    if (reqYes && reqNo) {
+                        const needsAppr = ds.requiresSurveyPublishApproval === '1';
+                        reqYes.checked = needsAppr;
+                        reqNo.checked = !needsAppr;
+                    }
+                    let rawStr = btn.getAttribute('data-portal-permissions');
+                    if (rawStr === null || rawStr.trim() === '') {
+                        rawStr = ds.portalPermissions || '[]';
+                    }
+                    let perms = [];
+                    try {
+                        const raw = JSON.parse(rawStr || '[]');
+                        perms = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' ? Object.values(raw) : []);
+                    } catch (e) {
+                        perms = [];
+                    }
+                    if (!Array.isArray(perms)) {
+                        perms = [];
+                    }
+                    perms = perms.map(String);
+                    const allowed = new Set(perms);
+                    editModal.querySelectorAll('.edit-portal-perm').forEach((cb) => {
+                        cb.checked = allowed.has(String(cb.value));
+                    });
+                }
+
                 openModal(editModal);
             };
 
             document.querySelectorAll('.edit-supervisor-btn').forEach((btn) => {
-                btn.addEventListener('click', () => {
-                    openEditModal(btn.dataset.id, btn.dataset.personnelCode, btn.dataset.unitId, btn.dataset.action);
-                });
+                btn.addEventListener('click', () => openEditModal(btn));
             });
 
             if (createModal?.dataset.open === 'true') {

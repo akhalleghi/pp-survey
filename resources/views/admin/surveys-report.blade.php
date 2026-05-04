@@ -205,6 +205,64 @@
             border-radius: 16px;
             background: #fff;
         }
+        .report-charts {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .report-charts > h3 {
+            margin: 0;
+            font-size: 1.05rem;
+            color: var(--slate);
+        }
+        .report-charts > .report-charts-lead {
+            margin: 0;
+            font-size: 0.82rem;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .report-charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+            gap: 1rem;
+        }
+        .report-chart-card {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 16px;
+            padding: 0.85rem 0.95rem;
+            background: rgba(255, 255, 255, 0.98);
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+        .report-chart-card h4 {
+            margin: 0;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--slate);
+            line-height: 1.45;
+        }
+        .report-chart-card .chart-sub {
+            margin: 0;
+            font-size: 0.74rem;
+            color: var(--muted);
+        }
+        .chart-canvas-wrap {
+            position: relative;
+            height: 280px;
+            width: 100%;
+            margin-top: 0.25rem;
+        }
+        .chart-empty {
+            margin: 0;
+            padding: 1.25rem 0.5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--muted);
+            border: 1px dashed rgba(15, 23, 42, 0.12);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.02);
+        }
     </style>
 
     <div class="report-wrapper">
@@ -228,6 +286,127 @@
             <section class="report-card" style="border-color: rgba(22, 163, 74, .25); background: rgba(22, 163, 74, .06);">
                 <strong style="color:#166534;">{{ session('status') }}</strong>
             </section>
+        @endif
+
+        @if (!empty($chartBlocks))
+            <section class="report-card report-charts">
+                <h3>نمودارهای آماری</h3>
+                <p class="report-charts-lead">
+                    برای هر سوالی که قابل تجمیع باشد (گزینه‌ای، چندانتخابی، امتیاز، عدد، تاریخ) نمودار به‌صورت خودکار ساخته می‌شود.
+                    داده‌ها از <strong>تمام پاسخ‌های ثبت‌شده</strong> هستند، نه فقط همین صفحهٔ جدول.
+                </p>
+                <div class="report-charts-grid">
+                    @foreach ($chartBlocks as $block)
+                        <article class="report-chart-card">
+                            <h4>{{ $block['title'] }}</h4>
+                            @if (!empty($block['subtitle']))
+                                <p class="chart-sub">{{ $block['subtitle'] }}</p>
+                            @endif
+                            @if (!empty($block['has_data']))
+                                <div class="chart-canvas-wrap" dir="ltr">
+                                    <canvas id="survey-chart-{{ $block['question_id'] }}" aria-label="نمودار آماری سوال"></canvas>
+                                </div>
+                            @else
+                                <p class="chart-empty">هنوز پاسخی برای این نمودار ثبت نشده است.</p>
+                            @endif
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+            <script src="{{ asset('vendor/chartjs/chart.umd.min.js') }}"></script>
+            <script>
+                (function () {
+                    var blocks = @json($chartBlocks);
+                    function initCharts() {
+                        if (typeof Chart === 'undefined') {
+                            return;
+                        }
+                        blocks.forEach(function (block) {
+                            if (!block.has_data) {
+                                return;
+                            }
+                            var canvas = document.getElementById('survey-chart-' + block.question_id);
+                            if (!canvas) {
+                                return;
+                            }
+                            try {
+                                var labels = block.labels;
+                                var data = block.data;
+                                var colors = block.colors;
+                                var kind = block.kind;
+                                var legendDisplay = kind === 'doughnut';
+                                var ds = {
+                                    label: block.title,
+                                    data: data,
+                                    borderWidth: kind === 'line' ? 2 : 1,
+                                    tension: 0.25,
+                                };
+                                if (kind === 'line') {
+                                    ds.backgroundColor = 'rgba(214, 17, 25, 0.12)';
+                                    ds.borderColor = 'rgba(214, 17, 25, 0.95)';
+                                    ds.fill = true;
+                                } else if (kind === 'doughnut') {
+                                    ds.backgroundColor = colors;
+                                    ds.borderColor = '#ffffff';
+                                    ds.hoverBorderColor = 'rgba(15, 23, 42, 0.12)';
+                                } else {
+                                    ds.backgroundColor = colors;
+                                    ds.borderColor = colors.map(function () {
+                                        return 'rgba(15, 23, 42, 0.18)';
+                                    });
+                                }
+                                var options = {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            display: legendDisplay,
+                                            position: 'bottom',
+                                            rtl: true,
+                                        },
+                                        tooltip: {
+                                            rtl: true,
+                                        },
+                                    },
+                                };
+                                if (kind === 'bar') {
+                                    options.indexAxis = block.index_axis || 'x';
+                                    if (options.indexAxis === 'y') {
+                                        options.scales = {
+                                            x: { beginAtZero: true, ticks: { precision: 0 } },
+                                            y: { ticks: { font: { size: 11 } } },
+                                        };
+                                    } else {
+                                        options.scales = {
+                                            x: { ticks: { maxRotation: 42 } },
+                                            y: { beginAtZero: true, ticks: { precision: 0 } },
+                                        };
+                                    }
+                                }
+                                if (kind === 'line') {
+                                    options.scales = {
+                                        x: { ticks: { maxRotation: 35 } },
+                                        y: { beginAtZero: true, ticks: { precision: 0 } },
+                                    };
+                                }
+                                new Chart(canvas.getContext('2d'), {
+                                    type: kind,
+                                    data: {
+                                        labels: labels,
+                                        datasets: [ds],
+                                    },
+                                    options: options,
+                                });
+                            } catch (e) {}
+                        });
+                    }
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', initCharts);
+                    } else {
+                        initCharts();
+                    }
+                })();
+            </script>
         @endif
 
         @if ($responses->count())

@@ -29,6 +29,16 @@
         };
         $primaryRgb = $hexToRgb($primary);
         $primaryDarkRgb = $hexToRgb($primaryDark);
+        $toFaDigits = static function (int|string $value): string {
+            return strtr((string) $value, ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']);
+        };
+        $publicTheme = array_merge(\App\Models\Survey::defaultPublicTheme(), $survey->public_theme ?? []);
+        $pubCss = static function (?string $v): string {
+            $v = trim((string) $v);
+            $v = str_replace(["\n", "\r", '"', "'", '<', '>', ';', '{', '}'], '', $v);
+
+            return strlen($v) > 80 ? substr($v, 0, 80) : $v;
+        };
     @endphp
     <style>
         :root {
@@ -41,6 +51,25 @@
             --text-primary: {{ $textPrimary }};
             --primary-rgb: {{ $primaryRgb }};
             --primary-dark-rgb: {{ $primaryDarkRgb }};
+            --pub-card-bg: {{ $pubCss($publicTheme['card_bg'] ?? '') }};
+            --pub-card-border: {{ $pubCss($publicTheme['card_border'] ?? '') }};
+            --pub-title: {{ $pubCss($publicTheme['title'] ?? '') }};
+            --pub-body: {{ $pubCss($publicTheme['body'] ?? '') }};
+            --pub-muted: {{ $pubCss($publicTheme['muted'] ?? '') }};
+            --pub-required-star: {{ $pubCss($publicTheme['required_star'] ?? '') }};
+            --pub-input-bg: {{ $pubCss($publicTheme['input_bg'] ?? '') }};
+            --pub-input-border: {{ $pubCss($publicTheme['input_border'] ?? '') }};
+            --pub-input-text: {{ $pubCss($publicTheme['input_text'] ?? '') }};
+            --pub-input-placeholder: {{ $pubCss($publicTheme['input_placeholder'] ?? '') }};
+            --pub-option-hover: {{ $pubCss($publicTheme['option_hover'] ?? '') }};
+            --pub-error: {{ $pubCss($publicTheme['error_color'] ?? '') }};
+            --pub-rating-wrap-bg: {{ $pubCss($publicTheme['rating_wrap_bg'] ?? '') }};
+            --pub-rating-wrap-border: {{ $pubCss($publicTheme['rating_wrap_border'] ?? '') }};
+            --pub-footer-percent: {{ $pubCss($publicTheme['footer_percent'] ?? '') }};
+            --pub-track-bg: {{ $pubCss($publicTheme['track_bg'] ?? '') }};
+            --pub-fill: {{ $pubCss($publicTheme['fill'] ?? '') }};
+            --pub-nav-prev: {{ $pubCss($publicTheme['nav_prev'] ?? '') }};
+            --pub-nav-next: {{ $pubCss($publicTheme['nav_next'] ?? '') }};
         }
         @if ($surveyBackground)
         :root { --survey-bg-image: url('{{ $surveyBackground }}'); }
@@ -310,6 +339,284 @@
             letter-spacing: 0.01em;
             user-select: none;
         }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        body:has(#surveyWizard:not(.is-hidden)) {
+            padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+        }
+        .survey-wizard-root {
+            width: 100%;
+            max-width: 560px;
+            margin-inline: auto;
+        }
+        .survey-wizard-form {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            padding: 0 !important;
+            display: flex;
+            flex-direction: column;
+            min-height: min(calc(100dvh - 5.5rem), 820px);
+        }
+        .survey-wizard-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: stretch;
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 0.75rem 0.2rem 1rem;
+            color: inherit;
+        }
+        .survey-wizard-card {
+            background: var(--pub-card-bg);
+            border: 1px solid var(--pub-card-border);
+            border-radius: 20px;
+            padding: clamp(0.9rem, 2.5vw, 1.15rem);
+            box-shadow: 0 14px 40px rgba(15, 23, 42, 0.12);
+        }
+        .survey-wizard-top {
+            margin-bottom: 1.05rem;
+            text-align: right;
+        }
+        .survey-wizard-title {
+            margin: 0 0 0.35rem;
+            font-size: clamp(1rem, 3.5vw, 1.18rem);
+            font-weight: 700;
+            color: var(--pub-title);
+            line-height: 1.45;
+        }
+        .survey-wizard-desc {
+            margin: 0;
+            font-size: 0.84rem;
+            color: var(--pub-muted);
+            line-height: 1.65;
+        }
+        .survey-wizard-root .participant-chip {
+            background: rgba(22, 163, 74, 0.1);
+            border-color: rgba(22, 163, 74, 0.28);
+            color: #166534;
+            margin-bottom: 1rem;
+        }
+        .survey-wizard-root .wizard-question {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+            padding: 0.2rem 0;
+            margin-top: 0;
+        }
+        .q-section-line {
+            margin: 0 0 0.75rem;
+            font-size: clamp(0.95rem, 3vw, 1.06rem);
+            font-weight: 700;
+            color: var(--pub-title);
+            letter-spacing: -0.02em;
+            line-height: 1.55;
+        }
+        .wizard-q-title {
+            margin: 0 0 0.9rem;
+            font-size: clamp(0.98rem, 3.1vw, 1.14rem);
+            font-weight: 600;
+            color: var(--pub-title);
+            line-height: 1.75;
+        }
+        .wizard-q-title--merged {
+            font-size: clamp(1rem, 3.2vw, 1.16rem);
+            font-weight: 700;
+        }
+        .wizard-q-title .q-step-num { font-weight: 800; }
+        .wizard-q-title .q-step-sep {
+            font-weight: 600;
+            opacity: 0.75;
+        }
+        .q-required-star {
+            color: var(--pub-required-star);
+            font-weight: 700;
+            margin-right: 0.2rem;
+        }
+        .survey-wizard-root .q-desc {
+            color: var(--pub-muted);
+            margin: -0.45rem 0 0.85rem;
+            font-size: 0.84rem;
+        }
+        .survey-wizard-root .input,
+        .survey-wizard-root .jalali-answer-display {
+            background: var(--pub-input-bg);
+            border: 1px solid var(--pub-input-border);
+            border-radius: 14px;
+            color: var(--pub-input-text);
+            padding: 0.78rem 0.95rem;
+            font-size: 0.95rem;
+        }
+        .survey-wizard-root .input::placeholder,
+        .survey-wizard-root .jalali-answer-display::placeholder {
+            color: var(--pub-input-placeholder);
+        }
+        .survey-wizard-root .input:focus,
+        .survey-wizard-root .jalali-answer-display:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.14);
+        }
+        .survey-wizard-root .option-list label {
+            color: var(--pub-title);
+            border-radius: 12px;
+            padding: 0.48rem 0.55rem;
+        }
+        .survey-wizard-root .option-list label:hover {
+            background: var(--pub-option-hover);
+        }
+        .survey-wizard-root .option-list input {
+            accent-color: var(--primary);
+        }
+        .survey-wizard-root .rating-slider-wrap {
+            border: 1px solid var(--pub-rating-wrap-border);
+            background: var(--pub-rating-wrap-bg);
+        }
+        .survey-wizard-root .rating-current,
+        .survey-wizard-root .rating-ends {
+            color: var(--pub-muted);
+        }
+        .survey-wizard-root .rating-slider {
+            accent-color: var(--primary);
+        }
+        .survey-wizard-root .error-text {
+            color: var(--pub-error);
+        }
+        .survey-wizard-root .wizard-card-errors {
+            color: var(--pub-error);
+            background: rgba(254, 226, 226, 0.85);
+            border: 1px solid rgba(248, 113, 113, 0.45);
+            border-radius: 14px;
+            padding: 0.65rem 0.85rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.86rem;
+            font-weight: 600;
+        }
+        .wizard-footer-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 0.85rem;
+            padding: 0.55rem 0.85rem calc(0.7rem + env(safe-area-inset-bottom, 0px));
+            background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.38) 28%, rgba(15, 23, 42, 0.78) 100%);
+            pointer-events: none;
+        }
+        .wizard-footer-bar > * {
+            pointer-events: auto;
+        }
+        .wizard-footer-progress {
+            flex: 1;
+            min-width: 0;
+            text-align: right;
+            padding-bottom: 0.1rem;
+        }
+        .wizard-percent-label {
+            display: block;
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: var(--pub-footer-percent);
+            margin-bottom: 0.42rem;
+            text-shadow: 0 1px 10px rgba(0, 0, 0, 0.28);
+        }
+        .wizard-progress-track {
+            height: 5px;
+            border-radius: 999px;
+            background: var(--pub-track-bg);
+            overflow: hidden;
+        }
+        .wizard-progress-fill {
+            display: block;
+            height: 100%;
+            width: 0%;
+            border-radius: inherit;
+            background: var(--pub-fill);
+            transition: width 0.3s ease;
+        }
+        .wizard-nav-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.38rem;
+            flex-shrink: 0;
+        }
+        .wizard-nav-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: var(--pub-nav-prev);
+            color: #fff;
+            font-family: 'Vazirmatn', system-ui, sans-serif;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.32);
+            transition: transform 0.14s ease, opacity 0.14s ease;
+        }
+        .wizard-nav-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+        .wizard-nav-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+        .wizard-nav-btn--next {
+            background: var(--pub-nav-next);
+        }
+        @keyframes wizard-finish-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55); }
+            55% { box-shadow: 0 0 0 14px rgba(220, 38, 38, 0); }
+        }
+        .wizard-next-finish {
+            display: none;
+            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-weight: 800;
+            font-size: 0.82rem;
+            letter-spacing: 0.02em;
+            line-height: 1.2;
+        }
+        .wizard-nav-btn--next.wizard-nav-btn--is-finish {
+            background: #dc2626 !important;
+            color: #fff;
+            width: auto;
+            min-width: 4.6rem;
+            height: 48px;
+            padding: 0 0.72rem;
+            animation: wizard-finish-pulse 1.65s ease-in-out infinite;
+        }
+        .wizard-nav-btn--next.wizard-nav-btn--is-finish:disabled {
+            animation: none;
+            opacity: 0.85;
+        }
+        .wizard-nav-btn--next.wizard-nav-btn--is-finish .wizard-next-icon {
+            display: none;
+        }
+        .wizard-nav-btn--next.wizard-nav-btn--is-finish .wizard-next-finish {
+            display: block;
+        }
+        .survey-wizard-empty {
+            color: var(--pub-muted);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
         @media (max-width: 820px) {
             body { padding: 0.72rem; }
             .wrap { max-width: 100%; }
@@ -362,7 +669,7 @@
 <body>
     <div class="wrap">
         @if ($showIntroStep)
-            <div id="surveyIntro" class="survey-panel card">
+            <div id="surveyIntro" class="survey-panel card @if ($errors->any()) is-hidden @endif">
                 <div class="hero-head">
                     <div>
                         <h1>{{ $survey->title }}</h1>
@@ -477,47 +784,48 @@
             </div>
         @endif
 
-        <div id="surveyWizard" class="survey-panel @if($showIntroStep || ($showAccessGate && !$audiencePassed)) is-hidden @endif">
-            <form class="card" id="surveyForm" method="POST" action="{{ route('surveys.public.submit', $survey->public_token) }}">
+        <div id="surveyWizard" class="survey-panel survey-wizard-root @if (($showIntroStep || ($showAccessGate && !$audiencePassed)) && !$errors->any()) is-hidden @endif">
+            <form class="survey-wizard-form" id="surveyForm" method="POST" action="{{ route('surveys.public.submit', $survey->public_token) }}">
                 @csrf
-                @if ($errors->any())
-                    <div class="access-error" style="margin-bottom:.6rem;">
-                        {{ $errors->first('answers') ?: 'لطفا موارد ضروری فرم را تکمیل کنید.' }}
-                    </div>
-                @endif
                 <input type="hidden" name="personnel_code" value="{{ $submittedPersonnelCode }}">
                 <input type="hidden" name="national_code" value="{{ $submittedNationalCode }}">
-                <div class="hero-head wizard-head">
-                    <div>
-                        <h1>{{ $survey->title }}</h1>
+
+                <div class="survey-wizard-body">
+                    <div class="survey-wizard-card">
+                @if ($errors->any())
+                    <div class="wizard-card-errors" role="alert">
+                        {{ $errors->first() ?: 'لطفا موارد ضروری فرم را تکمیل کنید.' }}
+                    </div>
+                @endif
+                    <div class="survey-wizard-top">
+                        <h1 class="survey-wizard-title">{{ $survey->title }}</h1>
                         @if ($survey->description)
-                            <p class="helper">{{ $survey->description }}</p>
+                            <p class="survey-wizard-desc">{{ $survey->description }}</p>
                         @endif
                     </div>
-                    <span class="badge">فرم نظرسنجی</span>
-                </div>
 
-                @if ($participantDisplayName)
-                    <div class="participant-chip">👤 {{ $participantDisplayName }}</div>
-                @endif
+                    @if ($participantDisplayName)
+                        <div class="participant-chip">👤 {{ $participantDisplayName }}</div>
+                    @endif
 
                 @if ($survey->questions->isEmpty())
-                    <p class="helper" style="margin-top: 0.9rem;">هنوز سوالی برای این نظرسنجی ثبت نشده است.</p>
+                    <p class="survey-wizard-empty">هنوز سوالی برای این نظرسنجی ثبت نشده است.</p>
                 @else
                     @foreach ($survey->questions as $question)
-                        <div class="question" data-question data-required="{{ $question->is_required ? '1' : '0' }}" data-type="{{ $question->type }}">
-                            <h3 class="q-title">
-                                {{ $question->title }}
-                                @if($question->is_required)
-                                    <span class="required-badge">اجباری</span>
-                                @endif
-                            </h3>
+                        <div class="question wizard-question" data-question data-question-id="{{ $question->id }}" data-required="{{ $question->is_required ? '1' : '0' }}" data-type="{{ $question->type }}">
                             @if ($question->description)
-                                <p class="q-desc">{{ $question->description }}</p>
+                                <p class="q-section-line">{{ $toFaDigits($loop->iteration) }} — {{ $question->description }}</p>
+                                <h3 class="wizard-q-title">
+                                    <span class="q-title-text">{{ $question->title }}</span>@if($question->is_required)<span class="q-required-star" aria-hidden="true">*</span>@endif
+                                </h3>
+                            @else
+                                <h3 class="wizard-q-title wizard-q-title--merged">
+                                    <span class="q-step-num">{{ $toFaDigits($loop->iteration) }}</span><span class="q-step-sep"> — </span><span class="q-title-text">{{ $question->title }}</span>@if($question->is_required)<span class="q-required-star" aria-hidden="true">*</span>@endif
+                                </h3>
                             @endif
 
                             @if (in_array($question->type, ['short_text', 'email', 'phone', 'url'], true))
-                                <input type="text" class="input" name="answers[{{ $question->id }}][value]" placeholder="پاسخ شما"
+                                <input type="text" class="input" name="answers[{{ $question->id }}][value]" placeholder="{{ $question->type === 'short_text' ? 'حروف فارسی' : 'پاسخ شما' }}"
                                     value="{{ $existingAnswers[$question->id]['text'] ?? '' }}">
                             @elseif ($question->type === 'long_text')
                                 <textarea rows="3" class="input" name="answers[{{ $question->id }}][value]" placeholder="پاسخ شما">{{ $existingAnswers[$question->id]['text'] ?? '' }}</textarea>
@@ -609,20 +917,36 @@
                             <div class="error-text" hidden>لطفا این سوال را پاسخ دهید.</div>
                         </div>
                     @endforeach
-                    <div class="wizard-actions">
-                        <button type="button" class="btn ghost" id="prevQuestion">قبلی</button>
-                        <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
-                            <button type="button" class="btn ghost" id="saveDraftBtn">ذخیره موقت</button>
-                            <button type="button" class="btn primary" id="nextQuestion">بعدی</button>
-                        </div>
+                @endif
                     </div>
-                    <div class="progress" aria-hidden="true">
-                        <div class="progress-bar"><span id="progressFill"></span></div>
-                        <div class="progress-meta">
-                            <span id="progressLabel">سوال 1 از {{ $survey->questions->count() }}</span>
-                            <span id="progressCount">{{ $survey->questions->count() }} سوال</span>
+                </div>
+
+                @if ($survey->questions->isNotEmpty())
+                    <footer class="wizard-footer-bar" role="navigation" aria-label="پیمایش و پیشرفت">
+                        <div class="wizard-footer-progress">
+                            <span id="progressPercentLabel" class="wizard-percent-label">۰٪ را پاسخ داده‌اید</span>
+                            <div class="wizard-progress-track" aria-hidden="true">
+                                <span id="progressFill" class="wizard-progress-fill"></span>
+                            </div>
                         </div>
-                    </div>
+                        <div class="wizard-nav-stack">
+                            <button type="button" class="wizard-nav-btn" id="prevQuestion" aria-label="سوال قبلی">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                </svg>
+                                <span class="sr-only">قبلی</span>
+                            </button>
+                            <button type="button" class="wizard-nav-btn wizard-nav-btn--next" id="nextQuestion" aria-label="سوال بعدی">
+                                <span class="wizard-next-icon" aria-hidden="true">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </span>
+                                <span class="wizard-next-finish" aria-hidden="true">پایان</span>
+                                <span class="sr-only wizard-next-sr">بعدی</span>
+                            </button>
+                        </div>
+                    </footer>
                 @endif
             </form>
         </div>
@@ -751,7 +1075,13 @@
             const wizardEl = document.getElementById('surveyWizard');
             const completeEl = document.getElementById('surveyComplete');
             const surveyForm = document.getElementById('surveyForm');
-            const saveDraftBtn = document.getElementById('saveDraftBtn');
+            let index = 0;
+            window.__allowSurveySubmit = false;
+            surveyForm?.addEventListener('submit', (e) => {
+                if (!window.__allowSurveySubmit) {
+                    e.preventDefault();
+                }
+            });
 
             const showWizard = () => {
                 introEl?.classList.add('is-hidden');
@@ -776,29 +1106,15 @@
                 return;
             }
 
-            const prevBtn = document.getElementById('prevQuestion');
-            const nextBtn = document.getElementById('nextQuestion');
-            const progressFill = document.getElementById('progressFill');
-            const progressLabel = document.getElementById('progressLabel');
-            let index = 0;
-            let finished = false;
+            const wizardFocusQuestionId = @json($wizardFocusQuestionId ?? null);
+            if (wizardFocusQuestionId) {
+                const idx = questions.findIndex((el) => String(el.dataset.questionId || '') === String(wizardFocusQuestionId));
+                if (idx >= 0) {
+                    index = idx;
+                }
+            }
 
-            const updateWizard = () => {
-                questions.forEach((q, i) => q.classList.toggle('active', i === index));
-                if (prevBtn) prevBtn.disabled = index === 0;
-                if (nextBtn) nextBtn.textContent = index === questions.length - 1 ? 'ثبت نهایی' : 'بعدی';
-                const percent = Math.round(((index + 1) / questions.length) * 100);
-                if (progressFill) progressFill.style.width = `${percent}%`;
-                if (progressLabel) progressLabel.textContent = `سوال ${index + 1} از ${questions.length}`;
-            };
-
-            const showComplete = () => {
-                finished = true;
-                wizardEl?.classList.add('is-hidden');
-                introEl?.classList.add('is-hidden');
-                completeEl?.classList.remove('is-hidden');
-                completeEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            };
+            const toFaDigitsJs = (num) => String(num).replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
 
             const isQuestionAnswered = (question) => {
                 const required = question.dataset.required === '1';
@@ -813,6 +1129,10 @@
                         return true;
                     }
                 }
+                const hiddenVal = question.querySelector('input[type="hidden"][name$="[value]"]');
+                if (hiddenVal && hiddenVal.value.trim().length > 0) {
+                    return true;
+                }
                 const textInputs = question.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea');
                 if (textInputs.length) {
                     return Array.from(textInputs).some((input) => input.value.trim().length > 0);
@@ -824,11 +1144,76 @@
                 return false;
             };
 
+            const hasProgressInput = (question) => {
+                if (question.dataset.type === 'rating') {
+                    const hiddenOption = question.querySelector('input[type="hidden"][name$="[option_id]"]');
+                    if (hiddenOption && hiddenOption.value.trim().length > 0) return true;
+                    const ratingValue = question.querySelector('input[name$="[value]"]');
+                    if (ratingValue && String(ratingValue.value || '').trim().length > 0) return true;
+                }
+                const hiddenAns = question.querySelector('input[type="hidden"][name$="[value]"]');
+                if (hiddenAns && hiddenAns.value.trim().length > 0) return true;
+                const textInputs = question.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea');
+                if (textInputs.length) {
+                    return Array.from(textInputs).some((input) => input.value.trim().length > 0);
+                }
+                const optionInputs = question.querySelectorAll('input[type="radio"], input[type="checkbox"]');
+                if (optionInputs.length) {
+                    return Array.from(optionInputs).some((input) => input.checked);
+                }
+                return false;
+            };
+
+            const getProgressPercent = () => {
+                if (!questions.length) return 0;
+                let done = 0;
+                questions.forEach((q) => {
+                    if (q.dataset.required === '1') {
+                        if (isQuestionAnswered(q)) done += 1;
+                    } else if (hasProgressInput(q)) {
+                        done += 1;
+                    }
+                });
+                return Math.round((done / questions.length) * 100);
+            };
+
+            const prevBtn = document.getElementById('prevQuestion');
+            const nextBtn = document.getElementById('nextQuestion');
+            const nextSr = nextBtn?.querySelector('.wizard-next-sr');
+            const progressFill = document.getElementById('progressFill');
+            const progressPercentLabel = document.getElementById('progressPercentLabel');
+            let finished = false;
+
+            const updateProgressUI = () => {
+                const p = getProgressPercent();
+                if (progressFill) progressFill.style.width = `${p}%`;
+                if (progressPercentLabel) {
+                    progressPercentLabel.textContent = `${toFaDigitsJs(p)}٪ را پاسخ داده‌اید`;
+                }
+            };
+
+            const updateWizard = () => {
+                questions.forEach((q, i) => q.classList.toggle('active', i === index));
+                if (prevBtn) prevBtn.disabled = index === 0;
+                if (nextBtn) {
+                    const last = index === questions.length - 1;
+                    nextBtn.classList.toggle('wizard-nav-btn--is-finish', last);
+                    if (nextSr) nextSr.textContent = last ? 'ثبت نهایی پاسخ‌ها' : 'بعدی';
+                    nextBtn.setAttribute('aria-label', last ? 'پایان و ثبت پاسخ‌ها' : 'سوال بعدی');
+                }
+                updateProgressUI();
+            };
+
+            const showComplete = () => {
+                finished = true;
+                wizardEl?.classList.add('is-hidden');
+                introEl?.classList.add('is-hidden');
+                completeEl?.classList.remove('is-hidden');
+                completeEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            };
+
             const saveDraft = async () => {
-                if (!allowPartial || !surveyForm || !saveDraftBtn) return;
-                const defaultLabel = 'ذخیره موقت';
-                saveDraftBtn.disabled = true;
-                saveDraftBtn.textContent = 'در حال ذخیره...';
+                if (!allowPartial || !surveyForm) return;
                 try {
                     const formData = new FormData(surveyForm);
                     const res = await fetch(@json(route('surveys.public.draft', $survey->public_token)), {
@@ -841,14 +1226,8 @@
                     if (!res.ok) {
                         throw new Error('draft');
                     }
-                    saveDraftBtn.textContent = 'ذخیره شد';
                 } catch (_) {
-                    saveDraftBtn.textContent = 'خطا';
-                } finally {
-                    window.setTimeout(() => {
-                        saveDraftBtn.textContent = defaultLabel;
-                        saveDraftBtn.disabled = false;
-                    }, 1200);
+                    /* ذخیرهٔ خودکار؛ خطا به‌صورت خاموش نادیده گرفته می‌شود */
                 }
             };
 
@@ -880,14 +1259,15 @@
                     updateWizard();
                 } else if (surveyForm) {
                     nextBtn.disabled = true;
-                    nextBtn.textContent = 'در حال ثبت...';
+                    if (nextSr) nextSr.textContent = 'در حال ثبت...';
+                    nextBtn.setAttribute('aria-label', 'در حال ارسال پاسخ‌ها');
+                    window.__allowSurveySubmit = true;
                     surveyForm.submit();
                 } else {
                     showComplete();
                 }
             });
 
-            saveDraftBtn?.addEventListener('click', saveDraft);
             document.querySelectorAll('[data-rating-slider]').forEach((wrap) => {
                 const rangeInput = wrap.querySelector('[data-rating-range]');
                 const hiddenOptionInput = wrap.querySelector('[data-rating-option-id]');
@@ -915,6 +1295,13 @@
                 syncRating();
             });
             surveyForm?.addEventListener('change', () => {
+                updateProgressUI();
+                if (allowPartial) {
+                    window.setTimeout(saveDraft, 400);
+                }
+            });
+            surveyForm?.addEventListener('input', () => {
+                updateProgressUI();
                 if (allowPartial) {
                     window.setTimeout(saveDraft, 400);
                 }
@@ -925,6 +1312,11 @@
             }
 
             updateWizard();
+            if (wizardFocusQuestionId) {
+                window.setTimeout(() => {
+                    questions[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 120);
+            }
         });
     </script>
 </body>

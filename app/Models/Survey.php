@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use RuntimeException;
 
 class Survey extends Model
 {
@@ -12,6 +13,9 @@ class Survey extends Model
     protected $fillable = [
         'title',
         'unit_id',
+        'created_by_admin_user_id',
+        'publish_requested_by_admin_user_id',
+        'publish_rejection_reason',
         'description',
         'questions_count',
         'responses_count',
@@ -38,6 +42,7 @@ class Survey extends Model
         'thank_you_message',
         'intro_text',
         'background_image',
+        'public_theme',
         'notification_emails',
     ];
 
@@ -54,6 +59,7 @@ class Survey extends Model
         'show_results_after_submit' => 'boolean',
         'audience_filters' => 'array',
         'tags' => 'array',
+        'public_theme' => 'array',
         'notification_emails' => 'array',
         'start_at' => 'datetime',
         'end_at' => 'datetime',
@@ -64,6 +70,16 @@ class Survey extends Model
         return $this->belongsTo(Unit::class);
     }
 
+    public function creator()
+    {
+        return $this->belongsTo(AdminUser::class, 'created_by_admin_user_id');
+    }
+
+    public function publishRequestedBy()
+    {
+        return $this->belongsTo(AdminUser::class, 'publish_requested_by_admin_user_id');
+    }
+
     public function questions()
     {
         return $this->hasMany(SurveyQuestion::class)->orderBy('position');
@@ -72,5 +88,57 @@ class Survey extends Model
     public function responses()
     {
         return $this->hasMany(SurveyResponse::class)->latest();
+    }
+
+    /**
+     * تولید شناسهٔ کوتاه برای لینک عمومی (مناسب پیامک)، بدون تکرار در جدول نظرسنجی‌ها.
+     * از حروف و اعداد بدون ابهام در پیامک (بدون ۰/و، ۱/ال، …) استفاده می‌شود.
+     */
+    public static function generateUniquePublicToken(int $length = 8): string
+    {
+        $alphabet = '23456789abcdefghjkmnpqrstuvwxyz';
+        $maxIndex = strlen($alphabet) - 1;
+
+        for ($attempt = 0; $attempt < 80; $attempt++) {
+            $token = '';
+            for ($i = 0; $i < $length; $i++) {
+                $token .= $alphabet[random_int(0, $maxIndex)];
+            }
+            if (!static::query()->where('public_token', $token)->exists()) {
+                return $token;
+            }
+        }
+
+        throw new RuntimeException('امکان تولید لینک یکتا پس از چند تلاش وجود ندارد.');
+    }
+
+    /**
+     * Default CSS values for the public survey wizard (merged with stored public_theme).
+     *
+     * @return array<string, string>
+     */
+    public static function defaultPublicTheme(): array
+    {
+        return [
+            'card_bg' => 'rgba(255,255,255,0.96)',
+            'card_border' => 'rgba(15,23,42,0.12)',
+            'title' => '#0f172a',
+            'body' => '#334155',
+            'muted' => '#64748b',
+            'required_star' => '#0369a1',
+            'input_bg' => '#ffffff',
+            'input_border' => '#cbd5e1',
+            'input_text' => '#0f172a',
+            'input_placeholder' => '#94a3b8',
+            'option_hover' => 'rgba(15,23,42,0.06)',
+            'error_color' => '#b91c1c',
+            'rating_wrap_bg' => 'rgba(248,250,252,0.95)',
+            'rating_wrap_border' => 'rgba(15,23,42,0.12)',
+            'footer_percent' => '#ffffff',
+            'track_bg' => 'rgba(255,255,255,0.22)',
+            'fill' => 'rgba(255,255,255,0.78)',
+            'nav_prev' => 'rgba(13, 116, 133, 0.94)',
+            'nav_next' => 'rgba(15, 118, 110, 0.96)',
+        ];
     }
 }

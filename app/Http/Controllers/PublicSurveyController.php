@@ -108,6 +108,17 @@ class PublicSurveyController extends Controller
         $showAccessGate = $needsIdentity;
         $showCompletedOnLoad = $request->boolean('submitted');
 
+        $wizardFocusQuestionId = null;
+        $errorsBag = $request->session()->get('errors');
+        if ($errorsBag instanceof \Illuminate\Support\ViewErrorBag) {
+            foreach (array_keys($errorsBag->getMessages()) as $key) {
+                if (preg_match('/^answers\.(\d+)$/', $key, $m)) {
+                    $wizardFocusQuestionId = (int) $m[1];
+                    break;
+                }
+            }
+        }
+
         return view('surveys.public-show', compact(
             'survey',
             'showIntroStep',
@@ -122,7 +133,8 @@ class PublicSurveyController extends Controller
             'participantDisplayName',
             'existingAnswers',
             'activeResponse',
-            'showCompletedOnLoad'
+            'showCompletedOnLoad',
+            'wizardFocusQuestionId'
         ));
     }
 
@@ -146,11 +158,15 @@ class PublicSurveyController extends Controller
         $response = DB::transaction(function () use ($survey, $context, $answersInput) {
             $response = $this->findOrCreateEditableResponse($survey, $context['resolved_personnel'], false);
             $count = $this->persistAnswers($response, $survey->questions, $answersInput);
-            $response->update([
-                'status' => 'draft',
+            $payload = [
                 'answers_count' => $count,
                 'last_seen_at' => now(),
-            ]);
+            ];
+            // ویرایش پاسخ ثبت‌شده: وضعیت را به پیش‌نویس برنگردان؛ فقط پاسخ‌ها به‌روز می‌شوند.
+            if ($response->status !== 'submitted') {
+                $payload['status'] = 'draft';
+            }
+            $response->update($payload);
             return $response;
         });
 
@@ -173,34 +189,66 @@ class PublicSurveyController extends Controller
 
         $answersInput = $request->input('answers', []);
         if (!is_array($answersInput)) {
-            return back()->withErrors(['answers' => 'پاسخ‌ها معتبر نیست.']);
+            return redirect()
+                ->route('surveys.public.show', array_filter([
+                    'token' => $token,
+                    'personnel_code' => $context['submitted_personnel_code'] ?: null,
+                    'national_code' => $context['submitted_national_code'] ?: null,
+                ]))
+                ->withErrors(['answers' => 'پاسخ‌ها معتبر نیست.'])
+                ->withInput();
         }
 
         [$activeResponse, $editLockMessage] = $this->resolveAccessibleResponse($survey, $context['resolved_personnel']);
         if ($editLockMessage) {
-            return back()->withErrors(['answers' => $editLockMessage]);
+            return redirect()
+                ->route('surveys.public.show', array_filter([
+                    'token' => $token,
+                    'personnel_code' => $context['submitted_personnel_code'] ?: null,
+                    'national_code' => $context['submitted_national_code'] ?: null,
+                ]))
+                ->withErrors(['answers' => $editLockMessage])
+                ->withInput();
         }
         if ($this->isResponseLimitReachedForNewSubmit($survey, $context['resolved_personnel'], $activeResponse)) {
-            return back()->withErrors(['answers' => 'ظرفیت پاسخ‌گویی این نظرسنجی تکمیل شده است.']);
+            return redirect()
+                ->route('surveys.public.show', array_filter([
+                    'token' => $token,
+                    'personnel_code' => $context['submitted_personnel_code'] ?: null,
+                    'national_code' => $context['submitted_national_code'] ?: null,
+                ]))
+                ->withErrors(['answers' => 'ظرفیت پاسخ‌گویی این نظرسنجی تکمیل شده است.'])
+                ->withInput();
         }
 
-        DB::transaction(function () use ($survey, $context, $answersInput) {
-            $response = $this->findOrCreateEditableResponse($survey, $context['resolved_personnel'], true);
-            $count = $this->persistAnswers($response, $survey->questions, $answersInput);
-            $this->assertRequiredQuestionsAnswered($survey->questions, $answersInput);
+        try {
+            DB::transaction(function () use ($survey, $context, $answersInput) {
+                $response = $this->findOrCreateEditableResponse($survey, $context['resolved_personnel'], true);
+                $count = $this->persistAnswers($response, $survey->questions, $answersInput);
+                $this->assertRequiredQuestionsAnswered($survey->questions, $answersInput);
 
-            $response->update([
-                'status' => 'submitted',
-                'answers_count' => $count,
-                'submitted_at' => now(),
-                'last_seen_at' => now(),
-                'edit_token' => $response->edit_token ?: Str::random(48),
-            ]);
+                $response->update([
+                    'status' => 'submitted',
+                    'answers_count' => $count,
+                    'submitted_at' => now(),
+                    'last_seen_at' => now(),
+                    'edit_token' => $response->edit_token ?: Str::random(48),
+                ]);
 
-            $survey->update([
-                'responses_count' => SurveyResponse::where('survey_id', $survey->id)->where('status', 'submitted')->count(),
-            ]);
-        });
+                $survey->update([
+                    'responses_count' => SurveyResponse::where('survey_id', $survey->id)->where('status', 'submitted')->count(),
+                ]);
+            });
+        } catch (ValidationException $e) {
+            return redirect()
+                ->route('surveys.public.show', array_filter([
+                    'token' => $token,
+                    'personnel_code' => $context['submitted_personnel_code'] ?: null,
+                    'national_code' => $context['submitted_national_code'] ?: null,
+                ]))
+                ->withErrors($e->errors())
+                ->withInput();
+        }
 
         return redirect()->route('surveys.public.show', array_filter([
             'token' => $token,
@@ -356,6 +404,12 @@ class PublicSurveyController extends Controller
         return $submittedCount >= (int) $survey->response_limit;
     }
 
+    /**
+     * یک ردیف پاسخ برای این مخاطب پیدا یا می‌سازد.
+     *
+     * نکته: اگر آخرین پاسخ این کاربر «ثبت نهایی» شده و ویرایش مجاز است، همان ردیف برگردانده می‌شود
+     * تا ثبت مجدد همان رکورد به‌روز شود (نه ردیف تکراری).
+     */
     private function findOrCreateEditableResponse(Survey $survey, ?Personnel $personnel, bool $forSubmit): SurveyResponse
     {
         $query = SurveyResponse::where('survey_id', $survey->id);
@@ -368,17 +422,16 @@ class PublicSurveyController extends Controller
 
         if ($existing && $existing->status === 'submitted') {
             if (!$survey->allow_edit) {
-                if ($survey->prevent_multiple_submissions) {
-                    abort(403, 'این نظرسنجی امکان ویرایش ندارد.');
-                }
-            } elseif ($survey->response_edit_window_hours && $existing->submitted_at) {
+                abort(403, 'این نظرسنجی امکان ویرایش ندارد.');
+            }
+            if ($survey->response_edit_window_hours && $existing->submitted_at) {
                 $deadline = $existing->submitted_at->copy()->addHours((int) $survey->response_edit_window_hours);
-                if (now()->greaterThan($deadline) && $survey->prevent_multiple_submissions) {
+                if (now()->greaterThan($deadline)) {
                     abort(403, 'مهلت ویرایش پاسخ به پایان رسیده است.');
                 }
-            } else {
-                return $existing;
             }
+
+            return $existing;
         }
 
         if ($existing && $existing->status === 'draft') {
@@ -399,16 +452,18 @@ class PublicSurveyController extends Controller
 
     private function assertRequiredQuestionsAnswered($questions, array $answersInput): void
     {
+        $messages = [];
         foreach ($questions as $question) {
             if (!$question->is_required) {
                 continue;
             }
             $raw = $answersInput[$question->id] ?? null;
             if (!$this->isQuestionAnswered($question, $raw)) {
-                throw ValidationException::withMessages([
-                    'answers' => 'لطفا همه سوالات اجباری را کامل کنید. سوال «' . $question->title . '» تکمیل نشده است.',
-                ]);
+                $messages['answers.' . $question->id] = 'تکمیل سوال «' . $question->title . '» الزامی است.';
             }
+        }
+        if ($messages !== []) {
+            throw ValidationException::withMessages($messages);
         }
     }
 
@@ -543,9 +598,11 @@ class PublicSurveyController extends Controller
             return $fallback;
         }
 
+        $identityMode = $value['identity_mode'] ?? 'none';
+
         return [
-            'identity_mode' => in_array($value['identity_mode'] ?? 'none', ['none', 'personnel_code', 'national_code', 'either'], true)
-                ? $value['identity_mode']
+            'identity_mode' => in_array($identityMode, ['none', 'personnel_code', 'national_code', 'either'], true)
+                ? $identityMode
                 : 'none',
             'modes' => array_values(array_filter((array) ($value['modes'] ?? []), fn ($mode) => in_array($mode, ['unit', 'gender', 'position', 'personnel'], true))),
             'unit_ids' => array_values(array_map('intval', (array) ($value['unit_ids'] ?? []))),

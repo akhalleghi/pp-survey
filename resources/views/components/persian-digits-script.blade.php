@@ -9,6 +9,24 @@
         const hasSkipFlag = (node) => node?.closest?.('[data-keep-latin-numbers]');
         const toPersianDigits = (value) => value.replace(digitRegex, (digit) => digitMap[digit]);
 
+        /** فقط در صورت تفاوت مقدار را عوض کن؛ وگرنه MutationObserver روی characterData حلقه بی‌نهایت می‌سازد. */
+        const setTextNodePersianIfNeeded = (textNode) => {
+            if (!textNode || textNode.nodeType !== Node.TEXT_NODE) {
+                return;
+            }
+            const cur = textNode.nodeValue;
+            if (!cur) {
+                return;
+            }
+            const next = toPersianDigits(cur);
+            if (next !== cur) {
+                textNode.nodeValue = next;
+            }
+        };
+
+        const shouldSkipTextMutationParent = (parent) =>
+            !parent || skipTags.has(parent.nodeName) || hasSkipFlag(parent);
+
         const processAttributes = (element) => {
             attributeList.forEach((attr) => {
                 if (!element.hasAttribute(attr)) {
@@ -16,7 +34,10 @@
                 }
                 const attrValue = element.getAttribute(attr);
                 if (attrValue && digitRegex.test(attrValue)) {
-                    element.setAttribute(attr, toPersianDigits(attrValue));
+                    const next = toPersianDigits(attrValue);
+                    if (next !== attrValue) {
+                        element.setAttribute(attr, next);
+                    }
                 }
             });
         };
@@ -39,8 +60,7 @@
             });
 
             while (walker.nextNode()) {
-                const currentNode = walker.currentNode;
-                currentNode.nodeValue = toPersianDigits(currentNode.nodeValue);
+                setTextNodePersianIfNeeded(walker.currentNode);
             }
         };
 
@@ -70,14 +90,19 @@
         const observeMutations = () => {
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
-                    if (mutation.type === 'characterData' && mutation.target.parentNode && !hasSkipFlag(mutation.target.parentNode)) {
-                        mutation.target.nodeValue = toPersianDigits(mutation.target.nodeValue);
+                    if (mutation.type === 'characterData') {
+                        const parent = mutation.target.parentNode;
+                        if (!shouldSkipTextMutationParent(parent)) {
+                            setTextNodePersianIfNeeded(mutation.target);
+                        }
                         return;
                     }
 
                     mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === Node.TEXT_NODE && node.parentNode && !hasSkipFlag(node.parentNode)) {
-                            node.nodeValue = toPersianDigits(node.nodeValue);
+                        if (node.nodeType === Node.TEXT_NODE) {
+                            if (!shouldSkipTextMutationParent(node.parentNode)) {
+                                setTextNodePersianIfNeeded(node);
+                            }
                         } else if (node.nodeType === Node.ELEMENT_NODE) {
                             mutateDigits(node);
                         }

@@ -5,9 +5,21 @@
 
 @php
     $audiencePresets = $audiencePresets ?? ['همه کاربران', 'براساس واحد', 'براساس جنسیت', 'براساس سمت', 'براساس مدرک تحصیلی', 'انتخابی توسط ادمین'];
-    $metrics = $metrics ?? ['active' => 0, 'responses' => 0, 'avg_questions' => 0, 'closed' => 0];
-    $statusLabels = ['active' => 'فعال', 'draft' => 'در حال آماده سازی', 'closed' => 'بسته شده'];
-    $statusFilters = ['' => 'همه', 'active' => 'فعال', 'draft' => 'در حال آماده سازی', 'closed' => 'بسته شده'];
+    $metrics = $metrics ?? ['active' => 0, 'pending_approval' => 0, 'responses' => 0, 'avg_questions' => 0, 'closed' => 0];
+    $statusLabels = [
+        'active' => 'فعال',
+        'draft' => 'در حال آماده سازی',
+        'pending_approval' => 'در انتظار تأیید مدیر',
+        'closed' => 'بسته شده',
+    ];
+    $statusFilters = [
+        '' => 'همه',
+        'active' => 'فعال',
+        'draft' => 'در حال آماده سازی',
+        'pending_approval' => 'در انتظار تأیید',
+        'closed' => 'بسته شده',
+    ];
+    $admin = $admin ?? current_admin();
     $units = $units ?? collect();
 @endphp
 
@@ -29,6 +41,11 @@
             padding: 0.85rem 1.1rem;
             border-radius: 16px;
             font-weight: 600;
+        }
+        .status-message.status-message--error {
+            background: rgba(220, 38, 38, 0.1);
+            border-color: rgba(220, 38, 38, 0.35);
+            color: #991b1b;
         }
         .surveys-hero {
             background: var(--surface);
@@ -114,10 +131,34 @@
             gap: 1.25rem;
         }
         .survey-table-wrapper {
-            overflow-x: auto;
+            /* overflow visible تا منوی کشویی اقدامات از سلول/جدول بیرون برود.
+               در عرض‌های کوچک‌تر، اسکرول افقی فعال می‌شود (در media query پایین). */
+            overflow: visible;
             -webkit-overflow-scrolling: touch;
             margin-inline: -0.15rem;
             padding-bottom: 0.25rem;
+        }
+        /* ستون اقدامات: منو بالاتر از ردیف‌های بعدی/قبلی (جدول + border-collapse) */
+        .surveys-table td:last-child {
+            overflow: visible;
+        }
+        .surveys-table tbody tr {
+            position: relative;
+            z-index: 0;
+        }
+        .surveys-table tbody tr:has(.survey-actions-dropdown:hover),
+        .surveys-table tbody tr:has(.survey-actions-dropdown:focus-within) {
+            z-index: 1200;
+            isolation: isolate;
+            background: var(--surface);
+        }
+        .surveys-table tbody td:last-child {
+            position: relative;
+            z-index: 0;
+        }
+        .surveys-table tbody tr:has(.survey-actions-dropdown:hover) td:last-child,
+        .surveys-table tbody tr:has(.survey-actions-dropdown:focus-within) td:last-child {
+            z-index: 2;
         }
         .surveys-table th:last-child,
         .surveys-table td:last-child {
@@ -125,13 +166,6 @@
             min-width: 7.5rem;
             max-width: 10rem;
             vertical-align: middle;
-        }
-        .surveys-table tbody tr {
-            position: relative;
-        }
-        .surveys-table tbody tr:has(.survey-actions-dropdown:hover),
-        .surveys-table tbody tr:has(.survey-actions-dropdown:focus-within) {
-            z-index: 4;
         }
         .table-head {
             display: flex;
@@ -182,7 +216,8 @@
         }
         .surveys-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
         }
         .surveys-table thead {
             background: rgba(15, 23, 42, 0.03);
@@ -235,10 +270,49 @@
             background: rgba(15, 23, 42, 0.12);
             color: var(--muted);
         }
+        .survey-status.pending_approval {
+            background: rgba(59, 130, 246, 0.18);
+            color: #1d4ed8;
+        }
+        .publish-requester {
+            display: flex;
+            flex-direction: column;
+            gap: 0.12rem;
+            line-height: 1.25;
+        }
+        .publish-requester-name {
+            font-weight: 600;
+            font-size: 0.88rem;
+        }
+        .publish-requester-user {
+            font-size: 0.75rem;
+        }
+        .reject-publish-lead {
+            margin: 0 0 1rem;
+            font-size: 0.88rem;
+            color: var(--muted);
+        }
+        .reject-publish-lead strong {
+            color: var(--slate);
+        }
+        .modal-actions .reject-submit {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: #fff;
+        }
+        .modal-actions .reject-submit:hover {
+            background: #b91c1c;
+            border-color: #b91c1c;
+        }
         .survey-actions-dropdown {
             position: relative;
             display: block;
             width: 100%;
+            z-index: 0;
+        }
+        .survey-actions-dropdown:hover,
+        .survey-actions-dropdown:focus-within {
+            z-index: 5000;
         }
         /* پل نامرئی برای حفظ هاور بین دکمه و منو (منو بالای دکمه باز می‌شود) */
         .survey-actions-dropdown::before {
@@ -297,18 +371,11 @@
             border: 1px solid var(--border);
             border-radius: 16px;
             box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
-            z-index: 20;
+            z-index: 40;
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
             transition: opacity 0.18s ease, visibility 0.18s ease;
-        }
-        .survey-actions-menu.survey-actions-menu--layered {
-            position: fixed;
-            inset-inline-end: auto;
-            bottom: auto;
-            z-index: 10060;
-            box-shadow: 0 22px 50px rgba(15, 23, 42, 0.22);
         }
         .survey-actions-dropdown:hover .survey-actions-menu,
         .survey-actions-dropdown:focus-within .survey-actions-menu {
@@ -338,6 +405,23 @@
             text-decoration: none;
             font-weight: 600;
             white-space: nowrap;
+        }
+        .survey-link-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.4rem;
+            width: 100%;
+        }
+        .survey-link-url {
+            display: block;
+            width: 100%;
+            margin-top: 0.3rem;
+            font-size: 0.65rem;
+            color: var(--slate);
+            line-height: 1.45;
+            word-break: break-all;
+            user-select: all;
         }
         .survey-actions-menu-item {
             display: block;
@@ -388,6 +472,28 @@
             background: transparent;
             color: var(--muted);
         }
+        .survey-actions-menu .is-danger {
+            color: #b91c1c;
+        }
+        .survey-actions-menu .is-danger:hover {
+            background: rgba(220, 38, 38, 0.1);
+            color: #991b1b;
+        }
+        .survey-actions-menu .is-success {
+            color: #15803d;
+            font-weight: 600;
+        }
+        .survey-actions-menu .is-success:hover {
+            background: rgba(34, 197, 94, 0.12);
+            color: #166534;
+        }
+        .survey-actions-hint {
+            display: block;
+            padding: 0.65rem 1rem;
+            font-size: 0.82rem;
+            color: var(--muted);
+            font-weight: 600;
+        }
         .mobile-card {
             display: none;
         }
@@ -399,7 +505,7 @@
             align-items: center;
             justify-content: center;
             padding: 1rem;
-            z-index: 110;
+            z-index: 20000;
         }
         .modal.open {
             display: flex;
@@ -510,6 +616,9 @@
             }
         }
         @media (max-width: 768px) {
+            .survey-table-wrapper {
+                overflow-x: auto;
+            }
             .table-head {
                 flex-direction: column;
                 align-items: stretch;
@@ -559,6 +668,11 @@
                 {{ session('status') }}
             </div>
         @endif
+        @if (session('error'))
+            <div class="status-message status-message--error">
+                {{ session('error') }}
+            </div>
+        @endif
 
         <section class="surveys-hero">
             <div>
@@ -582,6 +696,11 @@
                 <span>نظرسنجی‌های فعال</span>
                 <strong>{{ number_format($metrics['active']) }}</strong>
                 <small>در حال دریافت پاسخ</small>
+            </div>
+            <div class="survey-stat-card">
+                <span>در انتظار تأیید مدیر</span>
+                <strong>{{ number_format($metrics['pending_approval'] ?? 0) }}</strong>
+                <small>قبل از انتشار رسمی</small>
             </div>
             <div class="survey-stat-card">
                 <span>پاسخ‌های ثبت‌شده</span>
@@ -639,6 +758,7 @@
                             <th>زمان ایجاد</th>
                             <th>تعداد پاسخ</th>
                             <th>وضعیت</th>
+                            <th>درخواست انتشار</th>
                             <th>اقدامات</th>
                         </tr>
                     </thead>
@@ -648,6 +768,14 @@
                                 $tagList = $survey->tags ?? [];
                                 $unitLabel = $survey->unit?->name ?? 'Unknown Unit';
                                 $audienceFilters = $survey->audience_filters ?? [];
+                                $creator = $survey->creator;
+                                $ownerNeedsManagerApproval = $creator
+                                    && $creator->isSupervisor()
+                                    && $creator->requires_survey_publish_approval
+                                    && (int) $survey->created_by_admin_user_id === (int) $creator->id;
+                                $isOwnerSupervisor = $admin instanceof \App\Models\AdminUser
+                                    && $admin->isSupervisor()
+                                    && (int) $survey->created_by_admin_user_id === (int) $admin->id;
                             @endphp
                             <tr>
                                 <td>
@@ -660,6 +788,7 @@
                                                 <span class="survey-tag muted">بدون برچسب</span>
                                             @endforelse
                                         </div>
+                                        @include('admin.partials.survey-publish-rejection-notice', ['survey' => $survey])
                                     </div>
                                 </td>
                                 <td>{{ $unitLabel }}</td>
@@ -670,6 +799,20 @@
                                     <span class="survey-status {{ $survey->status }}">
                                         {{ $statusLabels[$survey->status] ?? 'نامشخص' }}
                                     </span>
+                                </td>
+                                <td>
+                                    @if ($survey->publishRequestedBy)
+                                        <div class="publish-requester">
+                                            <span
+                                                class="publish-requester-name">{{ $survey->publishRequestedBy->name ?: $survey->publishRequestedBy->username }}</span>
+                                            @if ($survey->publishRequestedBy->name && filled($survey->publishRequestedBy->username))
+                                                <small
+                                                    class="publish-requester-user muted">{{ $survey->publishRequestedBy->username }}</small>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <span class="muted">—</span>
+                                    @endif
                                 </td>
                                 <td>
                                     <div class="survey-actions-dropdown">
@@ -695,27 +838,81 @@
                                                 <a href="{{ route('admin.surveys.edit', $survey) }}" role="menuitem">تنظیمات</a>
                                             </div>
                                             <div class="survey-actions-menu-item" role="none">
+                                                <a href="{{ route('admin.surveys.edit', $survey) }}#appearance" role="menuitem">تنظیمات ظاهری</a>
+                                            </div>
+                                            <div class="survey-actions-menu-item" role="none">
                                                 <a href="{{ route('admin.surveys.questions.index', $survey) }}" role="menuitem">طراحی سوالات</a>
                                             </div>
                                             <div class="survey-actions-menu-item" role="none">
-                                                <form method="POST" action="{{ route('admin.surveys.generate-link', $survey) }}" class="survey-actions-form">
-                                                    @csrf
-                                                    <button type="submit" role="menuitem">ایجاد لینک</button>
-                                                </form>
+                                                @if ($admin instanceof \App\Models\AdminUser && $admin->isAdmin())
+                                                    <form method="POST" action="{{ route('admin.surveys.generate-link', $survey) }}" class="survey-actions-form">
+                                                        @csrf
+                                                        <button type="submit" role="menuitem">ایجاد / به‌روزرسانی لینک</button>
+                                                    </form>
+                                                @elseif ($ownerNeedsManagerApproval && $isOwnerSupervisor)
+                                                    @if ($survey->status === 'pending_approval')
+                                                        <button type="button" role="menuitem" class="is-muted" disabled>در انتظار تأیید مدیر</button>
+                                                    @elseif ($survey->status === 'active')
+                                                        <span class="survey-actions-hint" role="menuitem">نظرسنجی فعال است</span>
+                                                    @elseif ($survey->status === 'closed')
+                                                        <button type="button" role="menuitem" class="is-muted" disabled>نظرسنجی بسته شده</button>
+                                                    @else
+                                                        <form method="POST" action="{{ route('admin.surveys.generate-link', $survey) }}" class="survey-actions-form">
+                                                            @csrf
+                                                            <button type="submit" role="menuitem">ارسال برای تأیید مدیر</button>
+                                                        </form>
+                                                    @endif
+                                                @else
+                                                    <form method="POST" action="{{ route('admin.surveys.generate-link', $survey) }}" class="survey-actions-form">
+                                                        @csrf
+                                                        <button type="submit" role="menuitem">ایجاد لینک و فعال‌سازی</button>
+                                                    </form>
+                                                @endif
                                             </div>
-                                            @if ($survey->public_token)
-                                                <div class="survey-link" role="none">
-                                                    <span>لینک عمومی</span>
-                                                    <a href="{{ route('surveys.public.show', $survey->public_token) }}" target="_blank" rel="noopener noreferrer">باز کردن</a>
+                                            @if ($admin instanceof \App\Models\AdminUser && $admin->isAdmin() && $survey->status === 'pending_approval')
+                                                <div class="survey-actions-menu-item" role="none">
+                                                    <form method="POST" action="{{ route('admin.surveys.approve-publish', $survey) }}" class="survey-actions-form"
+                                                        onsubmit="return confirm('انتشار این نظرسنجی تأیید شود؟');">
+                                                        @csrf
+                                                        <button type="submit" role="menuitem" class="is-success">تأیید انتشار</button>
+                                                    </form>
+                                                </div>
+                                                <div class="survey-actions-menu-item" role="none">
+                                                    <button type="button" role="menuitem" class="is-danger" data-open-reject-modal
+                                                        data-reject-url="{{ route('admin.surveys.reject-publish', $survey) }}"
+                                                        data-reject-survey-id="{{ $survey->id }}"
+                                                        data-survey-title="{{ e($survey->title) }}">رد انتشار</button>
                                                 </div>
                                             @endif
+                                            @if ($survey->public_token)
+                                                <div class="survey-link" role="none">
+                                                    <div class="survey-link-row">
+                                                        <span>لینک عمومی</span>
+                                                        <a href="{{ route('surveys.public.show', $survey->public_token) }}" target="_blank" rel="noopener noreferrer">باز کردن</a>
+                                                    </div>
+                                                    <span class="survey-link-url" dir="ltr">{{ route('surveys.public.show', $survey->public_token) }}</span>
+                                                </div>
+                                            @endif
+                                            <div class="survey-actions-menu-item" role="none">
+                                                @if (($survey->responses_records_count ?? 0) > 0)
+                                                    <button type="button" role="menuitem" class="is-muted" disabled
+                                                        title="به‌دلیل وجود پاسخ (ثبت‌شده یا پیش‌نویس) امکان حذف وجود ندارد.">حذف نظرسنجی</button>
+                                                @else
+                                                    <form method="POST" action="{{ route('admin.surveys.destroy', $survey) }}" class="survey-actions-form"
+                                                        onsubmit="return confirm('با حذف این نظرسنجی، همه سوالات آن نیز حذف می‌شود.\n\nآیا مطمئن هستید؟');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" role="menuitem" class="is-danger">حذف نظرسنجی</button>
+                                                    </form>
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" style="text-align:center; padding:2rem 1rem; color:var(--muted);">
+                                <td colspan="8" style="text-align:center; padding:2rem 1rem; color:var(--muted);">
                                     هنوز نظرسنجی‌ای ثبت نشده است.
                                 </td>
                             </tr>
@@ -775,11 +972,44 @@
         </form>
     </div>
 
+    <div class="modal" id="rejectPublishModal" aria-hidden="true">
+        <form method="POST" id="rejectPublishForm" class="modal-dialog" action="">
+            @csrf
+            <div class="modal-header">
+                <h3>رد درخواست انتشار</h3>
+                <button class="modal-close" type="button" data-close-modal>&times;</button>
+            </div>
+            <p class="reject-publish-lead" id="rejectPublishSurveyLead"></p>
+            <div class="form-field">
+                <label for="rejection_reason">دلیل رد <span style="color:#dc2626">*</span></label>
+                <textarea id="rejection_reason" name="rejection_reason" rows="4" maxlength="2000" required
+                    placeholder="توضیح دهید چرا درخواست انتشار رد می‌شود...">{{ old('rejection_reason') }}</textarea>
+                @error('rejection_reason')
+                    <small class="error-text">{{ $message }}</small>
+                @enderror
+            </div>
+            <div class="modal-actions">
+                <button class="primary reject-submit" type="submit">ثبت رد درخواست</button>
+                <button class="ghost" type="button" data-close-modal>انصراف</button>
+            </div>
+        </form>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const body = document.body;
             const addSurveyModal = document.getElementById('addSurveyModal');
             const openAddSurvey = document.getElementById('openAddSurvey');
+            const rejectPublishModal = document.getElementById('rejectPublishModal');
+            const rejectPublishForm = document.getElementById('rejectPublishForm');
+            const rejectPublishLead = document.getElementById('rejectPublishSurveyLead');
+
+            const dismissSurveyActionsMenus = () => {
+                const ae = document.activeElement;
+                if (ae && ae.closest && ae.closest('.survey-actions-dropdown')) {
+                    ae.blur();
+                }
+            };
 
             const setBodyModalState = () => {
                 const hasOpenModal = Array.from(document.querySelectorAll('.modal')).some((modal) =>
@@ -790,7 +1020,12 @@
 
             const toggleModal = (modal, show) => {
                 if (!modal) return;
-                modal.classList.toggle('open', Boolean(show));
+                const willShow = Boolean(show);
+                if (willShow) {
+                    body.classList.add('modal-open');
+                    dismissSurveyActionsMenus();
+                }
+                modal.classList.toggle('open', willShow);
                 setBodyModalState();
             };
 
@@ -804,13 +1039,59 @@
                 });
             }
 
-            document.addEventListener('click', (event) => {
-                const closeBtn = event.target.closest('[data-close-modal]');
-                if (closeBtn) {
-                    const modal = closeBtn.closest('.modal');
-                    toggleModal(modal, false);
+            const escapeHtml = (s) => {
+                const d = document.createElement('div');
+                d.textContent = s;
+                return d.innerHTML;
+            };
+
+            const openRejectPublishModal = (openReject) => {
+                if (!openReject || !rejectPublishModal || !rejectPublishForm) {
+                    return;
                 }
-            });
+                const url = openReject.getAttribute('data-reject-url');
+                const title = openReject.getAttribute('data-survey-title') || '';
+                rejectPublishForm.setAttribute('action', url || '');
+                if (rejectPublishLead) {
+                    if (title) {
+                        rejectPublishLead.innerHTML = 'نظرسنجی: <strong>' + escapeHtml(title) + '</strong>';
+                    } else {
+                        rejectPublishLead.textContent = '';
+                    }
+                }
+                toggleModal(rejectPublishModal, true);
+                requestAnimationFrame(() => {
+                    const ta = document.getElementById('rejection_reason');
+                    if (ta) {
+                        try {
+                            ta.focus({ preventScroll: true });
+                        } catch (e) {
+                            ta.focus();
+                        }
+                    }
+                });
+            };
+
+            /* یک هندلر در فاز capture: جلوگیری از تداخل با سایر listenerها و حلقهٔ فوکوس/ری‌فلو هنگام باز شدن مودال رد */
+            document.addEventListener(
+                'click',
+                (event) => {
+                    const openReject = event.target.closest('[data-open-reject-modal]');
+                    if (openReject && rejectPublishModal && rejectPublishForm) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        event.stopImmediatePropagation();
+                        openRejectPublishModal(openReject);
+                        return;
+                    }
+                    const closeBtn = event.target.closest('[data-close-modal]');
+                    if (closeBtn) {
+                        const modal = closeBtn.closest('.modal');
+                        toggleModal(modal, false);
+                    }
+                },
+                true
+            );
 
             window.addEventListener('keydown', (event) => {
                 if (event.key === 'Escape') {
@@ -823,109 +1104,36 @@
                 window.addEventListener('load', () => toggleModal(addSurveyModal, true));
             @endif
 
-            const surveyTableWrappers = document.querySelectorAll('.survey-table-wrapper');
-            const isRtl = () => document.documentElement.getAttribute('dir') === 'rtl';
-
-            const clearSurveyActionsMenuPosition = (dropdown) => {
-                const menu = dropdown.querySelector('.survey-actions-menu');
-                if (!menu) return;
-                menu.classList.remove('survey-actions-menu--layered');
-                menu.style.top = '';
-                menu.style.left = '';
-                menu.style.right = '';
-                menu.style.bottom = '';
-            };
-
-            const positionSurveyActionsMenu = (dropdown) => {
-                const menu = dropdown.querySelector('.survey-actions-menu');
-                const trigger = dropdown.querySelector('.survey-actions-trigger');
-                if (!menu || !trigger) return;
-
-                menu.classList.add('survey-actions-menu--layered');
-
-                const r = trigger.getBoundingClientRect();
-                const vw = window.innerWidth;
-                const vh = window.innerHeight;
-                const pad = 10;
-                const gap = 6;
-
-                const mw = Math.max(menu.offsetWidth, 196);
-                const mh = menu.offsetHeight || 120;
-
-                let top = r.top - mh - gap;
-                if (top < pad) {
-                    top = Math.min(pad, r.bottom + gap);
-                }
-                if (top + mh > vh - pad) {
-                    top = Math.max(pad, vh - pad - mh);
-                }
-
-                let left;
-                if (isRtl()) {
-                    left = r.left;
-                    if (left + mw > vw - pad) left = vw - mw - pad;
-                    if (left < pad) left = pad;
-                    menu.style.left = `${Math.round(left)}px`;
-                    menu.style.right = 'auto';
-                } else {
-                    left = r.right - mw;
-                    if (left < pad) left = pad;
-                    if (left + mw > vw - pad) left = vw - mw - pad;
-                    menu.style.left = `${Math.round(left)}px`;
-                    menu.style.right = 'auto';
-                }
-
-                menu.style.top = `${Math.round(top)}px`;
-                menu.style.bottom = 'auto';
-            };
-
-            const schedulePositionSurveyMenus = () => {
-                requestAnimationFrame(() => {
-                    document.querySelectorAll('.survey-actions-dropdown').forEach((dropdown) => {
-                        const open =
-                            dropdown.matches(':hover') ||
-                            dropdown.contains(document.activeElement);
-                        if (open) {
-                            positionSurveyActionsMenu(dropdown);
-                        } else {
-                            clearSurveyActionsMenuPosition(dropdown);
-                        }
-                    });
-                });
-            };
-
-            document.querySelectorAll('.survey-actions-dropdown').forEach((dropdown) => {
-                let leaveTimer = null;
-                dropdown.addEventListener('mouseenter', () => {
-                    if (leaveTimer) {
-                        window.clearTimeout(leaveTimer);
-                        leaveTimer = null;
+            const rejectPublishSurveyId = @json(session('reject_publish_survey_id'));
+            const rejectPublishActionUrl = @json(session('reject_publish_action_url'));
+            if (rejectPublishModal && rejectPublishForm && rejectPublishSurveyId) {
+                const reopenBtn = document.querySelector(
+                    '[data-open-reject-modal][data-reject-survey-id="' + rejectPublishSurveyId + '"]'
+                );
+                if (reopenBtn) {
+                    requestAnimationFrame(() => openRejectPublishModal(reopenBtn));
+                } else if (rejectPublishActionUrl) {
+                    rejectPublishForm.setAttribute('action', rejectPublishActionUrl);
+                    if (rejectPublishLead) {
+                        rejectPublishLead.textContent =
+                            'لطفاً دلیل رد را تکمیل کنید و دوباره ثبت کنید.';
                     }
-                    requestAnimationFrame(() => positionSurveyActionsMenu(dropdown));
-                });
-                dropdown.addEventListener('mouseleave', () => {
-                    if (leaveTimer) window.clearTimeout(leaveTimer);
-                    leaveTimer = window.setTimeout(() => {
-                        leaveTimer = null;
-                        if (dropdown.matches(':hover')) return;
-                        if (dropdown.contains(document.activeElement)) return;
-                        clearSurveyActionsMenuPosition(dropdown);
-                    }, 150);
-                });
-                dropdown.addEventListener('focusin', () => {
-                    requestAnimationFrame(() => positionSurveyActionsMenu(dropdown));
-                });
-                dropdown.addEventListener('focusout', (event) => {
-                    if (dropdown.contains(event.relatedTarget)) return;
-                    clearSurveyActionsMenuPosition(dropdown);
-                });
-            });
+                    requestAnimationFrame(() => {
+                        toggleModal(rejectPublishModal, true);
+                        requestAnimationFrame(() => {
+                            const ta = document.getElementById('rejection_reason');
+                            if (ta) {
+                                try {
+                                    ta.focus({ preventScroll: true });
+                                } catch (e) {
+                                    ta.focus();
+                                }
+                            }
+                        });
+                    });
+                }
+            }
 
-            window.addEventListener('scroll', schedulePositionSurveyMenus, true);
-            window.addEventListener('resize', schedulePositionSurveyMenus);
-            surveyTableWrappers.forEach((wrap) => {
-                wrap.addEventListener('scroll', schedulePositionSurveyMenus);
-            });
         });
     </script>
 @endsection
