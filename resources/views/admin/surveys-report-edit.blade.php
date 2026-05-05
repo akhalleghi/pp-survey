@@ -59,7 +59,7 @@
             </div>
         </section>
 
-        <form class="card" method="POST" action="{{ route('admin.surveys.report.responses.update', [$survey, $response]) }}">
+        <form class="card" method="POST" enctype="multipart/form-data" action="{{ route('admin.surveys.report.responses.update', [$survey, $response]) }}">
             @csrf
             @method('PUT')
 
@@ -81,6 +81,39 @@
                     @elseif ($question->type === 'date')
                         <input type="date" class="input" name="answers[{{ $question->id }}][value]"
                                value="{{ $existingAnswers[$question->id]['date'] ?? '' }}">
+                    @elseif ($question->type === 'file_upload')
+                        @php
+                            $existingFilePath = $existingAnswers[$question->id]['file_path'] ?? null;
+                            $existingFileName = $existingAnswers[$question->id]['file_name'] ?? null;
+                            $cfg = $question->settings ?? [];
+                            $allowedExt = collect(explode(',', str_replace('،', ',', (string) ($cfg['allowed_extensions'] ?? ''))))
+                                ->map(fn($x) => trim((string) $x))
+                                ->filter()
+                                ->values()
+                                ->all();
+                            $maxKb = (int) ($cfg['max_file_size_kb'] ?? 0);
+                        @endphp
+                        <input type="file" class="input" name="answers[{{ $question->id }}][file]" @if(!empty($allowedExt)) accept="{{ collect($allowedExt)->map(fn($x) => '.' . ltrim($x, '.'))->implode(',') }}" @endif>
+                        <input type="hidden" name="answers[{{ $question->id }}][current_file]" value="{{ $existingFilePath }}">
+                        <input type="hidden" name="answers[{{ $question->id }}][current_file_name]" value="{{ $existingFileName }}">
+                        @if ($existingFilePath && $existingFileName)
+                            <div class="muted" style="margin-top:.45rem;">
+                                فایل فعلی:
+                                <a href="{{ route('admin.surveys.report.responses.files.download', [$survey, $response, $question]) }}">{{ $existingFileName }}</a>
+                            </div>
+                            <label style="display:inline-flex;gap:.35rem;align-items:center;margin-top:.35rem;">
+                                <input type="checkbox" name="answers[{{ $question->id }}][remove_file]" value="1">
+                                حذف فایل فعلی
+                            </label>
+                        @endif
+                        <div class="muted" style="margin-top:.35rem;">
+                            @if (!empty($allowedExt))
+                                پسوند مجاز: {{ implode('، ', $allowedExt) }}
+                            @endif
+                            @if ($maxKb > 0)
+                                <span style="margin-right:.4rem;">حداکثر حجم: {{ number_format($maxKb) }}KB</span>
+                            @endif
+                        </div>
                     @elseif (in_array($question->type, ['multiple_choice', 'dropdown', 'rating', 'yes_no', 'linear_scale'], true))
                         <div class="option-list">
                             @foreach ($question->options as $option)

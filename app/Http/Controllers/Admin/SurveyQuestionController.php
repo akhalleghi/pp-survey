@@ -40,6 +40,7 @@ class SurveyQuestionController extends Controller
         'url',
         'yes_no',
         'linear_scale',
+        'file_upload',
     ];
 
     public function index(Survey $survey): View
@@ -162,6 +163,7 @@ class SurveyQuestionController extends Controller
             'url' => ['label' => 'آدرس وب', 'has_options' => false],
             'yes_no' => ['label' => 'بله / خیر', 'has_options' => true],
             'linear_scale' => ['label' => 'مقیاس خطی', 'has_options' => true],
+            'file_upload' => ['label' => 'آپلود فایل', 'has_options' => false],
         ];
     }
 
@@ -192,6 +194,39 @@ class SurveyQuestionController extends Controller
         }
 
         $validated = $request->validate($rules);
+
+        if ($type === 'file_upload') {
+            $settings = $validated['settings'] ?? [];
+            $maxKb = (int) ($settings['max_file_size_kb'] ?? 0);
+            if ($maxKb <= 0) {
+                throw ValidationException::withMessages([
+                    'settings.max_file_size_kb' => 'حداکثر حجم فایل (کیلوبایت) الزامی است.',
+                ]);
+            }
+
+            $extRaw = trim((string) ($settings['allowed_extensions'] ?? ''));
+            if ($extRaw === '') {
+                throw ValidationException::withMessages([
+                    'settings.allowed_extensions' => 'حداقل یک پسوند فایل مجاز را وارد کنید.',
+                ]);
+            }
+
+            $extList = collect(explode(',', str_replace('،', ',', $extRaw)))
+                ->map(static fn ($ext) => mb_strtolower(trim((string) $ext)))
+                ->filter()
+                ->map(static fn ($ext) => ltrim($ext, '.'))
+                ->values()
+                ->all();
+
+            if (empty($extList)) {
+                throw ValidationException::withMessages([
+                    'settings.allowed_extensions' => 'فرمت پسوندهای مجاز صحیح نیست.',
+                ]);
+            }
+
+            $validated['settings']['max_file_size_kb'] = $maxKb;
+            $validated['settings']['allowed_extensions'] = implode(',', array_values(array_unique($extList)));
+        }
 
         if (in_array($type, $typesWithOptions, true)) {
             $values = collect($validated['options'] ?? [])

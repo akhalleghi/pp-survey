@@ -495,11 +495,19 @@
                                                     } else {
                                                         $value = (string) $answer->answer_number;
                                                     }
+                                                } elseif ($answer->question?->type === 'file_upload') {
+                                                    $value = (string) ($answer->answer_json['file_name'] ?? 'فایل');
                                                 }
                                             @endphp
                                             <div class="answer-item">
                                                 <strong>{{ $answer->question?->title ?? 'سوال' }}:</strong>
-                                                <span title="{{ $value }}">{{ $value }}</span>
+                                                @if ($answer->question?->type === 'file_upload' && !empty($answer->answer_json['file_path']))
+                                                    <a href="{{ route('admin.surveys.report.responses.files.download', [$survey, $response, $answer->question_id]) }}" style="font-size:.73rem;">
+                                                        دانلود {{ $value }}
+                                                    </a>
+                                                @else
+                                                    <span title="{{ $value }}">{{ $value }}</span>
+                                                @endif
                                             </div>
                                         @empty
                                             <span class="muted-sm">پاسخی ثبت نشده است.</span>
@@ -599,11 +607,19 @@
                                         } else {
                                             $value = (string) $answer->answer_number;
                                         }
+                                    } elseif ($answer->question?->type === 'file_upload') {
+                                        $value = (string) ($answer->answer_json['file_name'] ?? 'فایل');
                                     }
                                 @endphp
                                 <div class="answer-item">
                                     <strong>{{ $answer->question?->title ?? 'سوال' }}:</strong>
-                                    <span title="{{ $value }}">{{ $value }}</span>
+                                    @if ($answer->question?->type === 'file_upload' && !empty($answer->answer_json['file_path']))
+                                        <a href="{{ route('admin.surveys.report.responses.files.download', [$survey, $response, $answer->question_id]) }}" style="font-size:.73rem;">
+                                            دانلود {{ $value }}
+                                        </a>
+                                    @else
+                                        <span title="{{ $value }}">{{ $value }}</span>
+                                    @endif
                                 </div>
                             @empty
                                 <span class="muted-sm">پاسخی ثبت نشده است.</span>

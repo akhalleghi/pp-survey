@@ -320,6 +320,12 @@
                                 if (!empty($settings['max_choices'])) {
                                     $settingsBadges[] = 'حداکثر انتخاب: ' . $settings['max_choices'];
                                 }
+                                if (!empty($settings['max_file_size_kb'])) {
+                                    $settingsBadges[] = 'حداکثر حجم فایل: ' . number_format((int) $settings['max_file_size_kb']) . 'KB';
+                                }
+                                if (!empty($settings['allowed_extensions'])) {
+                                    $settingsBadges[] = 'پسوند مجاز: ' . $settings['allowed_extensions'];
+                                }
                             @endphp
                             @foreach ($settingsBadges as $badge)
                                 <span>{{ $badge }}</span>
@@ -424,6 +430,12 @@
                         <div data-setting-group="choice">
                             <input type="number" min="1" name="settings[max_choices]" placeholder="حداکثر انتخاب">
                         </div>
+                        <div data-setting-group="file">
+                            <input type="number" min="1" name="settings[max_file_size_kb]" placeholder="حداکثر حجم فایل (KB)">
+                        </div>
+                        <div data-setting-group="file">
+                            <input type="text" name="settings[allowed_extensions]" placeholder="پسوندها: pdf,jpg,png,docx">
+                        </div>
                     </div>
                 </div>
 
@@ -492,7 +504,8 @@
                 phone: ['text'],
                 url: ['text'],
                 yes_no: ['choice'],
-                linear_scale: ['choice', 'rating']
+                linear_scale: ['choice', 'rating'],
+                file_upload: ['file']
             };
 
             const setActiveType = (type, hasOptions) => {

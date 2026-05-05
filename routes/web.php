@@ -75,6 +75,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('surveys/{survey}/report/{response}/edit', [SurveyController::class, 'editResponse'])->name('surveys.report.responses.edit');
             Route::put('surveys/{survey}/report/{response}', [SurveyController::class, 'updateResponse'])->name('surveys.report.responses.update');
             Route::delete('surveys/{survey}/report/{response}', [SurveyController::class, 'destroyResponse'])->name('surveys.report.responses.destroy');
+            Route::get('surveys/{survey}/report/{response}/files/{question}/download', [SurveyController::class, 'downloadResponseFile'])->name('surveys.report.responses.files.download');
             Route::get('surveys/{survey}/questions', [SurveyQuestionController::class, 'index'])->name('surveys.questions.index');
             Route::post('surveys/{survey}/questions', [SurveyQuestionController::class, 'store'])->name('surveys.questions.store');
             Route::get('surveys/{survey}/questions/{question}/edit', [SurveyQuestionController::class, 'edit'])->name('surveys.questions.edit');

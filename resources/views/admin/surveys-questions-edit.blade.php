@@ -107,6 +107,8 @@
                         <div data-setting-group="date"><input type="text" class="jalali-picker-input" name="settings[max_date]" placeholder="حداکثر تاریخ" value="{{ $settings['max_date'] ?? '' }}"></div>
                         <div data-setting-group="choice"><input type="number" min="1" name="settings[min_choices]" placeholder="حداقل انتخاب" value="{{ $settings['min_choices'] ?? '' }}"></div>
                         <div data-setting-group="choice"><input type="number" min="1" name="settings[max_choices]" placeholder="حداکثر انتخاب" value="{{ $settings['max_choices'] ?? '' }}"></div>
+                        <div data-setting-group="file"><input type="number" min="1" name="settings[max_file_size_kb]" placeholder="حداکثر حجم فایل (KB)" value="{{ $settings['max_file_size_kb'] ?? '' }}"></div>
+                        <div data-setting-group="file"><input type="text" name="settings[allowed_extensions]" placeholder="پسوندها: pdf,jpg,png,docx" value="{{ $settings['allowed_extensions'] ?? '' }}"></div>
                     </div>
                 </div>
 
@@ -164,7 +166,7 @@
             const settingsGroups = {
                 short_text: ['text'], long_text: ['text'], multiple_choice: ['choice'], checkboxes: ['choice'],
                 dropdown: ['choice'], rating: ['choice', 'rating'], number: ['number'], email: [], date: ['date'],
-                phone: ['text'], url: ['text'], yes_no: ['choice'], linear_scale: ['choice', 'rating'],
+                phone: ['text'], url: ['text'], yes_no: ['choice'], linear_scale: ['choice', 'rating'], file_upload: ['file'],
             };
             const setActiveType = (type, hasOptions) => {
                 typeInput.value = type;

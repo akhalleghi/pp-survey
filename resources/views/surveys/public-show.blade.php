@@ -785,7 +785,7 @@
         @endif
 
         <div id="surveyWizard" class="survey-panel survey-wizard-root @if (($showIntroStep || ($showAccessGate && !$audiencePassed)) && !$errors->any()) is-hidden @endif">
-            <form class="survey-wizard-form" id="surveyForm" method="POST" action="{{ route('surveys.public.submit', $survey->public_token) }}">
+            <form class="survey-wizard-form" id="surveyForm" method="POST" enctype="multipart/form-data" action="{{ route('surveys.public.submit', $survey->public_token) }}">
                 @csrf
                 <input type="hidden" name="personnel_code" value="{{ $submittedPersonnelCode }}">
                 <input type="hidden" name="national_code" value="{{ $submittedNationalCode }}">
@@ -913,6 +913,34 @@
                                         @endfor
                                     @endif
                                 </div>
+                            @elseif ($question->type === 'file_upload')
+                                @php
+                                    $fileCfg = $question->settings ?? [];
+                                    $allowedExt = collect(explode(',', str_replace('،', ',', (string) ($fileCfg['allowed_extensions'] ?? ''))))
+                                        ->map(fn($x) => trim((string) $x))
+                                        ->filter()
+                                        ->values()
+                                        ->all();
+                                    $maxKb = (int) ($fileCfg['max_file_size_kb'] ?? 0);
+                                    $existingFilePath = $existingAnswers[$question->id]['file_path'] ?? null;
+                                    $existingFileName = $existingAnswers[$question->id]['file_name'] ?? null;
+                                @endphp
+                                <input type="file" class="input" name="answers[{{ $question->id }}][file]" @if(!empty($allowedExt)) accept="{{ collect($allowedExt)->map(fn($x) => '.' . ltrim($x, '.'))->implode(',') }}" @endif>
+                                <input type="hidden" name="answers[{{ $question->id }}][current_file]" value="{{ $existingFilePath }}">
+                                <input type="hidden" name="answers[{{ $question->id }}][current_file_name]" value="{{ $existingFileName }}">
+                                <div class="q-desc" style="margin-top:.45rem;">
+                                    @if (!empty($allowedExt))
+                                        پسوند مجاز: {{ implode('، ', $allowedExt) }}
+                                    @endif
+                                    @if ($maxKb > 0)
+                                        <span style="margin-right:.4rem;">حداکثر حجم: {{ number_format($maxKb) }}KB</span>
+                                    @endif
+                                </div>
+                                @if ($existingFilePath && $existingFileName)
+                                    <div class="q-desc" style="margin-top:.15rem;">
+                                        فایل فعلی: {{ $existingFileName }}
+                                    </div>
+                                @endif
                             @endif
                             <div class="error-text" hidden>لطفا این سوال را پاسخ دهید.</div>
                         </div>
@@ -1137,6 +1165,14 @@
                 if (textInputs.length) {
                     return Array.from(textInputs).some((input) => input.value.trim().length > 0);
                 }
+                const fileInput = question.querySelector('input[type="file"]');
+                if (fileInput) {
+                    if (fileInput.files && fileInput.files.length > 0) {
+                        return true;
+                    }
+                    const currentFile = question.querySelector('input[type="hidden"][name$="[current_file]"]');
+                    return !!(currentFile && currentFile.value.trim().length > 0);
+                }
                 const optionInputs = question.querySelectorAll('input[type="radio"], input[type="checkbox"]');
                 if (optionInputs.length) {
                     return Array.from(optionInputs).some((input) => input.checked);
@@ -1156,6 +1192,12 @@
                 const textInputs = question.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea');
                 if (textInputs.length) {
                     return Array.from(textInputs).some((input) => input.value.trim().length > 0);
+                }
+                const fileInput = question.querySelector('input[type="file"]');
+                if (fileInput) {
+                    if (fileInput.files && fileInput.files.length > 0) return true;
+                    const currentFile = question.querySelector('input[type="hidden"][name$="[current_file]"]');
+                    return !!(currentFile && currentFile.value.trim().length > 0);
                 }
                 const optionInputs = question.querySelectorAll('input[type="radio"], input[type="checkbox"]');
                 if (optionInputs.length) {

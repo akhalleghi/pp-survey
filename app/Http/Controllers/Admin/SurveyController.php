@@ -16,10 +16,13 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -741,6 +744,8 @@ class SurveyController extends Controller
                 'text' => $answer->answer_text,
                 'number' => $answer->answer_number,
                 'date' => $answer->answer_date?->format('Y-m-d'),
+                'file_path' => $answer->answer_json['file_path'] ?? null,
+                'file_name' => $answer->answer_json['file_name'] ?? null,
             ];
         }
 
@@ -765,8 +770,18 @@ class SurveyController extends Controller
             $saved = 0;
             foreach ($survey->questions as $question) {
                 $raw = $answersInput[$question->id] ?? null;
-                $normalized = $this->normalizeResponseAnswer($question, $raw);
+                $file = request()->file('answers.' . $question->id . '.file');
+                $normalized = $this->normalizeResponseAnswer($question, $raw, $file, $response);
                 if ($normalized === null) {
+                    $existing = SurveyResponseAnswer::where('response_id', $response->id)
+                        ->where('question_id', $question->id)
+                        ->first();
+                    if ($existing && $question->type === 'file_upload') {
+                        $old = $existing->answer_json['file_path'] ?? null;
+                        if (is_string($old) && $old !== '') {
+                            Storage::disk('public')->delete($old);
+                        }
+                    }
                     SurveyResponseAnswer::where('response_id', $response->id)
                         ->where('question_id', $question->id)
                         ->delete();
@@ -798,6 +813,14 @@ class SurveyController extends Controller
             abort(404);
         }
 
+        $response->load('answers');
+        foreach ($response->answers as $answer) {
+            $old = $answer->answer_json['file_path'] ?? null;
+            if (is_string($old) && $old !== '') {
+                Storage::disk('public')->delete($old);
+            }
+        }
+
         $response->delete();
         $survey->update([
             'responses_count' => SurveyResponse::where('survey_id', $survey->id)
@@ -810,7 +833,28 @@ class SurveyController extends Controller
             ->with('status', 'پاسخ با موفقیت حذف شد.');
     }
 
-    private function normalizeResponseAnswer($question, mixed $raw): ?array
+    public function downloadResponseFile(Survey $survey, SurveyResponse $response, SurveyQuestion $question)
+    {
+        $this->authorizeSurveyAccess($survey);
+        if ($response->survey_id !== $survey->id || $question->survey_id !== $survey->id) {
+            abort(404);
+        }
+
+        $answer = SurveyResponseAnswer::where('response_id', $response->id)
+            ->where('question_id', $question->id)
+            ->firstOrFail();
+
+        $path = $answer->answer_json['file_path'] ?? null;
+        if (!is_string($path) || $path === '' || !Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        $name = (string) ($answer->answer_json['file_name'] ?? basename($path));
+
+        return Storage::disk('public')->download($path, $name);
+    }
+
+    private function normalizeResponseAnswer($question, mixed $raw, ?UploadedFile $uploadedFile, SurveyResponse $response): ?array
     {
         $base = [
             'option_id' => null,
@@ -821,7 +865,9 @@ class SurveyController extends Controller
         ];
 
         if ($raw === null || $raw === '' || $raw === []) {
-            return null;
+            if ($question->type !== 'file_upload' || !$uploadedFile) {
+                return null;
+            }
         }
 
         if (in_array($question->type, ['multiple_choice', 'dropdown', 'rating', 'yes_no', 'linear_scale'], true)) {
@@ -861,6 +907,68 @@ class SurveyController extends Controller
             $dateValue = preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) ? $value : null;
 
             return array_merge($base, ['answer_date' => $dateValue, 'answer_text' => $value]);
+        }
+
+        if ($question->type === 'file_upload') {
+            $currentPath = is_array($raw) ? trim((string) ($raw['current_file'] ?? '')) : '';
+            $currentName = is_array($raw) ? trim((string) ($raw['current_file_name'] ?? '')) : '';
+            $removeCurrent = is_array($raw) && !empty($raw['remove_file']);
+
+            if (!$uploadedFile) {
+                if ($removeCurrent || $currentPath === '') {
+                    return null;
+                }
+
+                return array_merge($base, [
+                    'answer_json' => [
+                        'file_path' => $currentPath,
+                        'file_name' => $currentName,
+                        'file_size' => null,
+                        'mime_type' => null,
+                    ],
+                ]);
+            }
+
+            $extAllowedRaw = (string) ($question->settings['allowed_extensions'] ?? '');
+            $allowed = collect(explode(',', str_replace('،', ',', $extAllowedRaw)))
+                ->map(static fn ($x) => mb_strtolower(trim((string) $x)))
+                ->filter()
+                ->map(static fn ($x) => ltrim($x, '.'))
+                ->values()
+                ->all();
+            $maxKb = (int) ($question->settings['max_file_size_kb'] ?? 0);
+            if ($maxKb <= 0 || empty($allowed)) {
+                throw ValidationException::withMessages([
+                    'answers.' . $question->id => 'تنظیمات سوال فایل کامل نیست.',
+                ]);
+            }
+
+            $ext = mb_strtolower((string) $uploadedFile->getClientOriginalExtension());
+            if ($ext === '' || !in_array($ext, $allowed, true)) {
+                throw ValidationException::withMessages([
+                    'answers.' . $question->id => 'پسوند فایل مجاز نیست. فرمت‌های مجاز: ' . implode(', ', $allowed),
+                ]);
+            }
+            if ($uploadedFile->getSize() > ($maxKb * 1024)) {
+                throw ValidationException::withMessages([
+                    'answers.' . $question->id => 'حجم فایل بیشتر از حد مجاز است (' . number_format($maxKb) . 'KB).',
+                ]);
+            }
+
+            $path = $uploadedFile->store('survey-uploads/' . $question->survey_id . '/' . $response->id, 'public');
+            if ($currentPath !== '') {
+                Storage::disk('public')->delete($currentPath);
+            }
+
+            return array_merge($base, [
+                'answer_text' => $uploadedFile->getClientOriginalName(),
+                'answer_json' => [
+                    'file_path' => $path,
+                    'file_name' => $uploadedFile->getClientOriginalName(),
+                    'file_size' => $uploadedFile->getSize(),
+                    'mime_type' => $uploadedFile->getClientMimeType(),
+                ],
+            ]);
         }
 
         $value = is_array($raw) ? ($raw['value'] ?? null) : $raw;
@@ -917,6 +1025,11 @@ class SurveyController extends Controller
                 return (string) jalali_date($text, 'Y/m/d');
             }
             return $text;
+        }
+
+        if ($answer->question?->type === 'file_upload') {
+            $fileName = (string) ($answer->answer_json['file_name'] ?? '');
+            return $fileName !== '' ? $fileName : 'فایل';
         }
 
         if (!is_null($answer->answer_number)) {
