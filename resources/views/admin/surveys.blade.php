@@ -523,6 +523,33 @@
             max-height: 90vh;
             overflow-y: auto;
         }
+        .guide-modal-dialog {
+            width: min(760px, 100%);
+        }
+        .guide-steps {
+            margin: 0;
+            padding-right: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .guide-steps li {
+            line-height: 1.9;
+            color: var(--slate);
+        }
+        .guide-steps li strong {
+            color: var(--primary-dark);
+        }
+        .guide-note {
+            margin-top: 0.9rem;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            background: rgba(15, 23, 42, 0.03);
+            border-radius: 14px;
+            padding: 0.85rem 1rem;
+            line-height: 1.85;
+            color: var(--muted);
+            font-size: 0.88rem;
+        }
         .modal-header {
             display: flex;
             justify-content: space-between;
@@ -687,7 +714,7 @@
                     </svg>
                     افزودن نظرسنجی
                 </button>
-                <button type="button" class="outline">راهنمای ساخت</button>
+                <button type="button" class="outline" id="openSurveyGuide">راهنمای ساخت</button>
             </div>
         </section>
 
@@ -929,7 +956,55 @@
         </section>
     </div>
 
+    <div class="modal" id="surveyGuideModal" aria-hidden="true">
+        <div class="modal-dialog guide-modal-dialog">
+            <div class="modal-header">
+                <h3>راهنمای گام‌به‌گام ساخت نظرسنجی</h3>
+                <button class="modal-close" type="button" data-close-modal>&times;</button>
+            </div>
+            <ol class="guide-steps">
+                <li><strong>ایجاد نظرسنجی:</strong> روی «افزودن نظرسنجی» کلیک کنید، عنوان و واحد مربوطه را وارد کنید و ثبت را بزنید.</li>
+                <li><strong>تنظیمات پایه:</strong> از منوی اقدامات وارد «تنظیمات» شوید؛ وضعیت، بازه زمانی، سقف پاسخ، امکان ویرایش، مخاطبان و سایر گزینه‌ها را مشخص کنید.</li>
+                <li><strong>تنظیمات ظاهری:</strong> از «تنظیمات ظاهری» رنگ‌ها، پیام‌ها، پس‌زمینه و ظاهر فرم عمومی را تنظیم کنید.</li>
+                <li><strong>طراحی سوالات:</strong> نوع سوال‌ها را انتخاب کنید (متنی، چندگزینه‌ای، تاریخ، آپلود فایل و ...)، اجباری بودن و قواعد هر سوال را تعریف کنید.</li>
+                <li><strong>کنترل کیفیت:</strong> لینک عمومی را بسازید و فرم را با پاسخ نمونه تست کنید؛ نمایش و گزارش را بررسی کنید.</li>
+                <li><strong>انتشار:</strong> با گزینه «ایجاد/به‌روزرسانی لینک» نظرسنجی را فعال کنید (یا برای تایید مدیر ارسال کنید).</li>
+                <li><strong>پایش و تحلیل:</strong> از «مشاهده گزارش» پاسخ‌ها را بررسی، ویرایش، خروجی اکسل بگیرید و در پایان وضعیت را ببندید.</li>
+            </ol>
+            <div class="guide-note">
+                پیشنهاد: قبل از ارسال عمومی، یک سناریوی کامل را از ابتدا تا ثبت پاسخ و مشاهده گزارش اجرا کنید تا همه تنظیمات دسترسی و سوالات نهایی کنترل شود.
+            </div>
+            <div class="modal-actions" style="margin-top: 1rem;">
+                <button class="primary" type="button" data-close-modal>متوجه شدم</button>
+            </div>
+        </div>
+    </div>
+
     {{-- Add Survey Modal --}}
+    <div class="modal" id="surveyGuideModal" aria-hidden="true">
+        <div class="modal-dialog guide-modal-dialog">
+            <div class="modal-header">
+                <h3>راهنمای گام‌به‌گام ساخت نظرسنجی</h3>
+                <button class="modal-close" type="button" data-close-modal>&times;</button>
+            </div>
+            <ol class="guide-steps">
+                <li><strong>ایجاد نظرسنجی:</strong> روی «افزودن نظرسنجی» کلیک کنید، عنوان و واحد مربوطه را وارد کنید و ثبت را بزنید.</li>
+                <li><strong>تنظیمات پایه:</strong> از منوی اقدامات وارد «تنظیمات» شوید؛ وضعیت، بازه زمانی، سقف پاسخ، امکان ویرایش، مخاطبان و سایر گزینه‌ها را مشخص کنید.</li>
+                <li><strong>تنظیمات ظاهری:</strong> از «تنظیمات ظاهری» رنگ‌ها، پیام‌ها، پس‌زمینه و ظاهر فرم عمومی را تنظیم کنید.</li>
+                <li><strong>طراحی سوالات:</strong> نوع سوال‌ها را انتخاب کنید (متنی، چندگزینه‌ای، تاریخ، آپلود فایل و ...)، اجباری بودن و قواعد هر سوال را تعریف کنید.</li>
+                <li><strong>کنترل کیفیت:</strong> لینک عمومی را بسازید و فرم را با پاسخ نمونه تست کنید؛ نمایش و گزارش را بررسی کنید.</li>
+                <li><strong>انتشار:</strong> با گزینه «ایجاد/به‌روزرسانی لینک» نظرسنجی را فعال کنید (یا برای تایید مدیر ارسال کنید).</li>
+                <li><strong>پایش و تحلیل:</strong> از «مشاهده گزارش» پاسخ‌ها را بررسی، ویرایش، خروجی اکسل بگیرید و در پایان وضعیت را ببندید.</li>
+            </ol>
+            <div class="guide-note">
+                پیشنهاد: قبل از ارسال عمومی، یک سناریوی کامل را از ابتدا تا ثبت پاسخ و مشاهده گزارش اجرا کنید تا همه تنظیمات دسترسی و سوالات نهایی کنترل شود.
+            </div>
+            <div class="modal-actions" style="margin-top: 1rem;">
+                <button class="primary" type="button" data-close-modal>متوجه شدم</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="addSurveyModal" aria-hidden="true">
         <form method="POST" action="{{ route('admin.surveys.store') }}" class="modal-dialog" id="addSurveyForm">
             @csrf
@@ -1000,6 +1075,8 @@
             const body = document.body;
             const addSurveyModal = document.getElementById('addSurveyModal');
             const openAddSurvey = document.getElementById('openAddSurvey');
+            const surveyGuideModal = document.getElementById('surveyGuideModal');
+            const openSurveyGuide = document.getElementById('openSurveyGuide');
             const rejectPublishModal = document.getElementById('rejectPublishModal');
             const rejectPublishForm = document.getElementById('rejectPublishForm');
             const rejectPublishLead = document.getElementById('rejectPublishSurveyLead');
@@ -1036,6 +1113,12 @@
                         addSurveyForm.reset();
                     }
                     toggleModal(addSurveyModal, true);
+                });
+            }
+
+            if (openSurveyGuide) {
+                openSurveyGuide.addEventListener('click', () => {
+                    toggleModal(surveyGuideModal, true);
                 });
             }
 

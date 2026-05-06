@@ -8,8 +8,14 @@
     $passwordErrors = $errors->updatePassword ?? $errors;
     $brandingErrors = $errors->updateBranding ?? $errors;
     $colorErrors = $errors->updateColors ?? $errors;
+    $systemBackgroundErrors = $errors->updateSystemBackground ?? $errors;
     $securityErrors = $errors->updateSecurity ?? $errors;
+    $loginPageErrors = $errors->updateLoginPage ?? $errors;
     $securityCfg = $appSettings['security'] ?? [];
+    $systemBgCfg = $appSettings['system_background'] ?? [];
+    $systemBgImages = array_values(array_filter((array) ($systemBgCfg['images'] ?? []), static fn ($v) => is_string($v) && $v !== ''));
+    $loginPageCfg = $appSettings['login_page'] ?? [];
+    $loginPageImages = array_values(array_filter((array) ($loginPageCfg['background_images'] ?? []), static fn ($v) => is_string($v) && $v !== ''));
     $tabs = [
         [
             'id' => 'password',
@@ -30,6 +36,11 @@
             'id' => 'security',
             'label' => 'امنیت ورود',
             'subtitle' => 'قفل موقت، نشست و نگهداری گزارش ورود',
+        ],
+        [
+            'id' => 'login_page',
+            'label' => 'صفحه ورود',
+            'subtitle' => 'متن، رفتار لاگین و مدیریت بک‌گراند',
         ],
         [
             'id' => 'profile',
@@ -259,6 +270,34 @@
             color: var(--muted);
             background: rgba(15,23,42,0.02);
         }
+        .bg-image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.9rem;
+            margin-top: 0.8rem;
+        }
+        .bg-image-card {
+            border: 1px solid rgba(15,23,42,0.12);
+            border-radius: 16px;
+            padding: 0.65rem;
+            background: rgba(15,23,42,0.02);
+        }
+        .bg-image-card img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 10px;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .bg-image-card label {
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-top: 0.25rem;
+            font-weight: 500;
+        }
         @media (max-width: 640px) {
             .tab-pill {
                 flex: 1;
@@ -416,7 +455,7 @@
 
                 <section class="tab-panel {{ $activeTab === 'colors' ? 'active' : '' }}" data-tab-panel="colors">
                     <h3>رنگ‌بندی عمومی سامانه</h3>
-                    <p>با انتخاب رنگ‌های دلخواه، هویت بصری شما در داشبورد، صفحه ورود و صفحه خوش‌آمد یکپارچه می‌شود.</p>
+                    <p>این بخش مخصوص رنگ‌های پایه پنل است. تنظیمات تصویر پس‌زمینه سراسری سامانه هم پایین همین تب قرار دارد (مستقل از صفحه ورود).</p>
                     @php
                         $colorValues = $appSettings['colors'] ?? [];
                         $colorFields = [
@@ -476,6 +515,64 @@
                         <div class="form-actions">
                             <button type="submit" class="primary-btn">ذخیره رنگ‌ها</button>
                             <button type="reset" class="ghost-btn">بازنشانی فرم</button>
+                        </div>
+                    </form>
+
+                    <hr style="border:none;border-top:1px solid rgba(15,23,42,0.08);margin:1.5rem 0;">
+                    <h4 style="margin:0 0 .4rem;">بک‌گراند سراسری پنل (مستقل از لاگین)</h4>
+                    <p style="margin:0 0 .9rem;color:var(--muted);font-size:.9rem;">تصویر پشت کل سامانه با لایه مات نمایش داده می‌شود تا آیتم‌ها خوانا بمانند.</p>
+                    <form method="POST" action="{{ route('admin.settings.system-background') }}" enctype="multipart/form-data">
+                        @csrf
+                        @php
+                            $sysMode = old('mode', $systemBgCfg['mode'] ?? 'gradient');
+                            $sysActive = old('active_image', $systemBgCfg['active_image'] ?? null);
+                            $sysRandom = old('random_images', $systemBgCfg['random_images'] ?? []);
+                            $sysRandom = is_array($sysRandom) ? $sysRandom : [];
+                        @endphp
+                        <div class="form-grid">
+                            <div class="form-control">
+                                <label for="sys-bg-mode">حالت بک‌گراند سراسری</label>
+                                <select id="sys-bg-mode" name="mode">
+                                    <option value="gradient" @selected($sysMode === 'gradient')>فقط رنگ پس‌زمینه پنل</option>
+                                    <option value="single" @selected($sysMode === 'single')>یک تصویر ثابت</option>
+                                    <option value="random" @selected($sysMode === 'random')>تصویر تصادفی در هر بار بارگذاری</option>
+                                </select>
+                            </div>
+                            <div class="form-control">
+                                <label for="sys-overlay-opacity">شدت لایه مات (0 تا 80 درصد)</label>
+                                <input id="sys-overlay-opacity" type="number" min="0" max="80" name="overlay_opacity" value="{{ old('overlay_opacity', $systemBgCfg['overlay_opacity'] ?? 35) }}">
+                            </div>
+                            <div class="form-control" style="justify-content: center;">
+                                <label class="inline-toggle">
+                                    <input type="checkbox" name="enable_glass_ui" value="1" @checked(old('enable_glass_ui', (bool) ($systemBgCfg['enable_glass_ui'] ?? false)))>
+                                    هدر بالا و کارت‌ها حالت شیشه‌ای (Glass) داشته باشند
+                                </label>
+                                <span class="error-text" style="color: var(--muted);">برای هماهنگی بهتر با بک‌گراند فعال کنید. خوانایی متن حفظ می‌شود.</span>
+                            </div>
+                            <div class="form-control">
+                                <label for="sys-bg-upload">آپلود تصویر(های) جدید</label>
+                                <input id="sys-bg-upload" type="file" name="uploads[]" multiple accept="image/png,image/jpeg,image/jpg,image/webp" class="{{ $systemBackgroundErrors->has('uploads') || $systemBackgroundErrors->has('uploads.*') ? 'error' : '' }}">
+                                @if ($systemBackgroundErrors->has('uploads') || $systemBackgroundErrors->has('uploads.*'))
+                                    <span class="error-text">{{ $systemBackgroundErrors->first('uploads') ?: $systemBackgroundErrors->first('uploads.*') }}</span>
+                                @endif
+                            </div>
+                        </div>
+
+                        @if (!empty($systemBgImages))
+                            <div class="bg-image-grid">
+                                @foreach ($systemBgImages as $img)
+                                    <div class="bg-image-card">
+                                        <img src="{{ asset($img) }}" alt="بک‌گراند سراسری">
+                                        <label><input type="radio" name="active_image" value="{{ $img }}" @checked($sysActive === $img)> تصویر ثابت</label>
+                                        <label><input type="checkbox" name="random_images[]" value="{{ $img }}" @checked(in_array($img, $sysRandom, true))> داخل لیست تصادفی</label>
+                                        <label><input type="checkbox" name="remove_images[]" value="{{ $img }}"> حذف</label>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <div class="form-actions">
+                            <button type="submit" class="primary-btn">ذخیره بک‌گراند سراسری</button>
                         </div>
                     </form>
                 </section>
@@ -572,6 +669,87 @@
                         </div>
                         <div class="form-actions">
                             <button type="submit" class="primary-btn">ذخیره تنظیمات امنیتی</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="tab-panel {{ $activeTab === 'login_page' ? 'active' : '' }}" data-tab-panel="login_page">
+                    <h3>تنظیمات استاندارد صفحه ورود</h3>
+                    <p>عنوان/توضیح صفحه ورود، فعال یا غیرفعال بودن کپچا، شفافیت کارت لاگین و مدیریت چندین تصویر پس‌زمینه را از اینجا کنترل کنید.</p>
+                    <form method="POST" action="{{ route('admin.settings.login-page') }}" enctype="multipart/form-data">
+                        @csrf
+                        <div class="form-grid">
+                            <div class="form-control">
+                                <label for="login-title">عنوان صفحه ورود</label>
+                                <input id="login-title" type="text" name="title" value="{{ old('title', $loginPageCfg['title'] ?? 'ورود به ناحیه مدیریت') }}" class="{{ $loginPageErrors->has('title') ? 'error' : '' }}">
+                                @error('title')<span class="error-text">{{ $message }}</span>@enderror
+                            </div>
+                            <div class="form-control">
+                                <label for="login-subtitle">توضیح صفحه ورود</label>
+                                <input id="login-subtitle" type="text" name="subtitle" value="{{ old('subtitle', $loginPageCfg['subtitle'] ?? 'برای ورود به پنل مدیریت، اطلاعات حساب خود را وارد کنید.') }}" class="{{ $loginPageErrors->has('subtitle') ? 'error' : '' }}">
+                                @error('subtitle')<span class="error-text">{{ $message }}</span>@enderror
+                            </div>
+                            <div class="form-control">
+                                <label for="login-bg-mode">حالت پس‌زمینه</label>
+                                <select id="login-bg-mode" name="background_mode" class="{{ $loginPageErrors->has('background_mode') ? 'error' : '' }}">
+                                    @php $bgMode = old('background_mode', $loginPageCfg['background_mode'] ?? 'gradient'); @endphp
+                                    <option value="gradient" @selected($bgMode === 'gradient')>گرادیان پیش‌فرض (بدون عکس)</option>
+                                    <option value="single" @selected($bgMode === 'single')>نمایش یک عکس ثابت</option>
+                                    <option value="random" @selected($bgMode === 'random')>نمایش تصادفی از عکس‌های انتخاب‌شده</option>
+                                </select>
+                                @error('background_mode')<span class="error-text">{{ $message }}</span>@enderror
+                            </div>
+                            <div class="form-control">
+                                <label for="card-opacity">شفافیت کارت ورود (70 تا 100)</label>
+                                <input id="card-opacity" type="number" min="70" max="100" name="card_opacity" value="{{ old('card_opacity', $loginPageCfg['card_opacity'] ?? 95) }}" class="{{ $loginPageErrors->has('card_opacity') ? 'error' : '' }}">
+                                @error('card_opacity')<span class="error-text">{{ $message }}</span>@enderror
+                            </div>
+                            <div class="form-control">
+                                <label for="login-bg-upload">آپلود یک یا چند بک‌گراند</label>
+                                <input id="login-bg-upload" type="file" name="background_uploads[]" multiple accept="image/png,image/jpeg,image/jpg,image/webp" class="{{ $loginPageErrors->has('background_uploads') || $loginPageErrors->has('background_uploads.*') ? 'error' : '' }}">
+                                @if ($loginPageErrors->has('background_uploads') || $loginPageErrors->has('background_uploads.*'))
+                                    <span class="error-text">{{ $loginPageErrors->first('background_uploads') ?: $loginPageErrors->first('background_uploads.*') }}</span>
+                                @else
+                                    <span class="error-text" style="color: var(--muted);">هر فایل حداکثر ۵ مگابایت. فرمت‌های رایج تصویر پشتیبانی می‌شود.</span>
+                                @endif
+                            </div>
+                            <div class="form-control" style="justify-content: center;">
+                                <label class="inline-toggle">
+                                    <input type="checkbox" name="enable_captcha" value="1" @checked(old('enable_captcha', (bool) ($loginPageCfg['enable_captcha'] ?? true)))>
+                                    کپچای صفحه ورود فعال باشد
+                                </label>
+                            </div>
+                        </div>
+
+                        @if (!empty($loginPageImages))
+                            @php
+                                $activeBg = old('active_background', $loginPageCfg['active_background'] ?? null);
+                                $randomBgs = old('random_backgrounds', $loginPageCfg['random_backgrounds'] ?? []);
+                                $randomBgs = is_array($randomBgs) ? $randomBgs : [];
+                            @endphp
+                            <div class="bg-image-grid">
+                                @foreach ($loginPageImages as $img)
+                                    <div class="bg-image-card">
+                                        <img src="{{ asset($img) }}" alt="بک‌گراند ورود">
+                                        <label>
+                                            <input type="radio" name="active_background" value="{{ $img }}" @checked($activeBg === $img)>
+                                            عکس ثابت
+                                        </label>
+                                        <label>
+                                            <input type="checkbox" name="random_backgrounds[]" value="{{ $img }}" @checked(in_array($img, $randomBgs, true))>
+                                            در لیست تصادفی
+                                        </label>
+                                        <label>
+                                            <input type="checkbox" name="remove_backgrounds[]" value="{{ $img }}">
+                                            حذف تصویر
+                                        </label>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <div class="form-actions">
+                            <button type="submit" class="primary-btn">ذخیره تنظیمات صفحه ورود</button>
                         </div>
                     </form>
                 </section>

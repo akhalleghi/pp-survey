@@ -14,6 +14,8 @@ class AppSettings
             'survey_footer_text' => 'طراحی و توسعه توسط واحد فناوری اطلاعات توسعه نرم افزار',
             'colors' => self::defaultColors(),
             'security' => self::defaultSecurity(),
+            'login_page' => self::defaultLoginPage(),
+            'system_background' => self::defaultSystemBackground(),
         ];
     }
 
@@ -28,6 +30,38 @@ class AppSettings
             'log_retention_days' => 90,
             'session_idle_timeout_minutes' => 0,
             'admin_password_min_length' => 8,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected static function defaultLoginPage(): array
+    {
+        return [
+            'title' => 'ورود به ناحیه مدیریت',
+            'subtitle' => 'برای ورود به پنل مدیریت، اطلاعات حساب خود را وارد کنید.',
+            'enable_captcha' => true,
+            'background_mode' => 'gradient', // gradient | single | random
+            'background_images' => [],
+            'active_background' => null,
+            'random_backgrounds' => [],
+            'card_opacity' => 95,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected static function defaultSystemBackground(): array
+    {
+        return [
+            'mode' => 'gradient', // gradient | single | random
+            'images' => [],
+            'active_image' => null,
+            'random_images' => [],
+            'overlay_opacity' => 35, // percent 0..80
+            'enable_glass_ui' => false,
         ];
     }
 
@@ -79,6 +113,14 @@ class AppSettings
 
         if (isset($defaults['security']) && isset($merged['security']) && is_array($merged['security'])) {
             $merged['security'] = array_merge($defaults['security'], $merged['security']);
+        }
+
+        if (isset($defaults['login_page']) && isset($merged['login_page']) && is_array($merged['login_page'])) {
+            $merged['login_page'] = array_merge($defaults['login_page'], $merged['login_page']);
+        }
+
+        if (isset($defaults['system_background']) && isset($merged['system_background']) && is_array($merged['system_background'])) {
+            $merged['system_background'] = array_merge($defaults['system_background'], $merged['system_background']);
         }
 
         return $merged;

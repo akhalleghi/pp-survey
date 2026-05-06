@@ -8,9 +8,31 @@
     <link href="{{ asset('fonts/vazirmatn/vazirmatn.css') }}" rel="stylesheet">
     @php
         $themeColors = $appSettings['colors'] ?? \App\Support\AppSettings::get('colors', []);
+        $loginCfg = $appSettings['login_page'] ?? \App\Support\AppSettings::get('login_page', []);
         $primaryHex = ltrim($themeColors['primary'] ?? '#D61119', '#');
         $primaryRgb = sscanf($primaryHex, "%02x%02x%02x") ?: [214, 17, 25];
         $primaryRgbString = implode(',', $primaryRgb);
+        $loginTitle = $loginCfg['title'] ?? 'ورود به ناحیه مدیریت';
+        $loginSubtitle = $loginCfg['subtitle'] ?? 'برای ورود به پنل مدیریت، اطلاعات حساب خود را وارد کنید.';
+        $enableCaptcha = (bool) ($loginCfg['enable_captcha'] ?? true);
+        $bgMode = $loginCfg['background_mode'] ?? 'gradient';
+        $allLoginBgs = array_values(array_filter((array) ($loginCfg['background_images'] ?? []), static fn ($v) => is_string($v) && $v !== ''));
+        $activeBg = is_string($loginCfg['active_background'] ?? null) ? $loginCfg['active_background'] : null;
+        $randomPool = array_values(array_filter((array) ($loginCfg['random_backgrounds'] ?? []), static fn ($v) => is_string($v) && in_array($v, $allLoginBgs, true)));
+        $pickedBg = null;
+        if ($bgMode === 'single' && $activeBg && in_array($activeBg, $allLoginBgs, true)) {
+            $pickedBg = $activeBg;
+        } elseif ($bgMode === 'random') {
+            $pool = !empty($randomPool) ? $randomPool : $allLoginBgs;
+            if (!empty($pool)) {
+                $pickedBg = $pool[array_rand($pool)];
+            }
+        }
+        $cardOpacity = (int) ($loginCfg['card_opacity'] ?? 95);
+        if ($cardOpacity < 70 || $cardOpacity > 100) {
+            $cardOpacity = 95;
+        }
+        $cardBg = 'rgba(255,255,255,'.($cardOpacity / 100).')';
     @endphp
     <style>
         :root {
@@ -28,7 +50,15 @@
             margin: 0;
             min-height: 100vh;
             font-family: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            @if($pickedBg)
+            background:
+                linear-gradient(rgba(15,23,42,.28), rgba(15,23,42,.28)),
+                url('{{ asset($pickedBg) }}');
+            @else
             background: radial-gradient(circle at top, var(--accent-light), var(--accent-lighter) 55%);
+            @endif
+            background-size: cover;
+            background-position: center;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -37,7 +67,7 @@
         }
         .login-wrapper { width: 100%; max-width: 460px; }
         .login-card {
-            background: #fff;
+            background: {{ $cardBg }};
             border-radius: 32px;
             padding: 2.5rem;
             box-shadow: 0 20px 45px rgba({{ $primaryRgbString }}, 0.15);
@@ -135,8 +165,8 @@
     <div class="login-card">
         <div class="logo-block">
             <img src="{{ asset($appSettings['logo_path'] ?? 'storage/logo.png') }}" alt="لوگوی {{ $appSettings['app_name'] ?? 'سامانه نظرسنجی' }}">
-            <h1>{{ $appSettings['app_name'] ?? 'سامانه نظرسنجی' }}</h1>
-            <p>برای ورود به پنل مدیریت، اطلاعات حساب خود را وارد کنید.</p>
+            <h1>{{ $loginTitle }}</h1>
+            <p>{{ $loginSubtitle }}</p>
         </div>
 
         @if (session('error'))
@@ -165,14 +195,16 @@
                 <input id="password" name="password" type="password" autocomplete="current-password" required>
             </div>
 
-            <div class="captcha-stack">
-                <label for="captcha">کد امنیتی</label>
-                <div class="captcha-actions">
-                    <div class="captcha-display" id="captchaCode">{{ $captcha }}</div>
-                    <button type="button" class="refresh-btn" id="refreshCaptcha">تازه‌سازی کد</button>
+            @if ($enableCaptcha)
+                <div class="captcha-stack">
+                    <label for="captcha">کد امنیتی</label>
+                    <div class="captcha-actions">
+                        <div class="captcha-display" id="captchaCode">{{ $captcha }}</div>
+                        <button type="button" class="refresh-btn" id="refreshCaptcha">تازه‌سازی کد</button>
+                    </div>
+                    <input id="captcha" name="captcha" type="text" placeholder="کد نمایش داده‌شده را وارد کنید" autocomplete="off" required>
                 </div>
-                <input id="captcha" name="captcha" type="text" placeholder="کد نمایش داده‌شده را وارد کنید" autocomplete="off" required>
-            </div>
+            @endif
 
             <button type="submit" class="submit-btn">ورود به پنل مدیریت</button>
         </form>
@@ -185,26 +217,28 @@
     const captchaUrl = "{{ route('admin.captcha.refresh') }}";
     const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-    refreshBtn?.addEventListener('click', () => {
-        refreshBtn.disabled = true;
-        fetch(captchaUrl, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': token,
-                'Accept': 'application/json'
-            }
-        })
-            .then(response => response.json())
-            .then(data => {
-                captchaElement.textContent = data.captcha ?? '';
+    if (refreshBtn && captchaElement) {
+        refreshBtn.addEventListener('click', () => {
+            refreshBtn.disabled = true;
+            fetch(captchaUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json'
+                }
             })
-            .catch(() => {
-                captchaElement.textContent = '-----';
-            })
-            .finally(() => {
-                refreshBtn.disabled = false;
-            });
-    });
+                .then(response => response.json())
+                .then(data => {
+                    captchaElement.textContent = data.captcha ?? '';
+                })
+                .catch(() => {
+                    captchaElement.textContent = '-----';
+                })
+                .finally(() => {
+                    refreshBtn.disabled = false;
+                });
+        });
+    }
 </script>
 @include('components.persian-digits-script')
 </body>

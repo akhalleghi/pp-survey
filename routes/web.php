@@ -55,7 +55,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
             Route::post('settings/branding', [SettingsController::class, 'updateBranding'])->name('settings.branding');
             Route::post('settings/colors', [SettingsController::class, 'updateColors'])->name('settings.colors');
+            Route::post('settings/system-background', [SettingsController::class, 'updateSystemBackground'])->name('settings.system-background');
             Route::post('settings/security', [SettingsController::class, 'updateSecurity'])->name('settings.security');
+            Route::post('settings/login-page', [SettingsController::class, 'updateLoginPage'])->name('settings.login-page');
             Route::get('login-audit', [LoginAuditController::class, 'index'])->name('login-audit.index');
             Route::post('login-audit/clear-lock', [LoginAuditController::class, 'clearLock'])->name('login-audit.clear-lock');
         });

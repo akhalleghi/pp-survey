@@ -16,6 +16,26 @@
         use Illuminate\Support\Str;
 
         $themeColors = $appSettings['colors'] ?? \App\Support\AppSettings::get('colors', []);
+        $systemBg = $appSettings['system_background'] ?? \App\Support\AppSettings::get('system_background', []);
+        $systemBgMode = $systemBg['mode'] ?? 'gradient';
+        $systemBgImages = array_values(array_filter((array) ($systemBg['images'] ?? []), static fn ($v) => is_string($v) && $v !== ''));
+        $systemBgActive = is_string($systemBg['active_image'] ?? null) ? $systemBg['active_image'] : null;
+        $systemBgRandom = array_values(array_filter((array) ($systemBg['random_images'] ?? []), static fn ($v) => is_string($v) && in_array($v, $systemBgImages, true)));
+        $pickedSystemBg = null;
+        if ($systemBgMode === 'single' && $systemBgActive && in_array($systemBgActive, $systemBgImages, true)) {
+            $pickedSystemBg = $systemBgActive;
+        } elseif ($systemBgMode === 'random') {
+            $pool = !empty($systemBgRandom) ? $systemBgRandom : $systemBgImages;
+            if (!empty($pool)) {
+                $pickedSystemBg = $pool[array_rand($pool)];
+            }
+        }
+        $overlayOpacity = (int) ($systemBg['overlay_opacity'] ?? 35);
+        if ($overlayOpacity < 0 || $overlayOpacity > 80) {
+            $overlayOpacity = 35;
+        }
+        $overlayAlpha = number_format($overlayOpacity / 100, 2, '.', '');
+        $glassUiEnabled = (bool) ($systemBg['enable_glass_ui'] ?? false);
         $admin = $admin ?? null;
         $navItems = $navItems ?? [];
     @endphp
@@ -59,7 +79,16 @@
 
             font-family: 'Vazirmatn', system-ui, sans-serif;
 
+            @if($pickedSystemBg)
+            background:
+                linear-gradient(rgba(15, 23, 42, {{ $overlayAlpha }}), rgba(15, 23, 42, {{ $overlayAlpha }})),
+                url('{{ asset($pickedSystemBg) }}');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            @else
             background: {{ $themeColors['background'] ?? '#f4f5f7' }};
+            @endif
 
             color: var(--slate);
 
@@ -400,6 +429,32 @@
 
             overflow: visible;
 
+        }
+
+        .glass-ui-enabled .topbar {
+            background: rgba(255, 255, 255, 0.72) !important;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+        }
+
+        .glass-ui-enabled .content .card,
+        .glass-ui-enabled .content .report-card,
+        .glass-ui-enabled .content .settings-card,
+        .glass-ui-enabled .content .settings-hero,
+        .glass-ui-enabled .content .question-card,
+        .glass-ui-enabled .content .designer-canvas,
+        .glass-ui-enabled .content .designer-side,
+        .glass-ui-enabled .content .audit-hero,
+        .glass-ui-enabled .content .audit-filters,
+        .glass-ui-enabled .content .audit-table-wrap,
+        .glass-ui-enabled .content .audit-unlock-card,
+        .glass-ui-enabled .content .table-wrap {
+            background: rgba(255, 255, 255, 0.78) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-color: rgba(255, 255, 255, 0.5) !important;
         }
 
         .page-meta {
@@ -1330,7 +1385,7 @@
 
 </head>
 
-<body>
+<body class="{{ $glassUiEnabled ? 'glass-ui-enabled' : '' }}">
 
     <div class="dashboard-shell">
 

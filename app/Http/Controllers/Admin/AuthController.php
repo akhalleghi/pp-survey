@@ -7,6 +7,7 @@ use App\Models\AdminLoginLog;
 use App\Models\AdminUser;
 use App\Services\AdminLoginSecurityService;
 use App\Support\AdminPermissions;
+use App\Support\AppSettings;
 use App\Support\PersianCalendar;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -34,8 +35,15 @@ class AuthController extends Controller
             $request->session()->forget('admin_id');
         }
 
-        $captcha = $this->generateCaptcha();
-        $request->session()->put('admin_captcha', $captcha);
+        $loginSettings = AppSettings::get('login_page', []);
+        $enableCaptcha = (bool) ($loginSettings['enable_captcha'] ?? true);
+        $captcha = null;
+        if ($enableCaptcha) {
+            $captcha = $this->generateCaptcha();
+            $request->session()->put('admin_captcha', $captcha);
+        } else {
+            $request->session()->forget('admin_captcha');
+        }
 
         return view('admin.auth.login', compact('captcha'));
     }
@@ -45,11 +53,17 @@ class AuthController extends Controller
      */
     public function login(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        $loginSettings = AppSettings::get('login_page', []);
+        $enableCaptcha = (bool) ($loginSettings['enable_captcha'] ?? true);
+
+        $rules = [
             'username' => ['required', 'string'],
             'password' => ['required', 'string'],
-            'captcha' => ['required', 'string'],
-        ], [
+        ];
+        if ($enableCaptcha) {
+            $rules['captcha'] = ['required', 'string'];
+        }
+        $validated = $request->validate($rules, [
             'captcha.required' => 'کد امنیتی الزامی است.',
         ]);
 
@@ -73,17 +87,19 @@ class AuthController extends Controller
                 ->withErrors(['username' => 'به‌دلیل تلاش‌های ناموفق مکرر، ورود به‌طور موقت غیرفعال است. لطفاً بعداً دوباره تلاش کنید.']);
         }
 
-        $sessionCaptcha = $request->session()->get('admin_captcha');
-        if (! $sessionCaptcha || strcasecmp($validated['captcha'], $sessionCaptcha) !== 0) {
-            AdminLoginSecurityService::logEvent(
-                $request,
-                $username,
-                AdminLoginLog::OUTCOME_FAILED_CAPTCHA
-            );
+        if ($enableCaptcha) {
+            $sessionCaptcha = $request->session()->get('admin_captcha');
+            if (! $sessionCaptcha || strcasecmp($validated['captcha'] ?? '', $sessionCaptcha) !== 0) {
+                AdminLoginSecurityService::logEvent(
+                    $request,
+                    $username,
+                    AdminLoginLog::OUTCOME_FAILED_CAPTCHA
+                );
 
-            return back()
-                ->withInput($request->only('username'))
-                ->withErrors(['captcha' => 'کد امنیتی وارد شده صحیح نیست.']);
+                return back()
+                    ->withInput($request->only('username'))
+                    ->withErrors(['captcha' => 'کد امنیتی وارد شده صحیح نیست.']);
+            }
         }
 
         $admin = AdminUser::where('username', $username)->first();
@@ -178,6 +194,11 @@ class AuthController extends Controller
      */
     public function refreshCaptcha(Request $request): JsonResponse
     {
+        $loginSettings = AppSettings::get('login_page', []);
+        if (! (bool) ($loginSettings['enable_captcha'] ?? true)) {
+            return response()->json(['captcha' => null], 422);
+        }
+
         $captcha = $this->generateCaptcha();
         $request->session()->put('admin_captcha', $captcha);
 
