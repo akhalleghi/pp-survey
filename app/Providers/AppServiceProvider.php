@@ -36,6 +36,11 @@ class AppServiceProvider extends ServiceProvider
             $headerNotifications = AdminInboxNotifications::collect($admin);
             $view->with('headerNotifications', $headerNotifications);
             $view->with('headerNotificationCount', count($headerNotifications));
+
+            if ($admin && $admin->hasPermission(\App\Support\AdminPermissions::SETTINGS)) {
+                $view->with('settingsActiveTab', session('settings_active_tab', 'password'));
+                $view->with('openSettingsModal', (bool) session('open_settings_modal', false));
+            }
         });
     }
 }

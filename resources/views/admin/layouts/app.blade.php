@@ -14,6 +14,8 @@
 
     <link href="{{ asset('fonts/vazirmatn/vazirmatn.css') }}" rel="stylesheet">
 
+    @include('admin.partials.fontawesome-local')
+
     @php
         use Illuminate\Support\Str;
 
@@ -250,6 +252,16 @@
 
         }
 
+        .sidebar-footer-actions {
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 0.5rem;
+
+        }
+
         .sidebar-backup-btn {
 
             width: 100%;
@@ -292,11 +304,9 @@
 
         }
 
-        .sidebar-backup-btn svg {
+        .sidebar-backup-btn i {
 
-            width: 1.15rem;
-
-            height: 1.15rem;
+            font-size: 1.05rem;
 
             flex-shrink: 0;
 
@@ -344,11 +354,25 @@
 
         }
 
-        .nav-item svg {
+        .nav-ico {
 
-            width: 20px;
+            width: 1.25rem;
 
-            height: 20px;
+            flex-shrink: 0;
+
+            text-align: center;
+
+            font-size: 0.95rem;
+
+            opacity: 0.92;
+
+        }
+
+        .nav-item .nav-ico,
+
+        .nav-parent-toggle .nav-ico {
+
+            width: 1.25rem;
 
         }
 
@@ -390,9 +414,10 @@
 
         }
 
-        .nav-parent-toggle svg {
-            width: 20px;
-            height: 20px;
+        .nav-parent-toggle .nav-parent-arrow {
+            margin-right: auto;
+            font-size: 0.75rem;
+            opacity: 0.85;
         }
 
         .nav-parent-toggle:hover,
@@ -405,21 +430,15 @@
 
         }
 
-        .nav-parent-arrow {
-
-            margin-right: auto;
-
-            transition: transform 0.2s ease;
-
-            width: 18px;
-
-            height: 18px;
-
-        }
-
         .nav-parent.expanded .nav-parent-arrow {
 
             transform: rotate(180deg);
+
+        }
+
+        .nav-parent-arrow {
+
+            transition: transform 0.2s ease;
 
         }
 
@@ -1111,11 +1130,17 @@
 
         }
 
-        .stat-card-icon svg {
+        .stat-card-icon i {
 
-            width: 26px;
+            font-size: 1.35rem;
 
-            height: 26px;
+        }
+
+        .panel h3 i {
+
+            font-size: 1.05rem;
+
+            color: var(--primary);
 
         }
 
@@ -1227,13 +1252,11 @@
 
             }
 
-            body.sidebar-collapsed .nav-item svg {
+            body.sidebar-collapsed .nav-item .nav-ico {
 
-                margin: 0;
+                margin: 0 auto;
 
-                width: 22px;
-
-                height: 22px;
+                width: auto;
 
             }
 
@@ -1525,21 +1548,11 @@
                             <button type="button" class="nav-parent-toggle {{ $active ? 'active' : '' }}"
                                 data-target="{{ $submenuId }}" aria-expanded="{{ $active ? 'true' : 'false' }}">
 
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                        d="{{ $item['icon'] }}" />
-
-                                </svg>
+                                <i class="fa-solid {{ $item['icon'] }} nav-ico" aria-hidden="true"></i>
 
                                 {{ $item['label'] }}
 
-                                <svg class="nav-parent-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                        d="M6 9l6 6 6-6" />
-
-                                </svg>
+                                <i class="fa-solid fa-chevron-down nav-parent-arrow" aria-hidden="true"></i>
 
                             </button>
 
@@ -1557,12 +1570,7 @@
                                     <a href="{{ $child['href'] ?? '#' }}"
                                         class="nav-item child {{ $isChildActive ? 'active' : '' }}">
 
-                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                                d="{{ $child['icon'] }}" />
-
-                                        </svg>
+                                        <i class="fa-solid {{ $child['icon'] }} nav-ico" aria-hidden="true"></i>
 
                                         {{ $child['label'] }}
 
@@ -1575,10 +1583,7 @@
                     @else
                         <a href="{{ $item['href'] ?? '#' }}" class="nav-item {{ $active ? 'active' : '' }}">
 
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                    d="{{ $item['icon'] }}" />
-                            </svg>
+                            <i class="fa-solid {{ $item['icon'] }} nav-ico" aria-hidden="true"></i>
 
                             {{ $item['label'] }}
 
@@ -1588,15 +1593,20 @@
 
             </div>
 
-            @if ($admin?->isAdmin())
-                <div class="sidebar-footer">
-                    <button type="button" class="sidebar-backup-btn" id="openBackupModalBtn" aria-haspopup="dialog">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5 5 5M12 5v12" />
-                        </svg>
-                        <span class="sidebar-backup-label">پشتیبان‌گیری و بازیابی</span>
-                    </button>
+            @if ($admin?->hasPermission(\App\Support\AdminPermissions::SETTINGS) || $admin?->isAdmin())
+                <div class="sidebar-footer sidebar-footer-actions">
+                    @if ($admin?->hasPermission(\App\Support\AdminPermissions::SETTINGS))
+                        <button type="button" class="sidebar-backup-btn" id="openSettingsModalBtn" aria-haspopup="dialog">
+                            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                            <span class="sidebar-backup-label">تنظیمات برنامه</span>
+                        </button>
+                    @endif
+                    @if ($admin?->isAdmin())
+                        <button type="button" class="sidebar-backup-btn" id="openBackupModalBtn" aria-haspopup="dialog">
+                            <i class="fa-solid fa-database" aria-hidden="true"></i>
+                            <span class="sidebar-backup-label">پشتیبان‌گیری و بازیابی</span>
+                        </button>
+                    @endif
                 </div>
             @endif
 
@@ -1969,6 +1979,8 @@
 
         })();
     </script>
+
+    @include('admin.partials.settings-modal')
 
     @include('admin.partials.backup-modal')
 

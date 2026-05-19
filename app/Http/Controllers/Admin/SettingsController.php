@@ -5,23 +5,24 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
 use App\Services\AdminLoginSecurityService;
+use App\Support\AdminSettingsTabs;
 use App\Support\AppSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): RedirectResponse
     {
-        $admin = AdminUser::find($request->session()->get('admin_id'));
-        $activeTab = $request->session()->pull('settings_active_tab', 'password');
-        $appSettings = AppSettings::all();
+        $tab = $request->query('tab', 'password');
+        if (! in_array($tab, array_column(AdminSettingsTabs::all(), 'id'), true)) {
+            $tab = 'password';
+        }
 
-        return view('admin.settings', compact('admin', 'activeTab', 'appSettings'));
+        return $this->settingsRedirect($tab);
     }
 
     public function updatePassword(Request $request): RedirectResponse
@@ -38,19 +39,15 @@ class SettingsController extends Controller
         ]);
 
         if (! Hash::check($validated['current_password'], $admin->password)) {
-            return back()
-                ->withErrors(['current_password' => 'رمز عبور فعلی صحیح نیست.'], 'updatePassword')
-                ->with('settings_active_tab', 'password');
+            return $this->settingsRedirect('password')
+                ->withErrors(['current_password' => 'رمز عبور فعلی صحیح نیست.'], 'updatePassword');
         }
 
         $admin->update([
             'password' => Hash::make($validated['new_password']),
         ]);
 
-        return redirect()
-            ->route('admin.settings.index')
-            ->with('status', 'رمز عبور با موفقیت به‌روزرسانی شد.')
-            ->with('settings_active_tab', 'password');
+        return $this->settingsRedirect('password', 'رمز عبور با موفقیت به‌روزرسانی شد.');
     }
 
     public function updateBranding(Request $request): RedirectResponse
@@ -73,10 +70,7 @@ class SettingsController extends Controller
 
         AppSettings::update($payload);
 
-        return redirect()
-            ->route('admin.settings.index')
-            ->with('status', 'هویت بصری سامانه با موفقیت ذخیره شد.')
-            ->with('settings_active_tab', 'branding');
+        return $this->settingsRedirect('branding', 'هویت بصری سامانه با موفقیت ذخیره شد.');
     }
 
     public function updateColors(Request $request): RedirectResponse
@@ -101,10 +95,7 @@ class SettingsController extends Controller
 
         AppSettings::update(['colors' => $merged]);
 
-        return redirect()
-            ->route('admin.settings.index')
-            ->with('status', 'رنگ‌بندی سامانه با موفقیت ذخیره شد.')
-            ->with('settings_active_tab', 'colors');
+        return $this->settingsRedirect('colors', 'رنگ‌بندی سامانه با موفقیت ذخیره شد.');
     }
 
     public function updateSecurity(Request $request): RedirectResponse
@@ -131,10 +122,7 @@ class SettingsController extends Controller
         AppSettings::update(['security' => $merged]);
         AdminLoginSecurityService::pruneOldLogsIfNeeded();
 
-        return redirect()
-            ->route('admin.settings.index')
-            ->with('status', 'تنظیمات امنیتی ذخیره شد.')
-            ->with('settings_active_tab', 'security');
+        return $this->settingsRedirect('security', 'تنظیمات امنیتی ذخیره شد.');
     }
 
     public function updateLoginPage(Request $request): RedirectResponse
@@ -198,23 +186,20 @@ class SettingsController extends Controller
             $backgroundMode = 'random';
         }
 
-        $loginSettings = [
-            'title' => $validated['title'],
-            'subtitle' => $validated['subtitle'] ?? null,
-            'enable_captcha' => $request->boolean('enable_captcha'),
-            'background_mode' => $backgroundMode,
-            'background_images' => $allImages,
-            'active_background' => $active,
-            'random_backgrounds' => $randomSelected,
-            'card_opacity' => (int) $validated['card_opacity'],
-        ];
+        AppSettings::update([
+            'login_page' => [
+                'title' => $validated['title'],
+                'subtitle' => $validated['subtitle'] ?? null,
+                'enable_captcha' => $request->boolean('enable_captcha'),
+                'background_mode' => $backgroundMode,
+                'background_images' => $allImages,
+                'active_background' => $active,
+                'random_backgrounds' => $randomSelected,
+                'card_opacity' => (int) $validated['card_opacity'],
+            ],
+        ]);
 
-        AppSettings::update(['login_page' => $loginSettings]);
-
-        return redirect()
-            ->route('admin.settings.index')
-            ->with('status', 'تنظیمات صفحه ورود ذخیره شد.')
-            ->with('settings_active_tab', 'login_page');
+        return $this->settingsRedirect('login_page', 'تنظیمات صفحه ورود ذخیره شد.');
     }
 
     public function updateSystemBackground(Request $request): RedirectResponse
@@ -287,9 +272,19 @@ class SettingsController extends Controller
             ],
         ]);
 
-        return redirect()
-            ->route('admin.settings.index')
-            ->with('status', 'بک‌گراند سراسری سامانه ذخیره شد.')
-            ->with('settings_active_tab', 'colors');
+        return $this->settingsRedirect('colors', 'بک‌گراند سراسری سامانه ذخیره شد.');
+    }
+
+    private function settingsRedirect(string $tab, ?string $status = null): RedirectResponse
+    {
+        $redirect = redirect()->back();
+
+        if ($status !== null) {
+            $redirect->with('status', $status);
+        }
+
+        return $redirect
+            ->with('open_settings_modal', true)
+            ->with('settings_active_tab', $tab);
     }
 }
