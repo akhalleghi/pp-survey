@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-app-text-scale="{{ $appTextScale['id'] ?? 'md' }}">
 
 <head>
 
@@ -10,6 +10,7 @@
 
     <title>{{ ($appSettings['app_name'] ?? 'سامانه نظرسنجی') }} | شرکت پاریز پیشرو صنعت توسعه</title>
 
+    @include('components.app-font')
     <link rel="stylesheet" href="{{ asset('css/index.css') }}">
     @php
         $themeColors = $appSettings['colors'] ?? \App\Support\AppSettings::get('colors', []);

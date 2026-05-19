@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-app-text-scale="{{ $appTextScale['id'] ?? 'md' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? 'نظرسنجی در دسترس نیست' }}</title>
-    <link rel="stylesheet" href="/fonts/vazirmatn/vazirmatn.css">
+    @include('components.app-font')
     <style>
         * { box-sizing: border-box; }
         body {
@@ -14,7 +14,7 @@
             align-items: center;
             justify-content: center;
             padding: 2rem 1rem;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
             background: #f4f5f7;
             color: #0f172a;
         }

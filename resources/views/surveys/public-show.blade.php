@@ -1,10 +1,10 @@
 ﻿<!doctype html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-app-text-scale="{{ $appTextScale['id'] ?? 'md' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $survey->title }}</title>
-    <link rel="stylesheet" href="/fonts/vazirmatn/vazirmatn.css">
+    @include('components.app-font')
     <link rel="stylesheet" href="{{ asset('vendor/persian-datepicker-behzadi/persianDatepicker-default.css') }}">
     @php
         $surveyBackground = $survey->background_image ? asset($survey->background_image) : null;
@@ -82,7 +82,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
             color: var(--text-primary);
             background-color: var(--surface-bg);
             background-image:
@@ -567,7 +567,7 @@
             cursor: pointer;
             background: var(--pub-nav-prev);
             color: #fff;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
             box-shadow: 0 8px 22px rgba(15, 23, 42, 0.32);
             transition: transform 0.14s ease, opacity 0.14s ease;
         }
@@ -587,7 +587,7 @@
         }
         .wizard-next-finish {
             display: none;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
             font-weight: 800;
             font-size: 0.82rem;
             letter-spacing: 0.02em;

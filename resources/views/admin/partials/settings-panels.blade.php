@@ -6,6 +6,14 @@
     $systemBackgroundErrors = $errors->updateSystemBackground ?? $errors;
     $securityErrors = $errors->updateSecurity ?? $errors;
     $loginPageErrors = $errors->updateLoginPage ?? $errors;
+    $fontErrors = $errors->updateFont ?? $errors;
+    $currentAppFont = old('app_font', $appSettings['app_font'] ?? \App\Support\AppFonts::DEFAULT_ID);
+    $currentTextScale = old('app_text_scale', $appSettings['app_text_scale'] ?? \App\Support\AppTextScale::DEFAULT_ID);
+    $availableFonts = \App\Support\AppFonts::registry();
+    $availableTextScales = \App\Support\AppTextScale::registry();
+    if ($activeTab === 'typography') {
+        $activeTab = 'appearance';
+    }
     $securityCfg = $appSettings['security'] ?? [];
     $systemBgCfg = $appSettings['system_background'] ?? [];
     $systemBgImages = array_values(array_filter((array) ($systemBgCfg['images'] ?? []), static fn ($v) => is_string($v) && $v !== ''));
@@ -125,6 +133,73 @@
                         <div class="form-actions">
                             <button type="submit" class="primary-btn">ذخیره تنظیمات برند</button>
                             <button type="reset" class="ghost-btn">بازنشانی فرم</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="settings-modal-panel {{ $activeTab === 'appearance' ? 'active' : '' }}" data-settings-panel="appearance">
+                    <h3>ظاهر برنامه</h3>
+                    <p>فونت و اندازهٔ متن روی پنل مدیریت، فرم‌های نظرسنجی، صفحهٔ ورود و سایر بخش‌های سامانه اعمال می‌شود. با تغییر اندازه، دکمه‌ها و فاصله‌ها نیز متناسب بزرگ یا کوچک می‌شوند.</p>
+                    @foreach ($availableFonts as $previewFont)
+                        <link rel="stylesheet" href="{{ asset($previewFont['css']) }}">
+                    @endforeach
+                    <form method="POST" action="{{ route('admin.settings.font') }}" class="appearance-settings-form">
+                        @csrf
+                        <h4 class="settings-subsection-title">اندازهٔ متن و عناصر</h4>
+                        <div class="text-scale-picker" role="radiogroup" aria-label="اندازه متن سامانه">
+                            @foreach ($availableTextScales as $scaleOption)
+                                @php
+                                    $scaleSelected = $currentTextScale === $scaleOption['id'];
+                                @endphp
+                                <label class="text-scale-option {{ $scaleSelected ? 'is-selected' : '' }}">
+                                    <input
+                                        type="radio"
+                                        name="app_text_scale"
+                                        value="{{ $scaleOption['id'] }}"
+                                        {{ $scaleSelected ? 'checked' : '' }}
+                                        class="text-scale-input"
+                                    >
+                                    <span class="text-scale-label">{{ $scaleOption['label'] }}</span>
+                                    <span class="text-scale-preview" style="font-size: {{ $scaleOption['root'] }}">نمونه ۱۲۳</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @if ($fontErrors->has('app_text_scale'))
+                            <span class="error-text">{{ $fontErrors->first('app_text_scale') }}</span>
+                        @endif
+
+                        <h4 class="settings-subsection-title">فونت</h4>
+                        <div class="font-picker-grid" role="radiogroup" aria-label="انتخاب فونت سامانه">
+                            @foreach ($availableFonts as $fontOption)
+                                @php
+                                    $isSelected = $currentAppFont === $fontOption['id'];
+                                @endphp
+                                <label class="font-picker-card {{ $isSelected ? 'is-selected' : '' }}">
+                                    <input
+                                        type="radio"
+                                        name="app_font"
+                                        value="{{ $fontOption['id'] }}"
+                                        {{ $isSelected ? 'checked' : '' }}
+                                        class="font-picker-input"
+                                    >
+                                    <span class="font-picker-card-head">
+                                        <span class="font-picker-name">{{ $fontOption['label'] }}</span>
+                                        @if ($isSelected)
+                                            <span class="font-picker-badge">فعال</span>
+                                        @endif
+                                    </span>
+                                    <span class="font-picker-sample" style="font-family: {{ \App\Support\AppFonts::stack($fontOption['id']) }}">
+                                        {{ $fontOption['sample'] }}
+                                    </span>
+                                    <span class="font-picker-meta">وزن‌های ۳۰۰ تا ۷۰۰ — اعداد فارسی</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @if ($fontErrors->has('app_font'))
+                            <span class="error-text">{{ $fontErrors->first('app_font') }}</span>
+                        @endif
+                        <div class="form-actions">
+                            <button type="submit" class="primary-btn">ذخیره و اعمال ظاهر</button>
                         </div>
                     </form>
                 </section>

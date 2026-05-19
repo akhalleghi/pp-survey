@@ -155,7 +155,7 @@
             border: 1px solid rgba(15,23,42,0.15);
             border-radius: 14px;
             padding: 0.7rem 1rem;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
             min-width: 180px;
         }
         .filter-actions {
@@ -312,7 +312,7 @@
             border-radius: 16px;
             padding: 0.9rem 1rem;
             font-size: 1rem;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
         }
         .modal-actions {
             display: flex;
@@ -357,7 +357,7 @@
             height: 48px;
             display: flex;
             align-items: center;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
         }
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             color: var(--slate);

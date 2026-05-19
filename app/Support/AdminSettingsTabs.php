@@ -28,6 +28,13 @@ final class AdminSettingsTabs
                 'group' => 'appearance',
             ],
             [
+                'id' => 'appearance',
+                'label' => 'ظاهر برنامه',
+                'subtitle' => 'فونت و اندازهٔ متن',
+                'icon' => 'fa-text-height',
+                'group' => 'appearance',
+            ],
+            [
                 'id' => 'colors',
                 'label' => 'رنگ و پس‌زمینه',
                 'subtitle' => 'رنگ‌بندی و تصویر پنل',

@@ -327,6 +327,119 @@
         font-weight: 600;
         font-size: 0.88rem;
     }
+    .font-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.85rem;
+        margin: 1rem 0;
+    }
+    .font-picker-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+        padding: 1rem 1.05rem;
+        border: 2px solid rgba(15, 23, 42, 0.1);
+        border-radius: 14px;
+        background: #fff;
+        cursor: pointer;
+        transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    .font-picker-card:hover {
+        border-color: rgba(214, 17, 25, 0.35);
+    }
+    .font-picker-card.is-selected {
+        border-color: var(--primary);
+        background: rgba(214, 17, 25, 0.04);
+        box-shadow: 0 0 0 3px rgba(214, 17, 25, 0.12);
+    }
+    .font-picker-input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .font-picker-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+    .font-picker-name {
+        font-weight: 700;
+        font-size: 0.92rem;
+        color: var(--slate);
+    }
+    .font-picker-badge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--primary-dark);
+        background: rgba(214, 17, 25, 0.1);
+        padding: 0.15rem 0.5rem;
+        border-radius: 999px;
+    }
+    .font-picker-sample {
+        font-size: 1.05rem;
+        line-height: 1.65;
+        color: var(--slate-2);
+    }
+    .font-picker-meta {
+        font-size: 0.75rem;
+        color: var(--muted);
+    }
+    .settings-subsection-title {
+        margin: 1.35rem 0 0.65rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--slate);
+    }
+    .settings-subsection-title:first-of-type {
+        margin-top: 0.25rem;
+    }
+    .text-scale-picker {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        margin-bottom: 0.5rem;
+    }
+    .text-scale-option {
+        position: relative;
+        flex: 1 1 7.5rem;
+        min-width: 6.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.75rem 0.6rem;
+        border: 2px solid rgba(15, 23, 42, 0.1);
+        border-radius: 12px;
+        background: #fff;
+        cursor: pointer;
+        transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+        text-align: center;
+    }
+    .text-scale-option:hover {
+        border-color: rgba(214, 17, 25, 0.35);
+    }
+    .text-scale-option.is-selected {
+        border-color: var(--primary);
+        background: rgba(214, 17, 25, 0.04);
+        box-shadow: 0 0 0 3px rgba(214, 17, 25, 0.12);
+    }
+    .text-scale-input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .text-scale-label {
+        font-weight: 700;
+        font-size: 0.82rem;
+        color: var(--slate);
+    }
+    .text-scale-preview {
+        line-height: 1.4;
+        color: var(--slate-2);
+        font-weight: 600;
+    }
     @media (max-width: 820px) {
         .settings-modal-body {
             flex-direction: column;
@@ -489,6 +602,37 @@
             reader.readAsDataURL(file);
         });
     }
+
+    document.querySelectorAll('.font-picker-card').forEach((card) => {
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            const input = card.querySelector('.font-picker-input');
+            if (!input) return;
+            input.checked = true;
+            card.closest('.font-picker-grid')?.querySelectorAll('.font-picker-card').forEach((c) => {
+                c.classList.toggle('is-selected', c === card);
+                const badge = c.querySelector('.font-picker-badge');
+                if (badge) badge.remove();
+            });
+            if (!card.querySelector('.font-picker-badge')) {
+                const badge = document.createElement('span');
+                badge.className = 'font-picker-badge';
+                badge.textContent = 'فعال';
+                card.querySelector('.font-picker-card-head')?.appendChild(badge);
+            }
+        });
+    });
+
+    document.querySelectorAll('.text-scale-option').forEach((option) => {
+        option.addEventListener('click', () => {
+            const input = option.querySelector('.text-scale-input');
+            if (!input) return;
+            input.checked = true;
+            option.closest('.text-scale-picker')?.querySelectorAll('.text-scale-option').forEach((o) => {
+                o.classList.toggle('is-selected', o === option);
+            });
+        });
+    });
 
     panels.forEach((p) => {
         if (!p.classList.contains('active')) p.hidden = true;

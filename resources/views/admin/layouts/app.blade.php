@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-app-text-scale="{{ $appTextScale['id'] ?? 'md' }}">
 
 <head>
 
@@ -12,7 +12,7 @@
 
     <title>@yield('page-title', 'پنل مدیریت')</title>
 
-    <link href="{{ asset('fonts/vazirmatn/vazirmatn.css') }}" rel="stylesheet">
+    @include('components.app-font')
 
     @include('admin.partials.fontawesome-local')
 
@@ -81,7 +81,7 @@
 
             min-height: 100vh;
 
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
 
             @if($pickedSystemBg)
             background:
@@ -128,7 +128,7 @@
 
         .sidebar {
 
-            width: 288px;
+            width: 18rem;
 
             background: var(--sidebar);
 
@@ -192,11 +192,11 @@
 
         .brand img {
 
-            width: 56px;
+            width: 3.5rem;
 
-            height: 56px;
+            height: 3.5rem;
 
-            border-radius: 16px;
+            border-radius: 1rem;
 
             padding: 0.45rem;
 
@@ -496,7 +496,7 @@
 
             flex: 1;
 
-            margin-right: 288px;
+            margin-right: 18rem;
 
             display: flex;
 
@@ -632,11 +632,11 @@
 
             color: var(--slate);
 
-            width: 42px;
+            width: 2.625rem;
 
-            height: 42px;
+            height: 2.625rem;
 
-            border-radius: 14px;
+            border-radius: 0.875rem;
 
             display: inline-flex;
 
@@ -1084,7 +1084,7 @@
 
             display: grid;
 
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(13.75rem, 1fr));
 
             gap: 1.25rem;
 
@@ -1112,11 +1112,11 @@
 
         .stat-card-icon {
 
-            width: 52px;
+            width: 3.25rem;
 
-            height: 52px;
+            height: 3.25rem;
 
-            border-radius: 16px;
+            border-radius: 1rem;
 
             background: rgba(214, 17, 25, 0.1);
 
@@ -1168,7 +1168,7 @@
 
             display: grid;
 
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(16.25rem, 1fr));
 
             gap: 1.25rem;
 
@@ -1214,13 +1214,13 @@
 
             body.sidebar-collapsed .sidebar {
 
-                width: 96px;
+                width: 6rem;
 
             }
 
             body.sidebar-collapsed .main-shell {
 
-                margin-right: 96px;
+                margin-right: 6rem;
 
             }
 

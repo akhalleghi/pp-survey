@@ -1,0 +1,26 @@
+/**
+ * مقیاس سراسری: اندازهٔ html (rem) از components.app-font تنظیم می‌شود.
+ * آیتم‌های با واحد rem خودکار بزرگ/کوچک می‌شوند.
+ */
+html {
+    line-height: 1.5;
+}
+
+body {
+    font-size: 1rem;
+}
+
+button,
+input,
+select,
+textarea {
+    font-size: inherit;
+}
+
+/* دکمه‌ها و کنترل‌های رایج در پنل و فرم عمومی */
+.primary-btn,
+.ghost-btn,
+.danger-btn,
+.secondary-btn {
+    font-size: 0.9rem;
+}

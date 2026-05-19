@@ -1,6 +1,6 @@
 /* Import Fonts */
 @import url('/fonts/inter/inter.css');
-@import url('/fonts/vazirmatn/vazirmatn.css');
+/* فونت از components.app-font و --app-font-family بارگذاری می‌شود */
 
 /* CSS Variables */
 :root {
@@ -27,19 +27,19 @@ body {
     padding: 0;
     direction: rtl;
     text-align: right;
-    font-family: 'Vazir', 'Inter', sans-serif;
+    font-family: var(--app-font-family, 'Vazirmatn', system-ui, sans-serif);
     color: var(--color-text-primary);
     background-color: var(--color-background);
     line-height: 1.6;
 }
 
 html {
-    font-family: 'Vazir', 'Inter', sans-serif;
+    font-family: var(--app-font-family, 'Vazirmatn', system-ui, sans-serif);
     scroll-behavior: smooth;
 }
 
 h1, h2, h3, h4, h5, h6 {
-    font-family: 'Vazir', 'Inter', sans-serif;
+    font-family: var(--app-font-family, 'Vazirmatn', system-ui, sans-serif);
     font-weight: 600;
     line-height: 1.3;
     color: var(--color-text-primary);
@@ -52,7 +52,7 @@ a {
 }
 
 button {
-    font-family: 'Vazir', 'Inter', sans-serif;
+    font-family: var(--app-font-family, 'Vazirmatn', system-ui, sans-serif);
     font-weight: 600;
     cursor: pointer;
     transition: all var(--duration-fast) var(--timing-ease-out);
@@ -779,7 +779,7 @@ img {
 
 /* Font Vazir Utility */
 .font-vazir {
-    font-family: 'Vazir', 'Inter', sans-serif;
+    font-family: var(--app-font-family, 'Vazirmatn', system-ui, sans-serif);
 }
 
 /* Responsive */

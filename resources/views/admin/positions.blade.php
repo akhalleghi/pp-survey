@@ -111,7 +111,7 @@
             border-radius: 16px;
             padding: 0.9rem 1rem;
             font-size: 1rem;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .modal-body input:focus {
@@ -224,7 +224,7 @@
             border-radius: 14px;
             padding: 0.75rem 1rem;
             flex: 1 1 240px;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
         }
         .positions-filter .filter-actions {
             display: flex;

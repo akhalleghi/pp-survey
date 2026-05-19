@@ -10,6 +10,8 @@ class AppSettings
     {
         return [
             'app_name' => 'سامانه نظرسنجی',
+            'app_font' => \App\Support\AppFonts::DEFAULT_ID,
+            'app_text_scale' => \App\Support\AppTextScale::DEFAULT_ID,
             'logo_path' => 'storage/logo.png',
             'survey_footer_text' => 'طراحی و توسعه توسط واحد فناوری اطلاعات توسعه نرم افزار',
             'colors' => self::defaultColors(),

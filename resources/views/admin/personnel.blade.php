@@ -103,7 +103,7 @@
             border: 1px solid rgba(15,23,42,0.15);
             border-radius: 14px;
             padding: 0.75rem 1rem;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
             min-width: 180px;
         }
         .filter-actions {
@@ -315,7 +315,7 @@
             border-radius: 16px;
             padding: 0.85rem 1rem;
             font-size: 0.95rem;
-            font-family: 'Vazirmatn', system-ui, sans-serif;
+            font-family: var(--app-font-family);
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .modal-body input[type="file"] {

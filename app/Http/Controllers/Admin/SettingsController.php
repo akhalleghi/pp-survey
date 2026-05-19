@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
 use App\Services\AdminLoginSecurityService;
 use App\Support\AdminSettingsTabs;
+use App\Support\AppFonts;
 use App\Support\AppSettings;
+use App\Support\AppTextScale;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -18,6 +20,9 @@ class SettingsController extends Controller
     public function index(Request $request): RedirectResponse
     {
         $tab = $request->query('tab', 'password');
+        if ($tab === 'typography') {
+            $tab = 'appearance';
+        }
         if (! in_array($tab, array_column(AdminSettingsTabs::all(), 'id'), true)) {
             $tab = 'password';
         }
@@ -71,6 +76,26 @@ class SettingsController extends Controller
         AppSettings::update($payload);
 
         return $this->settingsRedirect('branding', 'هویت بصری سامانه با موفقیت ذخیره شد.');
+    }
+
+    public function updateFont(Request $request): RedirectResponse
+    {
+        $validated = $request->validateWithBag('updateFont', [
+            'app_font' => ['required', 'string', 'in:'.implode(',', AppFonts::ids())],
+            'app_text_scale' => ['required', 'string', 'in:'.implode(',', AppTextScale::ids())],
+        ], [
+            'app_font.required' => 'یک فونت را انتخاب کنید.',
+            'app_font.in' => 'فونت انتخاب‌شده معتبر نیست.',
+            'app_text_scale.required' => 'اندازهٔ متن را انتخاب کنید.',
+            'app_text_scale.in' => 'اندازهٔ متن انتخاب‌شده معتبر نیست.',
+        ]);
+
+        AppSettings::update([
+            'app_font' => $validated['app_font'],
+            'app_text_scale' => $validated['app_text_scale'],
+        ]);
+
+        return $this->settingsRedirect('appearance', 'ظاهر سامانه با موفقیت ذخیره و اعمال شد.');
     }
 
     public function updateColors(Request $request): RedirectResponse

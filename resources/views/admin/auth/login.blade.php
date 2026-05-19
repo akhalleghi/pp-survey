@@ -1,11 +1,11 @@
 ﻿<!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-app-text-scale="{{ $appTextScale['id'] ?? 'md' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>ورود ناحیه مدیریت</title>
-    <link href="{{ asset('fonts/vazirmatn/vazirmatn.css') }}" rel="stylesheet">
+    @include('components.app-font')
     @php
         $themeColors = $appSettings['colors'] ?? \App\Support\AppSettings::get('colors', []);
         $loginCfg = $appSettings['login_page'] ?? \App\Support\AppSettings::get('login_page', []);
@@ -49,7 +49,7 @@
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: var(--app-font-family);
             @if($pickedBg)
             background:
                 linear-gradient(rgba(15,23,42,.28), rgba(15,23,42,.28)),
