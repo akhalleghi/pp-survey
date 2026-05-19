@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.auth' => \App\Http\Middleware\AdminAuthenticate::class,
             'admin.permission' => \App\Http\Middleware\EnsureAdminPermission::class,
             'admin.session_idle' => \App\Http\Middleware\AdminSessionIdle::class,
+            'admin.only_main' => \App\Http\Middleware\EnsureAdminIsMain::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

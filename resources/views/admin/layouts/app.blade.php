@@ -8,6 +8,8 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <title>@yield('page-title', 'پنل مدیریت')</title>
 
     <link href="{{ asset('fonts/vazirmatn/vazirmatn.css') }}" rel="stylesheet">
@@ -227,6 +229,88 @@
             flex-direction: column;
 
             gap: 0.4rem;
+
+            flex: 1;
+
+            min-height: 0;
+
+            overflow-y: auto;
+
+        }
+
+        .sidebar-footer {
+
+            margin-top: auto;
+
+            padding-top: 1.25rem;
+
+            border-top: 1px solid rgba(248, 250, 252, 0.1);
+
+            flex-shrink: 0;
+
+        }
+
+        .sidebar-backup-btn {
+
+            width: 100%;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            gap: 0.55rem;
+
+            padding: 0.75rem 1rem;
+
+            border-radius: 14px;
+
+            border: 1px solid rgba(248, 250, 252, 0.18);
+
+            background: rgba(255, 255, 255, 0.06);
+
+            color: #f8fafc;
+
+            font-family: inherit;
+
+            font-size: 0.88rem;
+
+            font-weight: 600;
+
+            cursor: pointer;
+
+            transition: background 0.2s, border-color 0.2s;
+
+        }
+
+        .sidebar-backup-btn:hover {
+
+            background: rgba(255, 255, 255, 0.12);
+
+            border-color: rgba(248, 250, 252, 0.28);
+
+        }
+
+        .sidebar-backup-btn svg {
+
+            width: 1.15rem;
+
+            height: 1.15rem;
+
+            flex-shrink: 0;
+
+        }
+
+        body.sidebar-collapsed .sidebar-backup-btn .sidebar-backup-label {
+
+            display: none;
+
+        }
+
+        body.sidebar-collapsed .sidebar-backup-btn {
+
+            padding: 0.75rem;
 
         }
 
@@ -1504,6 +1588,18 @@
 
             </div>
 
+            @if ($admin?->isAdmin())
+                <div class="sidebar-footer">
+                    <button type="button" class="sidebar-backup-btn" id="openBackupModalBtn" aria-haspopup="dialog">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5 5 5M12 5v12" />
+                        </svg>
+                        <span class="sidebar-backup-label">پشتیبان‌گیری و بازیابی</span>
+                    </button>
+                </div>
+            @endif
+
         </aside>
 
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -1873,6 +1969,8 @@
 
         })();
     </script>
+
+    @include('admin.partials.backup-modal')
 
     @include('components.persian-digits-script')
 

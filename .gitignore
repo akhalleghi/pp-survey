@@ -18,6 +18,9 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/app/backups
+/storage/app/backup-uploads
+/storage/app/backup-restore-*
 /vendor
 Homestead.json
 Homestead.yaml

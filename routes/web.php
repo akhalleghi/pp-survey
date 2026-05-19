@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LoginAuditController;
 use App\Http\Controllers\Admin\PersonnelController;
@@ -31,6 +32,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        Route::middleware('admin.only_main')->prefix('backups')->name('backups.')->group(function () {
+            $backupFile = 'backup_[0-9]{8}_[0-9]{6}\.zip';
+            Route::get('/', [BackupController::class, 'index'])->name('index');
+            Route::post('/', [BackupController::class, 'store'])->name('store');
+            Route::post('/restore', [BackupController::class, 'restore'])->name('restore');
+            Route::get('/{filename}/download', [BackupController::class, 'download'])->where('filename', $backupFile)->name('download');
+            Route::delete('/{filename}', [BackupController::class, 'destroy'])->where('filename', $backupFile)->name('destroy');
+        });
 
         Route::middleware('admin.permission:org.units')->group(function () {
             Route::resource('units', UnitController::class)->only(['index', 'store', 'update', 'destroy']);
