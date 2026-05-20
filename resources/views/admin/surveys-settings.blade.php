@@ -13,7 +13,7 @@
         $selectedPersonnel = old('audience_personnel_ids', $audienceConfig['personnel_ids'] ?? []);
         $selectedIdentityMode = old('access_identity_mode', $audienceConfig['identity_mode'] ?? 'none');
     @endphp
-    <link rel="stylesheet" href="{{ asset('vendor/persian-datepicker/persian-datepicker.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/persian-datepicker-behzadi/persianDatepicker-default.css') }}">
     <style>
         .survey-settings {
             width: 100%;
@@ -144,6 +144,25 @@
             font-size: 0.92rem;
             font-family: inherit;
             direction: rtl;
+        }
+        .jalali-date-input input[readonly] {
+            cursor: pointer;
+            background: rgba(248, 250, 252, 0.92);
+        }
+        .survey-date-clear {
+            margin-top: 0.4rem;
+            border: none;
+            background: transparent;
+            color: var(--primary, #d61119);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+            font-family: inherit;
+        }
+        .survey-date-clear:hover {
+            opacity: 0.88;
         }
         .ss-toggle-grid {
             display: flex;
@@ -339,6 +358,40 @@
             flex: 1;
             min-width: 0;
         }
+        .questions-display-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            margin-top: 0.35rem;
+        }
+        .questions-display-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.55rem;
+            padding: 0.72rem 0.85rem;
+            border-radius: 14px;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            background: rgba(248, 250, 252, 0.65);
+            cursor: pointer;
+            font-size: 0.84rem;
+            line-height: 1.55;
+            color: var(--slate);
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .questions-display-option:hover {
+            border-color: rgba(214, 17, 25, 0.22);
+            background: rgba(255, 255, 255, 0.92);
+        }
+        .questions-display-option:has(input:checked) {
+            border-color: rgba(214, 17, 25, 0.38);
+            background: rgba(214, 17, 25, 0.06);
+            font-weight: 600;
+        }
+        .questions-display-option input {
+            margin-top: 0.22rem;
+            flex-shrink: 0;
+            accent-color: var(--primary);
+        }
         .wizard-nav-theme {
             margin-top: 1.15rem;
             padding: 1rem 1rem 1.05rem;
@@ -466,22 +519,56 @@
                     </label>
                     <label class="ss-field">
                         <span>شروع انتشار</span>
-                        <div class="jalali-date-input" data-jalali-input>
-                            <input id="start-at" type="text" name="start_at" placeholder="مثلاً 1403/01/12"
-                                   value="{{ old('start_at', $survey->start_at ? jalali_date($survey->start_at) : '') }}">
+                        <input type="hidden"
+                               id="start-at-iso"
+                               name="start_at"
+                               value="{{ survey_publish_iso_from_state('start_at', $survey->start_at) }}">
+                        <div class="jalali-date-input" data-publish-date-wrap>
+                            <input id="start-at"
+                                   type="text"
+                                   autocomplete="off"
+                                   aria-label="انتخاب تاریخ شروع انتشار"
+                                   placeholder="انتخاب از تقویم"
+                                   readonly
+                                   data-sync-hidden="start-at-iso"
+                                   value="{{ survey_publish_date_form_value('start_at', $survey->start_at) }}"
+                                   inputmode="none">
                         </div>
-                        <span class="hint">خالی = بدون محدودیت شروع.</span>
+                        <button type="button"
+                                class="survey-date-clear"
+                                data-clear-display="start-at"
+                                data-clear-hidden="start-at-iso">
+                            پاک کردن تاریخ شروع
+                        </button>
+                        <span class="hint">خالی = بدون محدودیت شروع. تاریخ فقط از تقویم؛ مقدار ارسالی به سرور به‌صورت یک تاریخ میلادی یکتا ذخیره می‌شود.</span>
                         @error('start_at', 'updateSurvey')
                             <span class="hint" style="color: #dc2626;">{{ $message }}</span>
                         @enderror
                     </label>
                     <label class="ss-field">
                         <span>پایان انتشار</span>
-                        <div class="jalali-date-input" data-jalali-input>
-                            <input id="end-at" type="text" name="end_at" placeholder="مثلاً 1403/02/01"
-                                   value="{{ old('end_at', $survey->end_at ? jalali_date($survey->end_at) : '') }}">
+                        <input type="hidden"
+                               id="end-at-iso"
+                               name="end_at"
+                               value="{{ survey_publish_iso_from_state('end_at', $survey->end_at) }}">
+                        <div class="jalali-date-input" data-publish-date-wrap>
+                            <input id="end-at"
+                                   type="text"
+                                   autocomplete="off"
+                                   aria-label="انتخاب تاریخ پایان انتشار"
+                                   placeholder="انتخاب از تقویم"
+                                   readonly
+                                   data-sync-hidden="end-at-iso"
+                                   value="{{ survey_publish_date_form_value('end_at', $survey->end_at) }}"
+                                   inputmode="none">
                         </div>
-                        <span class="hint">خالی = بدون تاریخ پایان.</span>
+                        <button type="button"
+                                class="survey-date-clear"
+                                data-clear-display="end-at"
+                                data-clear-hidden="end-at-iso">
+                            پاک کردن تاریخ پایان
+                        </button>
+                        <span class="hint">خالی = بدون تاریخ پایان. برای حذف کامل، «پاک کردن تاریخ پایان» را بزنید و ذخیره کنید.</span>
                         @error('end_at', 'updateSurvey')
                             <span class="hint" style="color: #dc2626;">{{ $message }}</span>
                         @enderror
@@ -778,7 +865,7 @@
                     <div class="ss-card-icon" aria-hidden="true">🎨</div>
                     <div>
                         <h3>ظاهر صفحه عمومی</h3>
-                        <p>پس‌زمینهٔ تصویری و رنگ‌های کارت سوالات در لینک عمومی. برای پس‌زمینه، پیش‌تنظیم یا آپلود را انتخاب کنید؛ رنگ دکمه‌های قبلی/بعدی ویزارد و سایر رنگ‌های فرم را در همین کارت تنظیم کنید.</p>
+                        <p>پس‌زمینهٔ تصویری و رنگ‌های کارت سوالات در لینک عمومی؛ همچنین نحوهٔ نمایش سوالات (مرحله‌ای یا یک‌صفحه‌ای). برای پس‌زمینه، پیش‌تنظیم یا آپلود را انتخاب کنید؛ رنگ دکمه‌های قبلی/بعدی ویزارد و سایر رنگ‌های فرم را در همین کارت تنظیم کنید.</p>
                     </div>
                 </div>
                 <div class="ss-field">
@@ -860,8 +947,26 @@
                         'fill' => 'نوار پیشرفت (پرشده)',
                     ];
                 @endphp
+                <div class="ss-field" style="margin-top: 1rem;">
+                    <span>نحوهٔ نمایش سوالات به کاربر</span>
+                    <p class="hint">در حالت تک‌به‌تک، کاربر با دکمه‌های قبلی و بعدی بین سوالات جابه‌جا می‌شود و نوار پیشرفت در پایین دیده می‌شود. در حالت یک‌صفحه‌ای، همهٔ سوالات زیر هم نشان داده می‌شوند و فقط یک دکمه برای ثبت نهایی وجود دارد.</p>
+                    <div class="questions-display-options" role="radiogroup" aria-label="نحوهٔ نمایش سوالات">
+                        @foreach (\App\Models\Survey::questionsDisplayModeOptions() as $modeValue => $modeLabel)
+                            <label class="questions-display-option">
+                                <input type="radio"
+                                    name="public_theme[questions_display_mode]"
+                                    value="{{ $modeValue }}"
+                                    @checked(\App\Models\Survey::normalizeQuestionsDisplayMode(old('public_theme.questions_display_mode', $appearanceTheme['questions_display_mode'] ?? null)) === $modeValue)>
+                                <span>{{ $modeLabel }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    @error('public_theme.questions_display_mode', 'updateSurvey')
+                        <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                    @enderror
+                </div>
                 <div class="wizard-nav-theme">
-                    <p class="hint">رنگ دکمه‌های قبلی و بعدی در پایین کارت سوال (لینک عمومی). دکمهٔ «پایان» روی آخرین سوال جداگانه با رنگ ثابت قرمز نمایش داده می‌شود.</p>
+                    <p class="hint">در حالت <strong>تک‌به‌تک</strong>، رنگ دکمه‌های قبلی و بعدی در پایین کارت سوال (لینک عمومی) اعمال می‌شود. دکمهٔ «پایان» روی آخرین سوال با رنگ ثابت قرمز است. در حالت یک‌صفحه‌ای این دکمه‌ها نمایش داده نمی‌شوند.</p>
                     <div class="wizard-nav-theme-demos" aria-hidden="true">
                         <span class="cap">پیش‌نمایش</span>
                         <span class="wizard-nav-theme-chip" title="قبلی" style="background: {{ $appearanceTheme['nav_prev'] ?? '' }}"></span>
@@ -932,24 +1037,189 @@
         </form>
     </div>
 
-    <script src="{{ asset('vendor/persian-datepicker/jquery.min.js') }}"></script>
-    <script src="{{ asset('vendor/persian-datepicker/persian-date.min.js') }}"></script>
-    <script src="{{ asset('vendor/persian-datepicker/persian-datepicker.min.js') }}"></script>
+    <script src="{{ asset('vendor/persian-datepicker-behzadi/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ asset('vendor/persian-datepicker-behzadi/persianDatepicker.min.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            if (!window.jQuery || !jQuery().pDatepicker) {
-                return;
-            }
+            const gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            const jDaysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
+            const pad2 = (num) => String(num).padStart(2, '0');
 
-            jQuery('#start-at, #end-at').pDatepicker({
-                format: 'YYYY/MM/DD',
-                initialValue: false,
-                autoClose: true,
-                calendarType: 'persian',
-                initialValueType: 'persian',
-                toolbox: {
-                    calendarSwitch: false
+            const isLeapGregorian = (year) => {
+                return ((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0);
+            };
+
+            const gregorianToJalali = (gy, gm, gd) => {
+                gy = parseInt(gy, 10);
+                gm = parseInt(gm, 10);
+                gd = parseInt(gd, 10);
+                let jy;
+                if (gy > 1600) {
+                    jy = 979;
+                    gy -= 1600;
+                } else {
+                    jy = 0;
+                    gy -= 621;
                 }
+
+                const gy2 = gm > 2 ? gy + 1 : gy;
+                let days = (365 * gy)
+                    + Math.floor((gy2 + 3) / 4)
+                    - Math.floor((gy2 + 99) / 100)
+                    + Math.floor((gy2 + 399) / 400)
+                    - 80
+                    + gd;
+                for (let i = 0; i < gm - 1; i++) {
+                    days += gDaysInMonth[i];
+                }
+                if (gm > 2 && isLeapGregorian(gy2)) {
+                    days++;
+                }
+
+                jy += 33 * Math.floor(days / 12053);
+                days %= 12053;
+                jy += 4 * Math.floor(days / 1461);
+                days %= 1461;
+                if (days > 365) {
+                    jy += Math.floor((days - 1) / 365);
+                    days = (days - 1) % 365;
+                }
+
+                let jm = 0;
+                for (; jm < 11 && days >= jDaysInMonth[jm]; jm++) {
+                    days -= jDaysInMonth[jm];
+                }
+
+                return `${jy}/${pad2(jm + 1)}/${pad2(days + 1)}`;
+            };
+
+            const syncJalaliDisplayFromHidden = (displayInput, hiddenInput) => {
+                if (!displayInput || !hiddenInput) {
+                    return;
+                }
+                if (!hiddenInput.value) {
+                    displayInput.value = '';
+                    return;
+                }
+                const parts = hiddenInput.value.split('-').map((part) => parseInt(part, 10));
+                if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) {
+                    displayInput.value = '';
+                    return;
+                }
+                displayInput.value = gregorianToJalali(parts[0], parts[1], parts[2]);
+            };
+
+            const publishDatePairs = [
+                { display: document.getElementById('start-at'), hidden: document.getElementById('start-at-iso') },
+                { display: document.getElementById('end-at'), hidden: document.getElementById('end-at-iso') },
+            ];
+
+            const flushPickerGregorianToHidden = (inp, fallbackHidden) => {
+                if (!(inp instanceof HTMLElement)) {
+                    return;
+                }
+                const hidSel = inp.getAttribute('data-sync-hidden');
+                const hiddenEl = (hidSel && document.getElementById(hidSel)) || fallbackHidden;
+                const readG = () => inp.getAttribute('data-gdate') || inp.getAttribute('data-gDate') || '';
+                let gDate = readG();
+                const apply = () => {
+                    gDate = readG();
+                    const displayValue = String(inp.value || '').trim();
+                    if (!hiddenEl) {
+                        return;
+                    }
+                    // Fallback: اگر افزونه data-gdate نداد، همان تاریخ نمایشی (شمسی) را بفرست.
+                    // سرور خودش آن را normalize می‌کند.
+                    if (gDate) {
+                        hiddenEl.value = gDate;
+                    } else if (displayValue) {
+                        hiddenEl.value = displayValue;
+                    } else {
+                        hiddenEl.value = '';
+                    }
+                };
+                window.requestAnimationFrame(() => {
+                    apply();
+                    if (!gDate && readG()) {
+                        apply();
+                        return;
+                    }
+                    if (!readG()) {
+                        window.setTimeout(() => {
+                            apply();
+                        }, 60);
+                    }
+                });
+            };
+
+            const initSurveyPublishDatePickers = () => {
+                if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.persianDatepicker) {
+                    console.error('persianDatepicker (Behzadi) در دسترس نیست.');
+                    return;
+                }
+
+                publishDatePairs.forEach(({ display, hidden }) => {
+                    if (!display || !hidden) {
+                        return;
+                    }
+                    try {
+                        window.jQuery(display).persianDatepicker('destroy');
+                    } catch (_) {
+                        /* اولین بار یا در حال نبودن پلاگین */
+                    }
+                    syncJalaliDisplayFromHidden(display, hidden);
+                    window.jQuery(display).persianDatepicker({
+                        formatDate: 'YYYY/0M/0D',
+                        closeOnBlur: true,
+                        selectedBefore: !!String(display.value || '').trim(),
+                        selectedDate: display.value || null,
+                        onSelect: function () {
+                            flushPickerGregorianToHidden(this, hidden);
+                        },
+                    });
+                    display.addEventListener('blur', () => flushPickerGregorianToHidden(display, hidden));
+                });
+            };
+
+            initSurveyPublishDatePickers();
+
+            document.querySelectorAll('.survey-date-clear[data-clear-display][data-clear-hidden]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const display = document.getElementById(btn.getAttribute('data-clear-display') || '');
+                    const hidden = document.getElementById(btn.getAttribute('data-clear-hidden') || '');
+                    if (!display || !hidden) {
+                        return;
+                    }
+                    hidden.value = '';
+                    display.value = '';
+                    initSurveyPublishDatePickers();
+                });
+            });
+
+            const syncPublishHiddenFromDisplay = (display, fallbackHidden) => {
+                if (!display || !fallbackHidden) {
+                    return;
+                }
+                const hidSel = display.getAttribute('data-sync-hidden');
+                const hiddenEl = (hidSel && document.getElementById(hidSel)) || fallbackHidden;
+                let g = display.getAttribute('data-gdate') || display.getAttribute('data-gDate') || '';
+                g = String(g).trim();
+                const displayValue = String(display.value || '').trim();
+                if (g) {
+                    hiddenEl.value = g;
+                } else if (displayValue) {
+                    hiddenEl.value = displayValue;
+                }
+                if (!displayValue) {
+                    hiddenEl.value = '';
+                }
+            };
+
+            const settingsForm = document.querySelector('.survey-settings-form');
+            settingsForm?.addEventListener('submit', () => {
+                publishDatePairs.forEach(({ display, hidden }) => {
+                    syncPublishHiddenFromDisplay(display, hidden);
+                });
             });
 
             const modeCheckboxes = Array.from(document.querySelectorAll('[data-audience-toggle]'));

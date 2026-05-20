@@ -10,6 +10,12 @@ class Survey extends Model
 {
     use HasFactory;
 
+    /** نمایش سوال‌به‌سوال با دکمه‌های قبلی/بعدی */
+    public const QUESTIONS_DISPLAY_WIZARD = 'wizard';
+
+    /** همهٔ سوالات در یک صفحه (بدون دکمهٔ قبلی/بعدی) */
+    public const QUESTIONS_DISPLAY_SINGLE_PAGE = 'single_page';
+
     protected $fillable = [
         'title',
         'unit_id',
@@ -61,8 +67,8 @@ class Survey extends Model
         'tags' => 'array',
         'public_theme' => 'array',
         'notification_emails' => 'array',
-        'start_at' => 'datetime',
-        'end_at' => 'datetime',
+        'start_at' => 'date',
+        'end_at' => 'date',
     ];
 
     public function unit()
@@ -120,6 +126,8 @@ class Survey extends Model
     public static function defaultPublicTheme(): array
     {
         return [
+            /** @see self::QUESTIONS_DISPLAY_WIZARD | self::QUESTIONS_DISPLAY_SINGLE_PAGE */
+            'questions_display_mode' => self::QUESTIONS_DISPLAY_WIZARD,
             'card_bg' => 'rgba(255,255,255,0.96)',
             'card_border' => 'rgba(15,23,42,0.12)',
             'title' => '#0f172a',
@@ -140,5 +148,20 @@ class Survey extends Model
             'nav_prev' => 'rgba(13, 116, 133, 0.94)',
             'nav_next' => 'rgba(15, 118, 110, 0.96)',
         ];
+    }
+
+    public static function questionsDisplayModeOptions(): array
+    {
+        return [
+            self::QUESTIONS_DISPLAY_WIZARD => 'تک‌به‌تک (با دکمه‌های قبلی و بعدی)',
+            self::QUESTIONS_DISPLAY_SINGLE_PAGE => 'همهٔ سوالات در یک صفحه (فرم زیر هم، بدون دکمهٔ قبلی/بعدی)',
+        ];
+    }
+
+    public static function normalizeQuestionsDisplayMode(?string $mode): string
+    {
+        return $mode === self::QUESTIONS_DISPLAY_SINGLE_PAGE
+            ? self::QUESTIONS_DISPLAY_SINGLE_PAGE
+            : self::QUESTIONS_DISPLAY_WIZARD;
     }
 }

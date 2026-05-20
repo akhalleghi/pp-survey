@@ -238,7 +238,7 @@ class SurveyController extends Controller
         $backgroundPresetOptions = array_merge(['none'], $backgroundPresets);
 
         $normalizeDateInput = function (?string $value): ?string {
-            if (!$value) {
+            if ($value === null) {
                 return null;
             }
             $trimmed = trim($value);
@@ -257,18 +257,35 @@ class SurveyController extends Controller
                 '۸' => '8',
                 '۹' => '9',
             ]);
-            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $normalized)) {
-                return $normalized;
+            /** میلادی فقط با خط فاصله (مثلاً پس از merge یا منابع دیگر) */
+            if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $normalized, $m)) {
+                $y = (int) $m[1];
+                $mo = (int) $m[2];
+                $d = (int) $m[3];
+
+                return checkdate($mo, $d, $y) ? sprintf('%04d-%02d-%02d', $y, $mo, $d) : null;
             }
+            /**
+             * تاریخ با / یا - : Persian Datepicker گاهی مقدار را میلادی با اسلش می‌گذارد (2026/05/20).
+             * قبلاً همان را به‌اشتباه «سال شمسی ۲۰۲۶» تفسیر می‌کردیم و روز ذخیره‌شده با انتخاب کاربر یکی نبود.
+             * تقریب: سال ≥ ۱۸۰۰ → میلادی؛ وگرنه تاریخ شمسی (برای بازهٔ متداول نظرسنجی ~۱۳۷۰ تا ~۱۵۰۰).
+             */
             if (preg_match('/^(\d{3,4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/', $normalized, $matches)) {
-                $jy = (int) $matches[1];
-                $jm = (int) $matches[2];
-                $jd = (int) $matches[3];
-                if ($jy < 1000 || $jm < 1 || $jm > 12 || $jd < 1 || $jd > 31) {
+                $y = (int) $matches[1];
+                $mo = (int) $matches[2];
+                $d = (int) $matches[3];
+                if ($mo < 1 || $mo > 12 || $d < 1 || $d > 31) {
                     return null;
                 }
-                [$gy, $gm, $gd] = jalali_to_gregorian($jy, $jm, $jd);
-                return sprintf('%04d-%02d-%02d', $gy, $gm, $gd);
+                if ($y >= 1800) {
+                    return checkdate($mo, $d, $y) ? sprintf('%04d-%02d-%02d', $y, $mo, $d) : null;
+                }
+                if ($y < 1000) {
+                    return null;
+                }
+                [$gy, $gm, $gd] = jalali_to_gregorian($y, $mo, $d);
+
+                return checkdate($gm, $gd, $gy) ? sprintf('%04d-%02d-%02d', $gy, $gm, $gd) : null;
             }
 
             return null;
@@ -283,9 +300,18 @@ class SurveyController extends Controller
             'response_edit_window_hours' => $blankToNull($request->input('response_edit_window_hours')),
         ]);
 
-        $publicThemeRuleKeys = collect(Survey::defaultPublicTheme())
-            ->mapWithKeys(fn ($_, $key) => ['public_theme.' . $key => ['nullable', 'string', 'max:80']])
+        $publicThemeColorKeys = collect(Survey::defaultPublicTheme())
+            ->keys()
+            ->reject(fn ($key) => $key === 'questions_display_mode')
+            ->mapWithKeys(fn ($key) => ['public_theme.'.$key => ['nullable', 'string', 'max:80']])
             ->all();
+
+        $publicThemeRuleKeys = array_merge($publicThemeColorKeys, [
+            'public_theme.questions_display_mode' => ['nullable', 'string', Rule::in([
+                Survey::QUESTIONS_DISPLAY_WIZARD,
+                Survey::QUESTIONS_DISPLAY_SINGLE_PAGE,
+            ])],
+        ]);
 
         $survey->load('creator');
         $acting = current_admin();
@@ -305,7 +331,7 @@ class SurveyController extends Controller
             'response_limit' => ['nullable', 'integer', 'min:1'],
             'status' => ['required', Rule::in($allowedStatuses)],
             'start_at' => ['nullable', 'date'],
-            'end_at' => ['nullable', 'date', 'after_or_equal:start_at'],
+            'end_at' => ['nullable', 'date'],
             'response_edit_window_hours' => ['nullable', 'integer', 'min:1', 'max:720'],
             'track_location' => ['nullable', 'boolean'],
             'prevent_multiple_submissions' => ['nullable', 'boolean'],
@@ -382,8 +408,25 @@ class SurveyController extends Controller
         $themeIn = $validated['public_theme'] ?? [];
         $publicTheme = [];
         foreach ($defaults as $key => $def) {
+            if ($key === 'questions_display_mode') {
+                $raw = $themeIn[$key] ?? null;
+                $publicTheme[$key] = Survey::normalizeQuestionsDisplayMode(is_string($raw) ? $raw : null);
+
+                continue;
+            }
             $v = isset($themeIn[$key]) ? trim(strip_tags((string) $themeIn[$key])) : '';
             $publicTheme[$key] = ($v !== '' && strlen($v) <= 80) ? $v : $def;
+        }
+
+        $startAtForDb = $normalizeDateInput($request->input('start_at'));
+        $endAtForDb = $normalizeDateInput($request->input('end_at'));
+
+        if (is_string($startAtForDb) && is_string($endAtForDb)
+            && strlen($startAtForDb) === 10 && strlen($endAtForDb) === 10
+            && strcmp($endAtForDb, $startAtForDb) < 0) {
+            return back()
+                ->withErrors(['end_at' => 'تاریخ پایان باید در همان روز یا بعد از تاریخ شروع باشد.'], 'updateSurvey')
+                ->withInput();
         }
 
         $survey->update([
@@ -393,8 +436,8 @@ class SurveyController extends Controller
             'response_edit_window_hours' => $validated['response_edit_window_hours'] ?? null,
             'status' => $validated['status'],
             'is_active' => $validated['status'] === 'active',
-            'start_at' => $validated['start_at'] ?? null,
-            'end_at' => $validated['end_at'] ?? null,
+            'start_at' => $startAtForDb,
+            'end_at' => $endAtForDb,
             'is_anonymous' => $request->boolean('is_anonymous'),
             'require_auth' => $request->boolean('require_auth'),
             'track_location' => $request->boolean('track_location'),

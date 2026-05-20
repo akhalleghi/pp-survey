@@ -173,6 +173,80 @@ if (!function_exists('jalali_to_gregorian')) {
     }
 }
 
+if (!function_exists('survey_publish_date_form_value')) {
+    /**
+     * مقدار نمایشی فیلدهای تاریخ انتشار در فرم تنظیمات نظرسنجی (تقویم شمسی).
+     *
+     * بعد از اعتبارسنجی ناموفق، ورودی فلashed به‌صورت میلادی Y-m-d در session قرار می‌گیرد
+     *؛ datepicker تقویم شمسی نیاز به رشتهٔ شمسی دارد. اگر کلید در old input نباشد، از مقدار ذخیره‌شده در مدل استفاده می‌شود.
+     */
+    function survey_publish_date_form_value(string $field, mixed $stored): string
+    {
+        $oldInputs = session()->get('_old_input', []);
+        if (! is_array($oldInputs)) {
+            $oldInputs = [];
+        }
+
+        if (array_key_exists($field, $oldInputs)) {
+            $v = $oldInputs[$field];
+            if ($v === null || (is_string($v) && trim($v) === '')) {
+                return '';
+            }
+            $trim = trim((string) $v);
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $trim)) {
+                return jalali_date($trim . ' 00:00:00');
+            }
+
+            return $trim;
+        }
+
+        if ($stored === null || $stored === '') {
+            return '';
+        }
+
+        return jalali_date($stored);
+    }
+}
+
+if (!function_exists('survey_publish_iso_from_state')) {
+    /**
+     * مقدار فیلد مخفی name="start_at|end_at" فقط به صورت میلادی Y-m-d یا رشتهٔ خالی (برای ذخیره در DB).
+     */
+    function survey_publish_iso_from_state(string $field, mixed $storedModel): string
+    {
+        $oldInputs = session()->get('_old_input', []);
+        if (! is_array($oldInputs)) {
+            $oldInputs = [];
+        }
+
+        if (array_key_exists($field, $oldInputs)) {
+            $v = $oldInputs[$field];
+            if ($v === null || (is_string($v) && trim($v) === '')) {
+                return '';
+            }
+            $trim = trim((string) $v);
+
+            return preg_match('/^\d{4}-\d{2}-\d{2}$/', $trim) ? $trim : '';
+        }
+
+        if ($storedModel === null || $storedModel === '') {
+            return '';
+        }
+
+        if ($storedModel instanceof CarbonInterface) {
+            try {
+                return $storedModel->format('Y-m-d');
+            } catch (\Throwable) {
+                return '';
+            }
+        }
+
+        $s = trim((string) $storedModel);
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $s) ? $s : '';
+    }
+}
+
 if (!function_exists('current_admin')) {
     function current_admin(): ?\App\Models\AdminUser
     {

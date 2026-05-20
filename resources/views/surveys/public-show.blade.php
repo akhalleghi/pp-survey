@@ -33,6 +33,8 @@
             return strtr((string) $value, ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']);
         };
         $publicTheme = array_merge(\App\Models\Survey::defaultPublicTheme(), $survey->public_theme ?? []);
+        $questionsDisplayMode = \App\Models\Survey::normalizeQuestionsDisplayMode($publicTheme['questions_display_mode'] ?? null);
+        $questionsDisplaySinglePage = $questionsDisplayMode === \App\Models\Survey::QUESTIONS_DISPLAY_SINGLE_PAGE;
         $pubCss = static function (?string $v): string {
             $v = trim((string) $v);
             $v = str_replace(["\n", "\r", '"', "'", '<', '>', ';', '{', '}'], '', $v);
@@ -94,6 +96,12 @@
             background-attachment: fixed;
         }
         .wrap { width: 100%; max-width: 980px; }
+        @media (min-width: 900px) {
+            .wrap { max-width: 1040px; }
+        }
+        @media (min-width: 1200px) {
+            .wrap { max-width: 1120px; }
+        }
         .survey-panel.is-hidden { display: none !important; }
         .card {
             background: rgba(255, 255, 255, 0.95);
@@ -353,10 +361,32 @@
         body:has(#surveyWizard:not(.is-hidden)) {
             padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
         }
+        body:has(#surveyWizard.survey-wizard-root--single:not(.is-hidden)) {
+            padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+        }
         .survey-wizard-root {
             width: 100%;
             max-width: 560px;
             margin-inline: auto;
+        }
+        .survey-wizard-root--single {
+            max-width: min(100%, 640px);
+        }
+        @media (min-width: 900px) {
+            .survey-wizard-root {
+                max-width: 700px;
+            }
+            .survey-wizard-root--single {
+                max-width: min(100%, 980px);
+            }
+        }
+        @media (min-width: 1200px) {
+            .survey-wizard-root {
+                max-width: 780px;
+            }
+            .survey-wizard-root--single {
+                max-width: min(100%, 1080px);
+            }
         }
         .survey-wizard-form {
             background: transparent !important;
@@ -612,6 +642,270 @@
         .wizard-nav-btn--next.wizard-nav-btn--is-finish .wizard-next-finish {
             display: block;
         }
+        .survey-wizard-root--single .survey-wizard-form {
+            min-height: 0;
+        }
+        .survey-wizard-root--single .survey-wizard-body {
+            justify-content: flex-start;
+            padding: 0.65rem 0.15rem 0.25rem;
+        }
+        .survey-wizard-root--single .survey-wizard-card {
+            padding: clamp(1rem, 3vw, 1.35rem);
+            border-radius: 22px;
+            box-shadow:
+                0 4px 6px -1px rgba(15, 23, 42, 0.06),
+                0 18px 48px -12px rgba(15, 23, 42, 0.14);
+        }
+        .survey-wizard-root--single .survey-wizard-top {
+            margin-bottom: 1.15rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+        }
+        .survey-single-intro {
+            margin-bottom: 1.1rem;
+        }
+        .survey-single-lead {
+            margin: 0 0 0.85rem;
+            font-size: 0.86rem;
+            line-height: 1.75;
+            color: var(--pub-muted);
+            padding: 0.72rem 0.88rem;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.07) 0%, rgba(15, 23, 42, 0.04) 100%);
+            border: 1px solid rgba(var(--primary-rgb), 0.12);
+        }
+        .survey-single-progress {
+            padding: 0.72rem 0.82rem 0.82rem;
+            border-radius: 16px;
+            background: rgba(248, 250, 252, 0.92);
+            border: 1px solid var(--pub-card-border);
+            margin-bottom: 0.15rem;
+        }
+        .survey-single-progress-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .survey-single-progress-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--pub-title);
+        }
+        .survey-single-progress-pct {
+            font-size: 0.8rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            color: var(--primary);
+            letter-spacing: 0.02em;
+        }
+        .survey-single-progress-track {
+            height: 8px;
+            border-radius: 999px;
+            background: var(--pub-track-bg);
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+        }
+        .survey-single-progress-fill {
+            display: block;
+            height: 100%;
+            width: 0%;
+            border-radius: inherit;
+            background: linear-gradient(
+                90deg,
+                rgba(var(--primary-rgb), 0.92),
+                rgba(var(--primary-dark-rgb), 0.88)
+            );
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .survey-single-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 0.35rem;
+        }
+        .survey-wizard-root--single .survey-single-q {
+            display: block;
+            margin: 0;
+            padding: 1rem 1rem 1.05rem 1.12rem;
+            border-radius: 18px;
+            border: 1px solid rgba(15, 23, 42, 0.09);
+            border-inline-start: 4px solid rgba(var(--primary-rgb), 0.88);
+            background: linear-gradient(
+                165deg,
+                rgba(255, 255, 255, 0.72) 0%,
+                rgba(248, 250, 252, 0.55) 100%
+            );
+            box-shadow:
+                0 1px 2px rgba(15, 23, 42, 0.04),
+                0 10px 28px -8px rgba(15, 23, 42, 0.1);
+            scroll-margin-top: 0.85rem;
+            scroll-margin-bottom: 5rem;
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease,
+                transform 0.2s ease;
+        }
+        .survey-wizard-root--single .survey-single-q:hover {
+            border-color: rgba(var(--primary-rgb), 0.22);
+            box-shadow:
+                0 2px 4px rgba(15, 23, 42, 0.05),
+                0 14px 36px -10px rgba(15, 23, 42, 0.14);
+        }
+        .survey-wizard-root--single .survey-single-q:focus-within {
+            border-inline-start-color: var(--primary);
+            box-shadow:
+                0 0 0 3px rgba(var(--primary-rgb), 0.12),
+                0 12px 32px -10px rgba(15, 23, 42, 0.16);
+        }
+        .survey-wizard-root--single .survey-single-q.error {
+            border-color: rgba(220, 38, 38, 0.45);
+            border-inline-start-color: #dc2626;
+            background: linear-gradient(
+                165deg,
+                rgba(254, 242, 242, 0.75) 0%,
+                rgba(255, 255, 255, 0.65) 100%
+            );
+            box-shadow:
+                0 0 0 1px rgba(220, 38, 38, 0.12),
+                0 10px 28px -8px rgba(220, 38, 38, 0.12);
+        }
+        .survey-wizard-root--single .survey-single-q .q-section-line {
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0;
+            color: var(--pub-title);
+            margin: 0 0 0.5rem;
+            padding: 0.5rem 0.65rem;
+            display: block;
+            border-radius: 12px;
+            background: rgba(var(--primary-rgb), 0.08);
+            border: 1px solid rgba(var(--primary-rgb), 0.12);
+            line-height: 1.55;
+        }
+        .survey-wizard-root--single .survey-single-q .wizard-q-title {
+            margin-bottom: 0.85rem;
+            padding-bottom: 0.65rem;
+            border-bottom: 1px dashed rgba(15, 23, 42, 0.1);
+        }
+        .survey-wizard-root--single .survey-single-q .wizard-q-title--merged {
+            border-bottom: 1px dashed rgba(15, 23, 42, 0.1);
+            padding-bottom: 0.65rem;
+        }
+        .survey-wizard-root--single .survey-single-q .q-step-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.85rem;
+            height: 1.85rem;
+            padding: 0 0.35rem;
+            margin-left: 0.45rem;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 800;
+            background: linear-gradient(145deg, rgba(var(--primary-rgb), 0.18), rgba(var(--primary-rgb), 0.08));
+            color: var(--primary);
+            vertical-align: middle;
+        }
+        .survey-wizard-root--single .survey-single-q .option-list {
+            gap: 0.42rem;
+        }
+        .survey-wizard-root--single .survey-single-q .option-list label {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(255, 255, 255, 0.65);
+            padding: 0.58rem 0.72rem;
+            margin: 0;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .survey-wizard-root--single .survey-single-q .option-list label:hover {
+            border-color: rgba(var(--primary-rgb), 0.28);
+            background: rgba(255, 255, 255, 0.95);
+        }
+        .survey-wizard-root--single .survey-single-q .rating-slider-wrap {
+            border-radius: 14px;
+            padding: 0.75rem 0.85rem;
+        }
+        .survey-wizard-root--single .survey-single-q .error-text {
+            margin-top: 0.55rem;
+            padding: 0.45rem 0.55rem;
+            border-radius: 10px;
+            background: rgba(254, 226, 226, 0.55);
+            font-weight: 600;
+        }
+        .survey-single-submit-wrap {
+            position: sticky;
+            bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px));
+            z-index: 30;
+            margin-top: 0.25rem;
+            padding: 1rem 0.5rem 0.35rem;
+            text-align: center;
+            background: linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0) 0%,
+                color-mix(in srgb, var(--pub-card-bg) 88%, transparent) 28%,
+                color-mix(in srgb, var(--pub-card-bg) 96%, transparent) 100%
+            );
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .survey-single-submit-wrap::before {
+            content: '';
+            display: block;
+            height: 1px;
+            max-width: 220px;
+            margin: 0 auto 0.85rem;
+            border-radius: 999px;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(var(--primary-rgb), 0.35),
+                transparent
+            );
+        }
+        .survey-single-submit-wrap .btn.primary {
+            min-width: min(100%, 300px);
+            padding: 0.82rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 800;
+            border-radius: 14px;
+            box-shadow:
+                0 4px 14px rgba(var(--primary-rgb), 0.35),
+                0 12px 28px -6px rgba(15, 23, 42, 0.2);
+            letter-spacing: 0.02em;
+        }
+        .survey-single-submit-wrap .btn.primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+        .survey-single-submit-hint {
+            margin: 0.55rem 0 0;
+            font-size: 0.76rem;
+            color: var(--pub-muted);
+            line-height: 1.55;
+        }
+        @supports not (color: color-mix(in srgb, red, blue)) {
+            .survey-single-submit-wrap {
+                background: linear-gradient(
+                    180deg,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.92) 35%,
+                    rgba(255, 255, 255, 0.98) 100%
+                );
+            }
+        }
+        @media (max-width: 480px) {
+            .survey-wizard-root--single .survey-single-stack {
+                gap: 0.85rem;
+            }
+            .survey-wizard-root--single .survey-single-q {
+                padding: 0.88rem 0.82rem 0.95rem 0.95rem;
+                border-radius: 16px;
+            }
+            .survey-single-lead {
+                font-size: 0.82rem;
+                padding: 0.62rem 0.72rem;
+            }
+        }
         .survey-wizard-empty {
             color: var(--pub-muted);
             font-size: 0.9rem;
@@ -691,7 +985,7 @@
                     </div>
                     <div class="meta-card">
                         <span class="label">نحوه پاسخ‌دهی</span>
-                        <span class="value">مرحله‌ای، سوال‌به‌سوال</span>
+                        <span class="value">{{ $questionsDisplaySinglePage ? 'همهٔ سوالات در یک صفحه' : 'مرحله‌ای، سوال‌به‌سوال' }}</span>
                     </div>
                 </div>
 
@@ -784,8 +1078,8 @@
             </div>
         @endif
 
-        <div id="surveyWizard" class="survey-panel survey-wizard-root @if (($showIntroStep || ($showAccessGate && !$audiencePassed)) && !$errors->any()) is-hidden @endif">
-            <form class="survey-wizard-form" id="surveyForm" method="POST" enctype="multipart/form-data" action="{{ route('surveys.public.submit', $survey->public_token) }}">
+        <div id="surveyWizard" class="survey-panel survey-wizard-root @if ($questionsDisplaySinglePage) survey-wizard-root--single @endif @if (($showIntroStep || ($showAccessGate && !$audiencePassed)) && !$errors->any()) is-hidden @endif">
+            <form class="survey-wizard-form" id="surveyForm" method="POST" enctype="multipart/form-data" action="{{ route('surveys.public.submit', $survey->public_token) }}" data-questions-display="{{ $questionsDisplayMode }}">
                 @csrf
                 <input type="hidden" name="personnel_code" value="{{ $submittedPersonnelCode }}">
                 <input type="hidden" name="national_code" value="{{ $submittedNationalCode }}">
@@ -811,145 +1105,46 @@
                 @if ($survey->questions->isEmpty())
                     <p class="survey-wizard-empty">هنوز سوالی برای این نظرسنجی ثبت نشده است.</p>
                 @else
-                    @foreach ($survey->questions as $question)
-                        <div class="question wizard-question" data-question data-question-id="{{ $question->id }}" data-required="{{ $question->is_required ? '1' : '0' }}" data-type="{{ $question->type }}">
-                            @if ($question->description)
-                                <p class="q-section-line">{{ $toFaDigits($loop->iteration) }} — {{ $question->description }}</p>
-                                <h3 class="wizard-q-title">
-                                    <span class="q-title-text">{{ $question->title }}</span>@if($question->is_required)<span class="q-required-star" aria-hidden="true">*</span>@endif
-                                </h3>
-                            @else
-                                <h3 class="wizard-q-title wizard-q-title--merged">
-                                    <span class="q-step-num">{{ $toFaDigits($loop->iteration) }}</span><span class="q-step-sep"> — </span><span class="q-title-text">{{ $question->title }}</span>@if($question->is_required)<span class="q-required-star" aria-hidden="true">*</span>@endif
-                                </h3>
-                            @endif
-
-                            @if (in_array($question->type, ['short_text', 'email', 'phone', 'url'], true))
-                                <input type="text" class="input" name="answers[{{ $question->id }}][value]" placeholder="{{ $question->type === 'short_text' ? 'حروف فارسی' : 'پاسخ شما' }}"
-                                    value="{{ $existingAnswers[$question->id]['text'] ?? '' }}">
-                            @elseif ($question->type === 'long_text')
-                                <textarea rows="3" class="input" name="answers[{{ $question->id }}][value]" placeholder="پاسخ شما">{{ $existingAnswers[$question->id]['text'] ?? '' }}</textarea>
-                            @elseif ($question->type === 'number')
-                                <input type="number" class="input" name="answers[{{ $question->id }}][value]" placeholder="عدد"
-                                    value="{{ $existingAnswers[$question->id]['number'] ?? '' }}">
-                            @elseif ($question->type === 'date')
-                                <input
-                                    type="text"
-                                    class="input jalali-answer-display"
-                                    data-hidden-id="answer-date-{{ $question->id }}"
-                                    value=""
-                                    placeholder="مثلاً 1405/02/08">
-                                <input
-                                    id="answer-date-{{ $question->id }}"
-                                    type="hidden"
-                                    name="answers[{{ $question->id }}][value]"
-                                    value="{{ $existingAnswers[$question->id]['date'] ?? '' }}">
-                            @elseif (in_array($question->type, ['multiple_choice', 'checkboxes', 'dropdown', 'rating', 'yes_no', 'linear_scale'], true))
-                                <div class="option-list">
-                                    @if ($question->type === 'rating' && $question->options->isNotEmpty())
-                                        @php
-                                            $ratingOptions = $question->options->values();
-                                            $selectedOptionId = (int) ($existingAnswers[$question->id]['option_id'] ?? 0);
-                                            $selectedIndex = $ratingOptions->search(fn($item) => (int) $item->id === $selectedOptionId);
-                                            if ($selectedIndex === false) {
-                                                $selectedIndex = 0;
-                                            }
-                                        @endphp
-                                        <div class="rating-slider-wrap"
-                                             data-rating-slider
-                                             data-question-id="{{ $question->id }}"
-                                             data-option-count="{{ $ratingOptions->count() }}">
-                                            <div class="rating-current" data-rating-current>
-                                                {{ $ratingOptions[$selectedIndex]->label }}
-                                            </div>
-                                            <input
-                                                type="range"
-                                                class="rating-slider"
-                                                min="0"
-                                                max="{{ max($ratingOptions->count() - 1, 0) }}"
-                                                step="1"
-                                                value="{{ $selectedIndex }}"
-                                                data-rating-range>
-                                            <input
-                                                type="hidden"
-                                                name="answers[{{ $question->id }}][option_id]"
-                                                value="{{ $ratingOptions[$selectedIndex]->id }}"
-                                                data-rating-option-id>
-                                            <div class="rating-ends">
-                                                <span title="{{ $ratingOptions->first()?->label }}">{{ $ratingOptions->first()?->label }}</span>
-                                                <span title="{{ $ratingOptions->last()?->label }}">{{ $ratingOptions->last()?->label }}</span>
-                                            </div>
-                                            <script type="application/json" data-rating-options>
-                                                {!! $ratingOptions->map(fn($option) => ['id' => (int) $option->id, 'label' => (string) $option->label])->toJson(JSON_UNESCAPED_UNICODE) !!}
-                                            </script>
-                                        </div>
-                                    @elseif ($question->options->isNotEmpty())
-                                        @foreach ($question->options as $option)
-                                            <label>
-                                                @if ($question->type === 'checkboxes')
-                                                    <input type="checkbox" name="answers[{{ $question->id }}][option_ids][]" value="{{ $option->id }}"
-                                                        @checked(in_array($option->id, $existingAnswers[$question->id]['option_ids'] ?? [], true))>
-                                                @else
-                                                    <input type="radio" name="answers[{{ $question->id }}][option_id]" value="{{ $option->id }}"
-                                                        @checked(($existingAnswers[$question->id]['option_id'] ?? null) == $option->id)>
-                                                @endif
-                                                {{ $option->label }}
-                                            </label>
-                                        @endforeach
-                                    @elseif ($question->type === 'rating')
-                                        @php
-                                            $minRating = (int) ($question->settings['min_rating'] ?? 1);
-                                            $maxRating = (int) ($question->settings['max_rating'] ?? 5);
-                                            if ($minRating < 1) $minRating = 1;
-                                            if ($maxRating < $minRating) $maxRating = max($minRating, 5);
-                                            $savedRating = (int) ($existingAnswers[$question->id]['number'] ?? 0);
-                                        @endphp
-                                        @for ($rate = $minRating; $rate <= $maxRating; $rate++)
-                                            <label>
-                                                <input type="radio" name="answers[{{ $question->id }}][value]" value="{{ $rate }}"
-                                                    @checked($savedRating === $rate)>
-                                                امتیاز {{ $rate }}
-                                            </label>
-                                        @endfor
-                                    @endif
+                    @if ($questionsDisplaySinglePage)
+                        <div class="survey-single-intro">
+                            <p class="survey-single-lead">
+                                همهٔ سوالات در همین صفحه است. موارد دارای علامت <span class="q-required-star" aria-hidden="true">*</span><span class="sr-only">ستاره</span> اجباری هستند؛ پس از تکمیل، پایین صفحه دکمهٔ ثبت را بزنید.
+                            </p>
+                            <div class="survey-single-progress" role="region" aria-label="پیشرفت تکمیل فرم" aria-live="polite">
+                                <div class="survey-single-progress-row">
+                                    <span class="survey-single-progress-title">پیشرفت تکمیل</span>
+                                    <span class="survey-single-progress-pct" id="singleProgressPercentLabel">۰٪</span>
                                 </div>
-                            @elseif ($question->type === 'file_upload')
-                                @php
-                                    $fileCfg = $question->settings ?? [];
-                                    $allowedExt = collect(explode(',', str_replace('،', ',', (string) ($fileCfg['allowed_extensions'] ?? ''))))
-                                        ->map(fn($x) => trim((string) $x))
-                                        ->filter()
-                                        ->values()
-                                        ->all();
-                                    $maxKb = (int) ($fileCfg['max_file_size_kb'] ?? 0);
-                                    $existingFilePath = $existingAnswers[$question->id]['file_path'] ?? null;
-                                    $existingFileName = $existingAnswers[$question->id]['file_name'] ?? null;
-                                @endphp
-                                <input type="file" class="input" name="answers[{{ $question->id }}][file]" @if(!empty($allowedExt)) accept="{{ collect($allowedExt)->map(fn($x) => '.' . ltrim($x, '.'))->implode(',') }}" @endif>
-                                <input type="hidden" name="answers[{{ $question->id }}][current_file]" value="{{ $existingFilePath }}">
-                                <input type="hidden" name="answers[{{ $question->id }}][current_file_name]" value="{{ $existingFileName }}">
-                                <div class="q-desc" style="margin-top:.45rem;">
-                                    @if (!empty($allowedExt))
-                                        پسوند مجاز: {{ implode('، ', $allowedExt) }}
-                                    @endif
-                                    @if ($maxKb > 0)
-                                        <span style="margin-right:.4rem;">حداکثر حجم: {{ number_format($maxKb) }}KB</span>
-                                    @endif
+                                <div class="survey-single-progress-track" aria-hidden="true">
+                                    <span class="survey-single-progress-fill" id="singleProgressFill"></span>
                                 </div>
-                                @if ($existingFilePath && $existingFileName)
-                                    <div class="q-desc" style="margin-top:.15rem;">
-                                        فایل فعلی: {{ $existingFileName }}
-                                    </div>
-                                @endif
-                            @endif
-                            <div class="error-text" hidden>لطفا این سوال را پاسخ دهید.</div>
+                            </div>
                         </div>
+                        <div class="survey-single-stack">
+                    @endif
+                    @foreach ($survey->questions as $question)
+                        @include('surveys.partials.public-question-fields', [
+                            'question' => $question,
+                            'questionIndex' => $loop->iteration,
+                            'existingAnswers' => $existingAnswers,
+                            'toFaDigits' => $toFaDigits,
+                            'questionCssClass' => $questionsDisplaySinglePage
+                                ? 'question wizard-question survey-single-q'
+                                : 'question wizard-question',
+                        ])
                     @endforeach
+                    @if ($questionsDisplaySinglePage)
+                        <div class="survey-single-submit-wrap">
+                            <button type="button" class="btn primary" id="submitSurveySinglePage" aria-label="ثبت نهایی پاسخ‌ها">ثبت پاسخ‌ها</button>
+                            <p class="survey-single-submit-hint">قبل از ثبت، یک‌بار پاسخ‌ها را مرور کنید؛ پس از ارسال، در صورت فعال بودن ویرایش، از مسیر اعلام‌شده اقدام کنید.</p>
+                        </div>
+                        </div>
+                    @endif
                 @endif
                     </div>
                 </div>
 
-                @if ($survey->questions->isNotEmpty())
+                @if ($survey->questions->isNotEmpty() && ! $questionsDisplaySinglePage)
                     <footer class="wizard-footer-bar" role="navigation" aria-label="پیمایش و پیشرفت">
                         <div class="wizard-footer-progress">
                             <span id="progressPercentLabel" class="wizard-percent-label">۰٪ را پاسخ داده‌اید</span>
@@ -1134,8 +1329,10 @@
                 return;
             }
 
+            const questionsDisplaySinglePage = @json($questionsDisplaySinglePage);
+
             const wizardFocusQuestionId = @json($wizardFocusQuestionId ?? null);
-            if (wizardFocusQuestionId) {
+            if (wizardFocusQuestionId && !questionsDisplaySinglePage) {
                 const idx = questions.findIndex((el) => String(el.dataset.questionId || '') === String(wizardFocusQuestionId));
                 if (idx >= 0) {
                     index = idx;
@@ -1224,6 +1421,8 @@
             const nextSr = nextBtn?.querySelector('.wizard-next-sr');
             const progressFill = document.getElementById('progressFill');
             const progressPercentLabel = document.getElementById('progressPercentLabel');
+            const singleProgressFill = document.getElementById('singleProgressFill');
+            const singleProgressPercentLabel = document.getElementById('singleProgressPercentLabel');
             let finished = false;
 
             const updateProgressUI = () => {
@@ -1232,9 +1431,16 @@
                 if (progressPercentLabel) {
                     progressPercentLabel.textContent = `${toFaDigitsJs(p)}٪ را پاسخ داده‌اید`;
                 }
+                if (singleProgressFill) singleProgressFill.style.width = `${p}%`;
+                if (singleProgressPercentLabel) {
+                    singleProgressPercentLabel.textContent = `${toFaDigitsJs(p)}٪ تکمیل‌شده`;
+                }
             };
 
             const updateWizard = () => {
+                if (questionsDisplaySinglePage) {
+                    return;
+                }
                 questions.forEach((q, i) => q.classList.toggle('active', i === index));
                 if (prevBtn) prevBtn.disabled = index === 0;
                 if (nextBtn) {
@@ -1273,6 +1479,7 @@
                 }
             };
 
+            if (!questionsDisplaySinglePage) {
             prevBtn?.addEventListener('click', () => {
                 if (finished) return;
                 if (index > 0) {
@@ -1309,6 +1516,42 @@
                     showComplete();
                 }
             });
+            } else {
+                const submitSingleBtn = document.getElementById('submitSurveySinglePage');
+                submitSingleBtn?.addEventListener('click', () => {
+                    if (finished) return;
+                    let ok = true;
+                    let firstInvalid = null;
+                    questions.forEach((q) => {
+                        const errorText = q.querySelector('.error-text');
+                        if (!isQuestionAnswered(q)) {
+                            ok = false;
+                            if (!firstInvalid) {
+                                firstInvalid = q;
+                            }
+                            q.classList.add('error');
+                            if (errorText) errorText.hidden = false;
+                        } else {
+                            q.classList.remove('error');
+                            if (errorText) errorText.hidden = true;
+                        }
+                    });
+                    if (!ok) {
+                        firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        const focusEl = firstInvalid?.querySelector(
+                            'input:not([type="hidden"]), textarea, select, button'
+                        );
+                        if (focusEl && typeof focusEl.focus === 'function') {
+                            focusEl.focus({ preventScroll: true });
+                        }
+                        return;
+                    }
+                    submitSingleBtn.disabled = true;
+                    submitSingleBtn.textContent = 'در حال ثبت...';
+                    window.__allowSurveySubmit = true;
+                    surveyForm.submit();
+                });
+            }
 
             document.querySelectorAll('[data-rating-slider]').forEach((wrap) => {
                 const rangeInput = wrap.querySelector('[data-rating-range]');
@@ -1353,10 +1596,20 @@
                 showComplete();
             }
 
-            updateWizard();
+            if (!questionsDisplaySinglePage) {
+                updateWizard();
+            } else {
+                updateProgressUI();
+            }
             if (wizardFocusQuestionId) {
                 window.setTimeout(() => {
-                    questions[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (questionsDisplaySinglePage) {
+                        const id = String(wizardFocusQuestionId);
+                        document.querySelector('[data-question-id="' + id.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]')
+                            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        questions[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                 }, 120);
             }
         });

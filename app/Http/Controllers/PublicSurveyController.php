@@ -40,7 +40,7 @@ class PublicSurveyController extends Controller
                 'message' => 'زمان شروع این نظرسنجی فرا نرسیده است. لطفاً بعداً دوباره تلاش کنید.',
             ]);
         }
-        if ($survey->end_at && $now->gt($survey->end_at)) {
+        if ($survey->end_at && $now->isAfter($survey->end_at->copy()->endOfDay())) {
             return view('surveys.public-unavailable', [
                 'title' => 'مهلت پاسخ‌دهی به پایان رسیده',
                 'message' => 'زمان دریافت پاسخ برای این نظرسنجی تمام شده است.',
