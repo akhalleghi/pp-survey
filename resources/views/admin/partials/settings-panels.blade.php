@@ -505,6 +505,10 @@
                     </form>
                 </section>
 
+                @if ($admin?->isAdmin())
+                    @include('admin.partials.settings-panel-sms')
+                @endif
+
                 <section class="settings-modal-panel {{ $activeTab === 'profile' ? 'active' : '' }}" data-settings-panel="profile">
                     <div class="placeholder-card">
                         <h3>به‌روزرسانی پروفایل مدیر</h3>

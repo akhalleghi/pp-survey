@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\PositionController;
 use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SmsPanelSettingsController;
 use App\Http\Controllers\Admin\SurveyController;
 use App\Http\Controllers\Admin\SurveyQuestionController;
 use App\Http\Controllers\Admin\UnitController;
@@ -69,6 +70,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('settings/system-background', [SettingsController::class, 'updateSystemBackground'])->name('settings.system-background');
             Route::post('settings/security', [SettingsController::class, 'updateSecurity'])->name('settings.security');
             Route::post('settings/login-page', [SettingsController::class, 'updateLoginPage'])->name('settings.login-page');
+            Route::middleware('admin.only_main')->group(function () {
+                Route::post('settings/sms-panel', [SmsPanelSettingsController::class, 'update'])->name('settings.sms-panel');
+                Route::post('settings/sms-panel/test', [SmsPanelSettingsController::class, 'sendTest'])->name('settings.sms-panel.test');
+            });
             Route::get('login-audit', [LoginAuditController::class, 'index'])->name('login-audit.index');
             Route::post('login-audit/clear-lock', [LoginAuditController::class, 'clearLock'])->name('login-audit.clear-lock');
         });

@@ -56,6 +56,14 @@ final class AdminSettingsTabs
                 'group' => 'security',
             ],
             [
+                'id' => 'sms_panel',
+                'label' => 'تنظیمات پنل پیامکی',
+                'subtitle' => 'اتصال و تست ارسال',
+                'icon' => 'fa-comment-sms',
+                'group' => 'integrations',
+                'main_admin_only' => true,
+            ],
+            [
                 'id' => 'profile',
                 'label' => 'پروفایل مدیر',
                 'subtitle' => 'به‌زودی',

@@ -7,6 +7,7 @@
         'account' => 'حساب و دسترسی',
         'appearance' => 'ظاهر سامانه',
         'security' => 'امنیت',
+        'integrations' => 'یکپارچه‌سازی',
         'future' => 'به‌زودی',
     ];
 @endphp
@@ -440,6 +441,51 @@
         color: var(--slate-2);
         font-weight: 600;
     }
+    .sms-panel-security-note {
+        display: flex;
+        gap: 0.65rem;
+        align-items: flex-start;
+        padding: 0.85rem 1rem;
+        border-radius: 14px;
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.2);
+        color: #1e3a8a;
+        font-size: 0.85rem;
+        line-height: 1.65;
+        margin-bottom: 1rem;
+    }
+    .sms-panel-security-note i {
+        margin-top: 0.15rem;
+        flex-shrink: 0;
+    }
+    .sms-test-card {
+        margin-top: 1.5rem;
+        padding-top: 1.25rem;
+        border-top: 1px dashed rgba(15, 23, 42, 0.12);
+    }
+    .sms-test-card h4 {
+        margin: 0 0 0.35rem;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+    }
+    .sms-test-card h4 i {
+        color: var(--primary);
+    }
+    .sms-test-card > p {
+        margin: 0 0 1rem;
+        color: var(--muted);
+        font-size: 0.85rem;
+        line-height: 1.7;
+    }
+    .password-field-hint {
+        display: block;
+        margin-top: 0.35rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+        line-height: 1.5;
+    }
     @media (max-width: 820px) {
         .settings-modal-body {
             flex-direction: column;
@@ -487,6 +533,9 @@
             <nav class="settings-modal-nav" id="settingsModalNav" aria-label="بخش‌های تنظیمات">
                 @php $lastGroup = null; @endphp
                 @foreach ($settingsTabs as $tab)
+                    @if (!empty($tab['main_admin_only']) && !($admin?->isAdmin()))
+                        @continue
+                    @endif
                     @php $group = $tab['group'] ?? 'other'; @endphp
                     @if ($lastGroup !== $group)
                         @if ($lastGroup !== null)

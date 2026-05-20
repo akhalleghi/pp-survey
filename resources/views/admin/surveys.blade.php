@@ -19,6 +19,19 @@
         'pending_approval' => 'در انتظار تأیید',
         'closed' => 'بسته شده',
     ];
+    $statusFilterIcons = [
+        '' => 'fa-layer-group',
+        'active' => 'fa-circle-check',
+        'draft' => 'fa-pen-ruler',
+        'pending_approval' => 'fa-hourglass-half',
+        'closed' => 'fa-lock',
+    ];
+    $statusBadgeIcons = [
+        'active' => 'fa-circle-check',
+        'draft' => 'fa-pen-ruler',
+        'pending_approval' => 'fa-hourglass-half',
+        'closed' => 'fa-lock',
+    ];
     $admin = $admin ?? current_admin();
     $units = $units ?? collect();
 @endphp
@@ -89,6 +102,9 @@
         .hero-actions .ghost {
             background: rgba(15, 23, 42, 0.08);
             color: var(--slate);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
         }
         .survey-stats {
             display: grid;
@@ -101,10 +117,34 @@
             border: 1px solid var(--border);
             padding: 1.2rem;
             display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
+            align-items: flex-start;
+            gap: 0.85rem;
             position: relative;
             overflow: hidden;
+        }
+        .survey-stat-card-icon {
+            width: 2.75rem;
+            height: 2.75rem;
+            border-radius: 14px;
+            background: rgba(214, 17, 25, 0.1);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+        }
+        .survey-stat-card-icon i {
+            font-size: 1.15rem;
+        }
+        .survey-stat-card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            position: relative;
+            z-index: 1;
+            min-width: 0;
         }
         .survey-stat-card::after {
             content: '';
@@ -187,14 +227,45 @@
             padding-right: 2.6rem;
             font-family: inherit;
         }
-        .survey-search svg {
+        .survey-search .survey-search-icon {
             position: absolute;
             top: 50%;
             right: 1rem;
             transform: translateY(-50%);
-            width: 18px;
-            height: 18px;
+            font-size: 1rem;
             color: var(--muted);
+            pointer-events: none;
+        }
+        .surveys-hero-title {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+        .surveys-hero-title i {
+            color: var(--primary);
+            font-size: 1.35rem;
+        }
+        .filter-chip i {
+            font-size: 0.8rem;
+            opacity: 0.85;
+        }
+        .surveys-table th .th-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-weight: 600;
+        }
+        .surveys-table th .th-label i {
+            color: var(--primary);
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+        .survey-empty-state i {
+            display: block;
+            font-size: 2rem;
+            color: var(--muted);
+            margin-bottom: 0.65rem;
+            opacity: 0.65;
         }
         .survey-filters {
             display: flex;
@@ -202,12 +273,17 @@
             flex-wrap: wrap;
         }
         .filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
             border: 1px solid var(--border);
             border-radius: 999px;
             padding: 0.4rem 0.85rem;
             font-size: 0.85rem;
             cursor: pointer;
             background: rgba(15, 23, 42, 0.02);
+            text-decoration: none;
+            color: inherit;
         }
         .filter-chip.active {
             background: rgba(214, 17, 25, 0.12);
@@ -347,10 +423,15 @@
             box-shadow: 0 0 0 1px rgba(214, 17, 25, 0.12);
         }
         .survey-actions-chevron {
-            width: 16px;
-            height: 16px;
+            font-size: 0.7rem;
             flex-shrink: 0;
             transition: transform 0.2s ease;
+            opacity: 0.75;
+        }
+        .modal-actions button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
         }
         .survey-actions-dropdown:hover .survey-actions-chevron,
         .survey-actions-dropdown:focus-within .survey-actions-chevron {
@@ -435,7 +516,8 @@
             margin-top: 2px;
         }
         .survey-actions-menu button,
-        .survey-actions-menu a {
+        .survey-actions-menu a,
+        .survey-actions-menu .survey-actions-hint {
             border: none;
             border-radius: 12px;
             padding: 0.55rem 0.75rem;
@@ -447,6 +529,7 @@
             display: flex;
             align-items: center;
             justify-content: flex-start;
+            gap: 0.5rem;
             width: 100%;
             box-sizing: border-box;
             text-align: right;
@@ -454,6 +537,44 @@
             color: var(--slate);
             background: transparent;
             transition: background 0.12s ease, color 0.12s ease;
+        }
+        .survey-actions-menu .menu-icon {
+            width: 1.15rem;
+            text-align: center;
+            flex-shrink: 0;
+            opacity: 0.88;
+        }
+        .survey-actions-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .survey-actions-trigger .menu-icon {
+            font-size: 0.9rem;
+            opacity: 0.75;
+        }
+        .survey-link-row span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .modal-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .modal-header h3 i {
+            color: var(--primary);
+        }
+        .guide-steps li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        .guide-steps li > i {
+            color: var(--primary);
+            margin-top: 0.2rem;
+            flex-shrink: 0;
         }
         .survey-actions-menu a {
             color: var(--slate);
@@ -703,46 +824,65 @@
 
         <section class="surveys-hero">
             <div>
-                <h2>کنترل پنل نظرسنجی‌ها</h2>
+                <h2 class="surveys-hero-title">
+                    <i class="fa-solid fa-square-poll-vertical" aria-hidden="true"></i>
+                    کنترل پنل نظرسنجی‌ها
+                </h2>
                 <p>از همین صفحه می‌توانید نظرسنجی جدید بسازید، وضعیت انتشار را مدیریت کنید و محدودیت پاسخ یا دسترسی مخاطبان
                     را روی هر نظرسنجی اعمال کنید.</p>
             </div>
             <div class="hero-actions">
                 <button type="button" class="primary" id="openAddSurvey">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5" />
-                    </svg>
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
                     افزودن نظرسنجی
                 </button>
-                <button type="button" class="outline" id="openSurveyGuide">راهنمای ساخت</button>
+                <button type="button" class="outline" id="openSurveyGuide">
+                    <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                    راهنمای ساخت
+                </button>
             </div>
         </section>
 
         <section class="survey-stats">
             <div class="survey-stat-card">
-                <span>نظرسنجی‌های فعال</span>
-                <strong>{{ number_format($metrics['active']) }}</strong>
-                <small>در حال دریافت پاسخ</small>
+                <div class="survey-stat-card-icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></div>
+                <div class="survey-stat-card-body">
+                    <span>نظرسنجی‌های فعال</span>
+                    <strong>{{ number_format($metrics['active']) }}</strong>
+                    <small>در حال دریافت پاسخ</small>
+                </div>
             </div>
             <div class="survey-stat-card">
-                <span>در انتظار تأیید مدیر</span>
-                <strong>{{ number_format($metrics['pending_approval'] ?? 0) }}</strong>
-                <small>قبل از انتشار رسمی</small>
+                <div class="survey-stat-card-icon" aria-hidden="true"><i class="fa-solid fa-hourglass-half"></i></div>
+                <div class="survey-stat-card-body">
+                    <span>در انتظار تأیید مدیر</span>
+                    <strong>{{ number_format($metrics['pending_approval'] ?? 0) }}</strong>
+                    <small>قبل از انتشار رسمی</small>
+                </div>
             </div>
             <div class="survey-stat-card">
-                <span>پاسخ‌های ثبت‌شده</span>
-                <strong>{{ number_format($metrics['responses']) }}</strong>
-                <small>مجموع همه نظرسنجی‌ها</small>
+                <div class="survey-stat-card-icon" aria-hidden="true"><i class="fa-solid fa-reply"></i></div>
+                <div class="survey-stat-card-body">
+                    <span>پاسخ‌های ثبت‌شده</span>
+                    <strong>{{ number_format($metrics['responses']) }}</strong>
+                    <small>مجموع همه نظرسنجی‌ها</small>
+                </div>
             </div>
             <div class="survey-stat-card">
-                <span>میانگین تعداد سوال</span>
-                <strong>{{ number_format($metrics['avg_questions'], 1) }}</strong>
-                <small>به‌ازای هر نظرسنجی</small>
+                <div class="survey-stat-card-icon" aria-hidden="true"><i class="fa-solid fa-list-ol"></i></div>
+                <div class="survey-stat-card-body">
+                    <span>میانگین تعداد سوال</span>
+                    <strong>{{ number_format($metrics['avg_questions'], 1) }}</strong>
+                    <small>به‌ازای هر نظرسنجی</small>
+                </div>
             </div>
             <div class="survey-stat-card">
-                <span>نظرسنجی‌های بسته شده</span>
-                <strong>{{ number_format($metrics['closed']) }}</strong>
-                <small>آماده آرشیو یا خروجی</small>
+                <div class="survey-stat-card-icon" aria-hidden="true"><i class="fa-solid fa-box-archive"></i></div>
+                <div class="survey-stat-card-body">
+                    <span>نظرسنجی‌های بسته شده</span>
+                    <strong>{{ number_format($metrics['closed']) }}</strong>
+                    <small>آماده آرشیو یا خروجی</small>
+                </div>
             </div>
         </section>
 
@@ -753,10 +893,7 @@
                     @if ($statusFilter)
                         <input type="hidden" name="status" value="{{ $statusFilter }}">
                     @endif
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
-                            d="M21 21l-4.35-4.35M10 18a8 8 0 110-16 8 8 0 010 16z" />
-                    </svg>
+                    <i class="fa-solid fa-magnifying-glass survey-search-icon" aria-hidden="true"></i>
                 </form>
                 <div class="survey-filters">
                     @foreach ($statusFilters as $key => $label)
@@ -769,6 +906,7 @@
                         @endphp
                         <a href="{{ route('admin.surveys.index', $query) }}"
                             class="filter-chip {{ $isActiveFilter ? 'active' : '' }}">
+                            <i class="fa-solid {{ $statusFilterIcons[$key] ?? 'fa-filter' }}" aria-hidden="true"></i>
                             {{ $label }}
                         </a>
                     @endforeach
@@ -779,14 +917,14 @@
                 <table class="surveys-table">
                     <thead>
                         <tr>
-                            <th>نام نظرسنجی</th>
-                            <th>واحد مربوطه</th>
-                            <th>تعداد سوالات</th>
-                            <th>زمان ایجاد</th>
-                            <th>تعداد پاسخ</th>
-                            <th>وضعیت</th>
-                            <th>درخواست انتشار</th>
-                            <th>اقدامات</th>
+                            <th><span class="th-label"><i class="fa-solid fa-file-lines" aria-hidden="true"></i>نام نظرسنجی</span></th>
+                            <th><span class="th-label"><i class="fa-solid fa-building" aria-hidden="true"></i>واحد مربوطه</span></th>
+                            <th><span class="th-label"><i class="fa-solid fa-list-ol" aria-hidden="true"></i>تعداد سوالات</span></th>
+                            <th><span class="th-label"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i>زمان ایجاد</span></th>
+                            <th><span class="th-label"><i class="fa-solid fa-chart-column" aria-hidden="true"></i>تعداد پاسخ</span></th>
+                            <th><span class="th-label"><i class="fa-solid fa-signal" aria-hidden="true"></i>وضعیت</span></th>
+                            <th><span class="th-label"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i>درخواست انتشار</span></th>
+                            <th><span class="th-label"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>اقدامات</span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -824,6 +962,7 @@
                                 <td>{{ number_format($survey->responses_count) }}</td>
                                 <td>
                                     <span class="survey-status {{ $survey->status }}">
+                                        <i class="fa-solid {{ $statusBadgeIcons[$survey->status] ?? 'fa-circle-question' }}" aria-hidden="true"></i>
                                         {{ $statusLabels[$survey->status] ?? 'نامشخص' }}
                                     </span>
                                 </td>
@@ -845,54 +984,51 @@
                                     <div class="survey-actions-dropdown">
                                         <button type="button" class="survey-actions-trigger" aria-haspopup="menu"
                                             aria-controls="survey-actions-menu-{{ $survey->id }}">
+                                            <i class="fa-solid fa-ellipsis-vertical menu-icon" aria-hidden="true"></i>
                                             اقدامات
-                                            <svg class="survey-actions-chevron" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M19 9l-7 7-7-7" />
-                                            </svg>
+                                            <i class="fa-solid fa-chevron-down survey-actions-chevron menu-icon" aria-hidden="true"></i>
                                         </button>
                                         <div class="survey-actions-menu" id="survey-actions-menu-{{ $survey->id }}"
                                             role="menu" aria-label="اقدامات نظرسنجی">
                                             <div class="survey-actions-menu-item" role="none">
                                                 @if (($survey->submitted_responses_count ?? $survey->responses_count ?? 0) > 0)
-                                                    <a href="{{ route('admin.surveys.report', $survey) }}" role="menuitem">مشاهده گزارش</a>
+                                                    <a href="{{ route('admin.surveys.report', $survey) }}" role="menuitem"><i class="fa-solid fa-chart-pie menu-icon" aria-hidden="true"></i>مشاهده گزارش</a>
                                                 @else
-                                                    <button type="button" role="menuitem" class="is-muted" disabled>مشاهده گزارش</button>
+                                                    <button type="button" role="menuitem" class="is-muted" disabled><i class="fa-solid fa-chart-pie menu-icon" aria-hidden="true"></i>مشاهده گزارش</button>
                                                 @endif
                                             </div>
                                             <div class="survey-actions-menu-item" role="none">
-                                                <a href="{{ route('admin.surveys.edit', $survey) }}" role="menuitem">تنظیمات</a>
+                                                <a href="{{ route('admin.surveys.edit', $survey) }}" role="menuitem"><i class="fa-solid fa-sliders menu-icon" aria-hidden="true"></i>تنظیمات</a>
                                             </div>
                                             <div class="survey-actions-menu-item" role="none">
-                                                <a href="{{ route('admin.surveys.edit', $survey) }}#appearance" role="menuitem">تنظیمات ظاهری</a>
+                                                <a href="{{ route('admin.surveys.edit', $survey) }}#appearance" role="menuitem"><i class="fa-solid fa-palette menu-icon" aria-hidden="true"></i>تنظیمات ظاهری</a>
                                             </div>
                                             <div class="survey-actions-menu-item" role="none">
-                                                <a href="{{ route('admin.surveys.questions.index', $survey) }}" role="menuitem">طراحی سوالات</a>
+                                                <a href="{{ route('admin.surveys.questions.index', $survey) }}" role="menuitem"><i class="fa-solid fa-list-check menu-icon" aria-hidden="true"></i>طراحی سوالات</a>
                                             </div>
                                             <div class="survey-actions-menu-item" role="none">
                                                 @if ($admin instanceof \App\Models\AdminUser && $admin->isAdmin())
                                                     <form method="POST" action="{{ route('admin.surveys.generate-link', $survey) }}" class="survey-actions-form">
                                                         @csrf
-                                                        <button type="submit" role="menuitem">ایجاد / به‌روزرسانی لینک</button>
+                                                        <button type="submit" role="menuitem"><i class="fa-solid fa-link menu-icon" aria-hidden="true"></i>ایجاد / به‌روزرسانی لینک</button>
                                                     </form>
                                                 @elseif ($ownerNeedsManagerApproval && $isOwnerSupervisor)
                                                     @if ($survey->status === 'pending_approval')
-                                                        <button type="button" role="menuitem" class="is-muted" disabled>در انتظار تأیید مدیر</button>
+                                                        <button type="button" role="menuitem" class="is-muted" disabled><i class="fa-solid fa-clock menu-icon" aria-hidden="true"></i>در انتظار تأیید مدیر</button>
                                                     @elseif ($survey->status === 'active')
-                                                        <span class="survey-actions-hint" role="menuitem">نظرسنجی فعال است</span>
+                                                        <span class="survey-actions-hint" role="menuitem"><i class="fa-solid fa-circle-check menu-icon" aria-hidden="true"></i>نظرسنجی فعال است</span>
                                                     @elseif ($survey->status === 'closed')
-                                                        <button type="button" role="menuitem" class="is-muted" disabled>نظرسنجی بسته شده</button>
+                                                        <button type="button" role="menuitem" class="is-muted" disabled><i class="fa-solid fa-lock menu-icon" aria-hidden="true"></i>نظرسنجی بسته شده</button>
                                                     @else
                                                         <form method="POST" action="{{ route('admin.surveys.generate-link', $survey) }}" class="survey-actions-form">
                                                             @csrf
-                                                            <button type="submit" role="menuitem">ارسال برای تأیید مدیر</button>
+                                                            <button type="submit" role="menuitem"><i class="fa-solid fa-paper-plane menu-icon" aria-hidden="true"></i>ارسال برای تأیید مدیر</button>
                                                         </form>
                                                     @endif
                                                 @else
                                                     <form method="POST" action="{{ route('admin.surveys.generate-link', $survey) }}" class="survey-actions-form">
                                                         @csrf
-                                                        <button type="submit" role="menuitem">ایجاد لینک و فعال‌سازی</button>
+                                                        <button type="submit" role="menuitem"><i class="fa-solid fa-link menu-icon" aria-hidden="true"></i>ایجاد لینک و فعال‌سازی</button>
                                                     </form>
                                                 @endif
                                             </div>
@@ -901,21 +1037,21 @@
                                                     <form method="POST" action="{{ route('admin.surveys.approve-publish', $survey) }}" class="survey-actions-form"
                                                         onsubmit="return confirm('انتشار این نظرسنجی تأیید شود؟');">
                                                         @csrf
-                                                        <button type="submit" role="menuitem" class="is-success">تأیید انتشار</button>
+                                                        <button type="submit" role="menuitem" class="is-success"><i class="fa-solid fa-check menu-icon" aria-hidden="true"></i>تأیید انتشار</button>
                                                     </form>
                                                 </div>
                                                 <div class="survey-actions-menu-item" role="none">
                                                     <button type="button" role="menuitem" class="is-danger" data-open-reject-modal
                                                         data-reject-url="{{ route('admin.surveys.reject-publish', $survey) }}"
                                                         data-reject-survey-id="{{ $survey->id }}"
-                                                        data-survey-title="{{ e($survey->title) }}">رد انتشار</button>
+                                                        data-survey-title="{{ e($survey->title) }}"><i class="fa-solid fa-xmark menu-icon" aria-hidden="true"></i>رد انتشار</button>
                                                 </div>
                                             @endif
                                             @if ($survey->public_token)
                                                 <div class="survey-link" role="none">
                                                     <div class="survey-link-row">
-                                                        <span>لینک عمومی</span>
-                                                        <a href="{{ route('surveys.public.show', $survey->public_token) }}" target="_blank" rel="noopener noreferrer">باز کردن</a>
+                                                        <span><i class="fa-solid fa-globe menu-icon" aria-hidden="true"></i>لینک عمومی</span>
+                                                        <a href="{{ route('surveys.public.show', $survey->public_token) }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square menu-icon" aria-hidden="true"></i>باز کردن</a>
                                                     </div>
                                                     <span class="survey-link-url" dir="ltr">{{ route('surveys.public.show', $survey->public_token) }}</span>
                                                 </div>
@@ -923,13 +1059,13 @@
                                             <div class="survey-actions-menu-item" role="none">
                                                 @if (($survey->responses_records_count ?? 0) > 0)
                                                     <button type="button" role="menuitem" class="is-muted" disabled
-                                                        title="به‌دلیل وجود پاسخ (ثبت‌شده یا پیش‌نویس) امکان حذف وجود ندارد.">حذف نظرسنجی</button>
+                                                        title="به‌دلیل وجود پاسخ (ثبت‌شده یا پیش‌نویس) امکان حذف وجود ندارد."><i class="fa-solid fa-trash menu-icon" aria-hidden="true"></i>حذف نظرسنجی</button>
                                                 @else
                                                     <form method="POST" action="{{ route('admin.surveys.destroy', $survey) }}" class="survey-actions-form"
                                                         onsubmit="return confirm('با حذف این نظرسنجی، همه سوالات آن نیز حذف می‌شود.\n\nآیا مطمئن هستید؟');">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" role="menuitem" class="is-danger">حذف نظرسنجی</button>
+                                                        <button type="submit" role="menuitem" class="is-danger"><i class="fa-solid fa-trash menu-icon" aria-hidden="true"></i>حذف نظرسنجی</button>
                                                     </form>
                                                 @endif
                                             </div>
@@ -939,7 +1075,8 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" style="text-align:center; padding:2rem 1rem; color:var(--muted);">
+                                <td colspan="8" class="survey-empty-state" style="text-align:center; padding:2rem 1rem; color:var(--muted);">
+                                    <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
                                     هنوز نظرسنجی‌ای ثبت نشده است.
                                 </td>
                             </tr>
@@ -959,57 +1096,33 @@
     <div class="modal" id="surveyGuideModal" aria-hidden="true">
         <div class="modal-dialog guide-modal-dialog">
             <div class="modal-header">
-                <h3>راهنمای گام‌به‌گام ساخت نظرسنجی</h3>
+                <h3><i class="fa-solid fa-circle-question" aria-hidden="true"></i>راهنمای گام‌به‌گام ساخت نظرسنجی</h3>
                 <button class="modal-close" type="button" data-close-modal>&times;</button>
             </div>
             <ol class="guide-steps">
-                <li><strong>ایجاد نظرسنجی:</strong> روی «افزودن نظرسنجی» کلیک کنید، عنوان و واحد مربوطه را وارد کنید و ثبت را بزنید.</li>
-                <li><strong>تنظیمات پایه:</strong> از منوی اقدامات وارد «تنظیمات» شوید؛ وضعیت، بازه زمانی، سقف پاسخ، امکان ویرایش، مخاطبان و سایر گزینه‌ها را مشخص کنید.</li>
-                <li><strong>تنظیمات ظاهری:</strong> از «تنظیمات ظاهری» رنگ‌ها، پیام‌ها، پس‌زمینه و ظاهر فرم عمومی را تنظیم کنید.</li>
-                <li><strong>طراحی سوالات:</strong> نوع سوال‌ها را انتخاب کنید (متنی، چندگزینه‌ای، تاریخ، آپلود فایل و ...)، اجباری بودن و قواعد هر سوال را تعریف کنید.</li>
-                <li><strong>کنترل کیفیت:</strong> لینک عمومی را بسازید و فرم را با پاسخ نمونه تست کنید؛ نمایش و گزارش را بررسی کنید.</li>
-                <li><strong>انتشار:</strong> با گزینه «ایجاد/به‌روزرسانی لینک» نظرسنجی را فعال کنید (یا برای تایید مدیر ارسال کنید).</li>
-                <li><strong>پایش و تحلیل:</strong> از «مشاهده گزارش» پاسخ‌ها را بررسی، ویرایش، خروجی اکسل بگیرید و در پایان وضعیت را ببندید.</li>
+                <li><i class="fa-solid fa-plus" aria-hidden="true"></i><strong>ایجاد نظرسنجی:</strong> روی «افزودن نظرسنجی» کلیک کنید، عنوان و واحد مربوطه را وارد کنید و ثبت را بزنید.</li>
+                <li><i class="fa-solid fa-sliders" aria-hidden="true"></i><strong>تنظیمات پایه:</strong> از منوی اقدامات وارد «تنظیمات» شوید؛ وضعیت، بازه زمانی، سقف پاسخ، امکان ویرایش، مخاطبان و سایر گزینه‌ها را مشخص کنید.</li>
+                <li><i class="fa-solid fa-palette" aria-hidden="true"></i><strong>تنظیمات ظاهری:</strong> از «تنظیمات ظاهری» رنگ‌ها، پیام‌ها، پس‌زمینه و ظاهر فرم عمومی را تنظیم کنید.</li>
+                <li><i class="fa-solid fa-list-check" aria-hidden="true"></i><strong>طراحی سوالات:</strong> نوع سوال‌ها را انتخاب کنید (متنی، چندگزینه‌ای، تاریخ، آپلود فایل و ...)، اجباری بودن و قواعد هر سوال را تعریف کنید.</li>
+                <li><i class="fa-solid fa-flask" aria-hidden="true"></i><strong>کنترل کیفیت:</strong> لینک عمومی را بسازید و فرم را با پاسخ نمونه تست کنید؛ نمایش و گزارش را بررسی کنید.</li>
+                <li><i class="fa-solid fa-rocket" aria-hidden="true"></i><strong>انتشار:</strong> با گزینه «ایجاد/به‌روزرسانی لینک» نظرسنجی را فعال کنید (یا برای تایید مدیر ارسال کنید).</li>
+                <li><i class="fa-solid fa-chart-line" aria-hidden="true"></i><strong>پایش و تحلیل:</strong> از «مشاهده گزارش» پاسخ‌ها را بررسی، ویرایش، خروجی اکسل بگیرید و در پایان وضعیت را ببندید.</li>
             </ol>
             <div class="guide-note">
                 پیشنهاد: قبل از ارسال عمومی، یک سناریوی کامل را از ابتدا تا ثبت پاسخ و مشاهده گزارش اجرا کنید تا همه تنظیمات دسترسی و سوالات نهایی کنترل شود.
             </div>
             <div class="modal-actions" style="margin-top: 1rem;">
-                <button class="primary" type="button" data-close-modal>متوجه شدم</button>
+                <button class="primary" type="button" data-close-modal><i class="fa-solid fa-check" aria-hidden="true"></i>متوجه شدم</button>
             </div>
         </div>
     </div>
 
     {{-- Add Survey Modal --}}
-    <div class="modal" id="surveyGuideModal" aria-hidden="true">
-        <div class="modal-dialog guide-modal-dialog">
-            <div class="modal-header">
-                <h3>راهنمای گام‌به‌گام ساخت نظرسنجی</h3>
-                <button class="modal-close" type="button" data-close-modal>&times;</button>
-            </div>
-            <ol class="guide-steps">
-                <li><strong>ایجاد نظرسنجی:</strong> روی «افزودن نظرسنجی» کلیک کنید، عنوان و واحد مربوطه را وارد کنید و ثبت را بزنید.</li>
-                <li><strong>تنظیمات پایه:</strong> از منوی اقدامات وارد «تنظیمات» شوید؛ وضعیت، بازه زمانی، سقف پاسخ، امکان ویرایش، مخاطبان و سایر گزینه‌ها را مشخص کنید.</li>
-                <li><strong>تنظیمات ظاهری:</strong> از «تنظیمات ظاهری» رنگ‌ها، پیام‌ها، پس‌زمینه و ظاهر فرم عمومی را تنظیم کنید.</li>
-                <li><strong>طراحی سوالات:</strong> نوع سوال‌ها را انتخاب کنید (متنی، چندگزینه‌ای، تاریخ، آپلود فایل و ...)، اجباری بودن و قواعد هر سوال را تعریف کنید.</li>
-                <li><strong>کنترل کیفیت:</strong> لینک عمومی را بسازید و فرم را با پاسخ نمونه تست کنید؛ نمایش و گزارش را بررسی کنید.</li>
-                <li><strong>انتشار:</strong> با گزینه «ایجاد/به‌روزرسانی لینک» نظرسنجی را فعال کنید (یا برای تایید مدیر ارسال کنید).</li>
-                <li><strong>پایش و تحلیل:</strong> از «مشاهده گزارش» پاسخ‌ها را بررسی، ویرایش، خروجی اکسل بگیرید و در پایان وضعیت را ببندید.</li>
-            </ol>
-            <div class="guide-note">
-                پیشنهاد: قبل از ارسال عمومی، یک سناریوی کامل را از ابتدا تا ثبت پاسخ و مشاهده گزارش اجرا کنید تا همه تنظیمات دسترسی و سوالات نهایی کنترل شود.
-            </div>
-            <div class="modal-actions" style="margin-top: 1rem;">
-                <button class="primary" type="button" data-close-modal>متوجه شدم</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="addSurveyModal" aria-hidden="true">
+<div class="modal" id="addSurveyModal" aria-hidden="true">
         <form method="POST" action="{{ route('admin.surveys.store') }}" class="modal-dialog" id="addSurveyForm">
             @csrf
             <div class="modal-header">
-                <h3>افزودن نظرسنجی جدید</h3>
+                <h3><i class="fa-solid fa-plus" aria-hidden="true"></i>افزودن نظرسنجی جدید</h3>
                 <button class="modal-close" type="button" data-close-modal>&times;</button>
             </div>
             <p>نام نظرسنجی و واحد مربوطه را مشخص کنید؛ یادداشت کوتاه اختیاری است.</p>
@@ -1041,8 +1154,8 @@
                 @enderror
             </div>
             <div class="modal-actions">
-                <button class="primary" type="submit">ثبت و ادامه</button>
-                <button class="ghost" type="button" data-close-modal>انصراف</button>
+                <button class="primary" type="submit"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i>ثبت و ادامه</button>
+                <button class="ghost" type="button" data-close-modal><i class="fa-solid fa-xmark" aria-hidden="true"></i>انصراف</button>
             </div>
         </form>
     </div>
@@ -1051,7 +1164,7 @@
         <form method="POST" id="rejectPublishForm" class="modal-dialog" action="">
             @csrf
             <div class="modal-header">
-                <h3>رد درخواست انتشار</h3>
+                <h3><i class="fa-solid fa-ban" aria-hidden="true"></i>رد درخواست انتشار</h3>
                 <button class="modal-close" type="button" data-close-modal>&times;</button>
             </div>
             <p class="reject-publish-lead" id="rejectPublishSurveyLead"></p>
@@ -1064,8 +1177,8 @@
                 @enderror
             </div>
             <div class="modal-actions">
-                <button class="primary reject-submit" type="submit">ثبت رد درخواست</button>
-                <button class="ghost" type="button" data-close-modal>انصراف</button>
+                <button class="primary reject-submit" type="submit"><i class="fa-solid fa-ban" aria-hidden="true"></i>ثبت رد درخواست</button>
+                <button class="ghost" type="button" data-close-modal><i class="fa-solid fa-xmark" aria-hidden="true"></i>انصراف</button>
             </div>
         </form>
     </div>

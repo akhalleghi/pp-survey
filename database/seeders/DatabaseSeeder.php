@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             UnitSeeder::class,
             PositionSeeder::class,
+            SmsProviderSeeder::class,
         ]);
     }
 }
