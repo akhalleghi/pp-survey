@@ -7,6 +7,7 @@ use App\Models\Survey;
 use App\Models\SurveyQuestion;
 use App\Models\SurveyResponse;
 use App\Models\SurveyResponseAnswer;
+use App\Support\PublicSurveyAccessSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -20,8 +21,16 @@ use Illuminate\View\View;
 
 class PublicSurveyController extends Controller
 {
-    public function show(Request $request, string $token): View
+    public function show(Request $request, string $token): View|RedirectResponse
     {
+        if ($request->query->hasAny(['personnel_code', 'national_code', 'submitted'])) {
+            if ($request->boolean('submitted')) {
+                session()->flash('survey_completed', true);
+            }
+
+            return redirect()->route('surveys.public.show', ['token' => $token]);
+        }
+
         $survey = Survey::where('public_token', $token)
             ->with(['questions.options'])
             ->firstOrFail();
@@ -54,12 +63,12 @@ class PublicSurveyController extends Controller
             ]);
         }
 
-        $context = $this->buildAccessContext($request, $survey);
+        $context = $this->buildAccessContext($survey);
         $identityMode = $context['identity_mode'];
         $needsIdentity = $context['needs_identity'];
-        $submittedPersonnelCode = $context['submitted_personnel_code'];
-        $submittedNationalCode = $context['submitted_national_code'];
-        $accessError = $context['access_error'];
+        $submittedPersonnelCode = old('personnel_code', '');
+        $submittedNationalCode = old('national_code', '');
+        $accessError = $context['access_error'] ?: session('access_error');
         $resolvedPersonnel = $context['resolved_personnel'];
         $audiencePassed = $context['audience_passed'];
         $activeResponse = null;
@@ -110,7 +119,7 @@ class PublicSurveyController extends Controller
 
         $showIntroStep = filled($survey->intro_text);
         $showAccessGate = $needsIdentity;
-        $showCompletedOnLoad = $request->boolean('submitted');
+        $showCompletedOnLoad = (bool) session('survey_completed', false);
 
         $wizardFocusQuestionId = null;
         $errorsBag = $request->session()->get('errors');
@@ -142,6 +151,29 @@ class PublicSurveyController extends Controller
         ));
     }
 
+    public function verifyAccess(Request $request, string $token): RedirectResponse
+    {
+        $survey = Survey::where('public_token', $token)->firstOrFail();
+        if ($survey->status !== 'active'
+            || ($survey->start_at && now()->lt($survey->start_at))
+            || ($survey->end_at && now()->isAfter($survey->end_at->copy()->endOfDay()))
+            || ($survey->require_auth && ! Auth::check())) {
+            return redirect()->route('surveys.public.show', ['token' => $token]);
+        }
+
+        $context = $this->buildAccessContextFromCredentials($request, $survey);
+        if (! $context['audience_passed'] || ! $context['resolved_personnel']) {
+            return redirect()
+                ->route('surveys.public.show', ['token' => $token])
+                ->withInput($request->only(['personnel_code', 'national_code']))
+                ->with('access_error', $context['access_error'] ?: 'اطلاعات وارد شده معتبر نیست.');
+        }
+
+        PublicSurveyAccessSession::grant($survey, $context['resolved_personnel']);
+
+        return redirect()->route('surveys.public.show', ['token' => $token]);
+    }
+
     public function saveDraft(Request $request, string $token): JsonResponse
     {
         $survey = Survey::where('public_token', $token)->with('questions.options')->firstOrFail();
@@ -149,7 +181,7 @@ class PublicSurveyController extends Controller
             return response()->json(['ok' => false, 'message' => 'ذخیره موقت برای این نظرسنجی فعال نیست.'], 422);
         }
 
-        $context = $this->buildAccessContext($request, $survey);
+        $context = $this->buildAccessContext($survey);
         if (!$context['audience_passed']) {
             return response()->json(['ok' => false, 'message' => $context['access_error'] ?: 'عدم دسترسی'], 403);
         }
@@ -180,25 +212,17 @@ class PublicSurveyController extends Controller
     public function submit(Request $request, string $token): RedirectResponse
     {
         $survey = Survey::where('public_token', $token)->with('questions.options')->firstOrFail();
-        $context = $this->buildAccessContext($request, $survey);
+        $context = $this->buildAccessContext($survey);
         if (!$context['audience_passed']) {
             return redirect()
-                ->route('surveys.public.show', array_filter([
-                    'token' => $token,
-                    'personnel_code' => $context['submitted_personnel_code'] ?: null,
-                    'national_code' => $context['submitted_national_code'] ?: null,
-                ]))
-                ->with('status', $context['access_error'] ?: 'دسترسی به ثبت پاسخ ندارید.');
+                ->route('surveys.public.show', ['token' => $token])
+                ->with('access_error', $context['access_error'] ?: 'دسترسی به ثبت پاسخ ندارید. لطفاً دوباره هویت خود را تأیید کنید.');
         }
 
         $answersInput = $request->input('answers', []);
         if (!is_array($answersInput)) {
             return redirect()
-                ->route('surveys.public.show', array_filter([
-                    'token' => $token,
-                    'personnel_code' => $context['submitted_personnel_code'] ?: null,
-                    'national_code' => $context['submitted_national_code'] ?: null,
-                ]))
+                ->route('surveys.public.show', ['token' => $token])
                 ->withErrors(['answers' => 'پاسخ‌ها معتبر نیست.'])
                 ->withInput();
         }
@@ -206,21 +230,13 @@ class PublicSurveyController extends Controller
         [$activeResponse, $editLockMessage] = $this->resolveAccessibleResponse($survey, $context['resolved_personnel']);
         if ($editLockMessage) {
             return redirect()
-                ->route('surveys.public.show', array_filter([
-                    'token' => $token,
-                    'personnel_code' => $context['submitted_personnel_code'] ?: null,
-                    'national_code' => $context['submitted_national_code'] ?: null,
-                ]))
+                ->route('surveys.public.show', ['token' => $token])
                 ->withErrors(['answers' => $editLockMessage])
                 ->withInput();
         }
         if ($this->isResponseLimitReachedForNewSubmit($survey, $context['resolved_personnel'], $activeResponse)) {
             return redirect()
-                ->route('surveys.public.show', array_filter([
-                    'token' => $token,
-                    'personnel_code' => $context['submitted_personnel_code'] ?: null,
-                    'national_code' => $context['submitted_national_code'] ?: null,
-                ]))
+                ->route('surveys.public.show', ['token' => $token])
                 ->withErrors(['answers' => 'ظرفیت پاسخ‌گویی این نظرسنجی تکمیل شده است.'])
                 ->withInput();
         }
@@ -245,21 +261,14 @@ class PublicSurveyController extends Controller
             });
         } catch (ValidationException $e) {
             return redirect()
-                ->route('surveys.public.show', array_filter([
-                    'token' => $token,
-                    'personnel_code' => $context['submitted_personnel_code'] ?: null,
-                    'national_code' => $context['submitted_national_code'] ?: null,
-                ]))
+                ->route('surveys.public.show', ['token' => $token])
                 ->withErrors($e->errors())
                 ->withInput();
         }
 
-        return redirect()->route('surveys.public.show', array_filter([
-            'token' => $token,
-            'personnel_code' => $context['submitted_personnel_code'] ?: null,
-            'national_code' => $context['submitted_national_code'] ?: null,
-            'submitted' => 1,
-        ]));
+        return redirect()
+            ->route('surveys.public.show', ['token' => $token])
+            ->with('survey_completed', true);
     }
 
     private function resolvePersonnelByIdentity(string $identityMode, string $personnelCode, string $nationalCode): ?Personnel
@@ -303,30 +312,24 @@ class PublicSurveyController extends Controller
         return \App\Support\SurveyAudience::personnelMatches($personnel, $config);
     }
 
-    private function buildAccessContext(Request $request, Survey $survey): array
+    private function buildAccessContext(Survey $survey): array
     {
         $audienceConfig = $this->normalizeAudienceConfig($survey->audience_filters);
         $identityMode = $audienceConfig['identity_mode'];
         $needsIdentity = $identityMode !== 'none';
-        $submittedPersonnelCode = $this->normalizeDigits(trim((string) $request->input('personnel_code', $request->query('personnel_code', ''))));
-        $submittedNationalCode = $this->normalizeDigits(trim((string) $request->input('national_code', $request->query('national_code', ''))));
         $accessError = null;
         $resolvedPersonnel = null;
         $audiencePassed = true;
 
         if ($needsIdentity) {
-            if ($submittedPersonnelCode === '' && $submittedNationalCode === '') {
+            $resolvedPersonnel = PublicSurveyAccessSession::resolvePersonnel($survey);
+            if (! $resolvedPersonnel) {
                 $audiencePassed = false;
             } else {
-                $resolvedPersonnel = $this->resolvePersonnelByIdentity($identityMode, $submittedPersonnelCode, $submittedNationalCode);
-                if (!$resolvedPersonnel) {
-                    $audiencePassed = false;
-                    $accessError = 'اطلاعات وارد شده معتبر نیست یا در فهرست پرسنل ثبت نشده است.';
-                } else {
-                    $audiencePassed = $this->matchesAudienceFilters($resolvedPersonnel, $audienceConfig);
-                    if (!$audiencePassed) {
-                        $accessError = 'شما مجاز به شرکت در این نظرسنجی نیستید.';
-                    }
+                $audiencePassed = $this->matchesAudienceFilters($resolvedPersonnel, $audienceConfig);
+                if (! $audiencePassed) {
+                    PublicSurveyAccessSession::clear($survey);
+                    $accessError = 'شما مجاز به شرکت در این نظرسنجی نیستید.';
                 }
             }
         }
@@ -334,8 +337,52 @@ class PublicSurveyController extends Controller
         return [
             'identity_mode' => $identityMode,
             'needs_identity' => $needsIdentity,
-            'submitted_personnel_code' => $submittedPersonnelCode,
-            'submitted_national_code' => $submittedNationalCode,
+            'access_error' => $accessError,
+            'resolved_personnel' => $resolvedPersonnel,
+            'audience_passed' => $audiencePassed,
+        ];
+    }
+
+    private function buildAccessContextFromCredentials(Request $request, Survey $survey): array
+    {
+        $audienceConfig = $this->normalizeAudienceConfig($survey->audience_filters);
+        $identityMode = $audienceConfig['identity_mode'];
+        $needsIdentity = $identityMode !== 'none';
+        $submittedPersonnelCode = $this->normalizeDigits(trim((string) $request->input('personnel_code', '')));
+        $submittedNationalCode = $this->normalizeDigits(trim((string) $request->input('national_code', '')));
+        $accessError = null;
+        $resolvedPersonnel = null;
+        $audiencePassed = true;
+
+        if (! $needsIdentity) {
+            return [
+                'identity_mode' => $identityMode,
+                'needs_identity' => false,
+                'access_error' => null,
+                'resolved_personnel' => null,
+                'audience_passed' => true,
+            ];
+        }
+
+        if ($submittedPersonnelCode === '' && $submittedNationalCode === '') {
+            $audiencePassed = false;
+            $accessError = 'اطلاعات پرسنلی را وارد کنید.';
+        } else {
+            $resolvedPersonnel = $this->resolvePersonnelByIdentity($identityMode, $submittedPersonnelCode, $submittedNationalCode);
+            if (! $resolvedPersonnel) {
+                $audiencePassed = false;
+                $accessError = 'اطلاعات وارد شده معتبر نیست یا در فهرست پرسنل ثبت نشده است.';
+            } else {
+                $audiencePassed = $this->matchesAudienceFilters($resolvedPersonnel, $audienceConfig);
+                if (! $audiencePassed) {
+                    $accessError = 'شما مجاز به شرکت در این نظرسنجی نیستید.';
+                }
+            }
+        }
+
+        return [
+            'identity_mode' => $identityMode,
+            'needs_identity' => $needsIdentity,
             'access_error' => $accessError,
             'resolved_personnel' => $resolvedPersonnel,
             'audience_passed' => $audiencePassed,
@@ -530,7 +577,7 @@ class PublicSurveyController extends Controller
 
         if (in_array($question->type, ['multiple_choice', 'dropdown', 'yes_no', 'linear_scale'], true)) {
             $optionId = (int) (is_array($raw) ? ($raw['option_id'] ?? 0) : $raw);
-            if ($optionId <= 0) {
+            if ($optionId <= 0 || ! $this->optionBelongsToQuestion($question, $optionId)) {
                 return null;
             }
             return array_merge($base, ['option_id' => $optionId]);
@@ -538,7 +585,7 @@ class PublicSurveyController extends Controller
 
         if ($question->type === 'rating') {
             $optionId = (int) (is_array($raw) ? ($raw['option_id'] ?? 0) : 0);
-            if ($optionId > 0) {
+            if ($optionId > 0 && $this->optionBelongsToQuestion($question, $optionId)) {
                 return array_merge($base, ['option_id' => $optionId]);
             }
             $value = is_array($raw) ? ($raw['value'] ?? null) : $raw;
@@ -551,6 +598,7 @@ class PublicSurveyController extends Controller
         if ($question->type === 'checkboxes') {
             $optionIds = is_array($raw) ? ($raw['option_ids'] ?? $raw) : [];
             $optionIds = array_values(array_unique(array_filter(array_map('intval', (array) $optionIds), fn ($id) => $id > 0)));
+            $optionIds = array_values(array_filter($optionIds, fn ($id) => $this->optionBelongsToQuestion($question, $id)));
             if (empty($optionIds)) {
                 return null;
             }
@@ -579,7 +627,7 @@ class PublicSurveyController extends Controller
             $currentPath = is_array($raw) ? trim((string) ($raw['current_file'] ?? '')) : '';
             $currentName = is_array($raw) ? trim((string) ($raw['current_file_name'] ?? '')) : '';
             if (!$uploadedFile) {
-                if ($currentPath === '') {
+                if ($currentPath === '' || ! $this->storedFileBelongsToResponse($response, $question, $currentPath)) {
                     return null;
                 }
 
@@ -646,6 +694,32 @@ class PublicSurveyController extends Controller
     private function normalizeAudienceConfig(mixed $value): array
     {
         return \App\Support\SurveyAudience::normalize($value);
+    }
+
+    private function optionBelongsToQuestion(SurveyQuestion $question, int $optionId): bool
+    {
+        if ($optionId <= 0) {
+            return false;
+        }
+        if ($question->relationLoaded('options')) {
+            return $question->options->contains('id', $optionId);
+        }
+
+        return $question->options()->whereKey($optionId)->exists();
+    }
+
+    private function storedFileBelongsToResponse(SurveyResponse $response, SurveyQuestion $question, string $path): bool
+    {
+        $existing = SurveyResponseAnswer::query()
+            ->where('response_id', $response->id)
+            ->where('question_id', $question->id)
+            ->first();
+        if (! $existing) {
+            return false;
+        }
+
+        return is_string($existing->answer_json['file_path'] ?? null)
+            && $existing->answer_json['file_path'] === $path;
     }
 
     private function normalizeDigits(string $value): string

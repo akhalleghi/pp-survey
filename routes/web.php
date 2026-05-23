@@ -22,6 +22,9 @@ Route::get('/', function () {
 });
 
 Route::get('surveys/public/{token}', [PublicSurveyController::class, 'show'])->name('surveys.public.show');
+Route::post('surveys/public/{token}/access', [PublicSurveyController::class, 'verifyAccess'])
+    ->middleware('throttle:15,1')
+    ->name('surveys.public.access');
 Route::post('surveys/public/{token}/draft', [PublicSurveyController::class, 'saveDraft'])->name('surveys.public.draft');
 Route::post('surveys/public/{token}/submit', [PublicSurveyController::class, 'submit'])->name('surveys.public.submit');
 

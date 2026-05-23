@@ -1056,7 +1056,8 @@
                 @endif
 
                 @if ($showAccessGate && !$audiencePassed)
-                    <form class="access-gate" method="GET" action="{{ route('surveys.public.show', $survey->public_token) }}">
+                    <form class="access-gate" method="POST" action="{{ route('surveys.public.access', $survey->public_token) }}">
+                        @csrf
                         <h2>تایید اطلاعات پرسنلی</h2>
                         <p class="helper">برای ورود به فرم، اطلاعات مورد نیاز را وارد کنید.</p>
                         <div class="access-grid">
@@ -1110,7 +1111,8 @@
                         <span class="value">{{ number_format($estimatedDurationMinutes) }} دقیقه</span>
                     </div>
                 </div>
-                <form class="access-gate" method="GET" action="{{ route('surveys.public.show', $survey->public_token) }}">
+                <form class="access-gate" method="POST" action="{{ route('surveys.public.access', $survey->public_token) }}">
+                    @csrf
                     <h2>تایید اطلاعات پرسنلی</h2>
                     <p class="helper">برای ورود به فرم، اطلاعات مورد نیاز را وارد کنید.</p>
                     <div class="access-grid">
@@ -1140,8 +1142,6 @@
         <div id="surveyWizard" class="survey-panel survey-wizard-root @if ($questionsDisplaySinglePage) survey-wizard-root--single @endif @if (($showIntroStep || ($showAccessGate && !$audiencePassed)) && !$errors->any()) is-hidden @endif">
             <form class="survey-wizard-form" id="surveyForm" method="POST" enctype="multipart/form-data" action="{{ route('surveys.public.submit', $survey->public_token) }}" data-questions-display="{{ $questionsDisplayMode }}">
                 @csrf
-                <input type="hidden" name="personnel_code" value="{{ $submittedPersonnelCode }}">
-                <input type="hidden" name="national_code" value="{{ $submittedNationalCode }}">
 
                 @include('surveys.partials.brand-logo')
                 <div class="survey-wizard-body">
