@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\PersonnelController;
 use App\Http\Controllers\Admin\PositionController;
 use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SmsManagementController;
 use App\Http\Controllers\Admin\SmsPanelSettingsController;
 use App\Http\Controllers\Admin\SurveyController;
 use App\Http\Controllers\Admin\SurveyQuestionController;
@@ -41,6 +42,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/restore', [BackupController::class, 'restore'])->name('restore');
             Route::get('/{filename}/download', [BackupController::class, 'download'])->where('filename', $backupFile)->name('download');
             Route::delete('/{filename}', [BackupController::class, 'destroy'])->where('filename', $backupFile)->name('destroy');
+        });
+
+        Route::middleware('admin.only_main')->prefix('sms')->name('sms.')->group(function () {
+            Route::get('/', [SmsManagementController::class, 'index'])->name('index');
+            Route::get('/personnel-search', [SmsManagementController::class, 'personnelSearch'])->name('personnel-search');
+            Route::get('/surveys/{survey}/template', [SmsManagementController::class, 'surveyTemplate'])->name('survey-template');
+            Route::post('/preview', [SmsManagementController::class, 'preview'])->name('preview');
+            Route::post('/campaigns', [SmsManagementController::class, 'storeDraft'])->name('campaigns.store');
+            Route::post('/campaigns/{campaign}/send', [SmsManagementController::class, 'confirmSend'])->name('campaigns.send');
+            Route::post('/campaigns/{campaign}/send-step', [SmsManagementController::class, 'sendStep'])->name('campaigns.send-step');
         });
 
         Route::middleware('admin.permission:org.units')->group(function () {

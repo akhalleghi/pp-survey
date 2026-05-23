@@ -215,6 +215,14 @@ final class AdminPermissions
                 'route' => 'admin.login-audit.index',
             ],
             [
+                'label' => 'مدیریت پیامک',
+                'permission' => null,
+                'admin_only' => true,
+                'href' => route('admin.sms.index'),
+                'icon' => 'fa-comment-sms',
+                'route' => 'admin.sms.index',
+            ],
+            [
                 'label' => 'نظرسنجی‌ها',
                 'permission' => self::SURVEYS,
                 'href' => route('admin.surveys.index'),
@@ -244,6 +252,10 @@ final class AdminPermissions
         $out = [];
 
         foreach ($items as $item) {
+            if (! empty($item['admin_only']) && ! $admin->isAdmin()) {
+                continue;
+            }
+
             $children = $item['children'] ?? [];
             if ($children !== []) {
                 $filteredChildren = [];

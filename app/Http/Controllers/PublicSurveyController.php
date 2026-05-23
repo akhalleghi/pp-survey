@@ -300,25 +300,7 @@ class PublicSurveyController extends Controller
 
     private function matchesAudienceFilters(Personnel $personnel, array $config): bool
     {
-        $modes = $config['modes'];
-        if (empty($modes)) {
-            return true;
-        }
-
-        if (in_array('unit', $modes, true) && !in_array((int) $personnel->unit_id, $config['unit_ids'], true)) {
-            return false;
-        }
-        if (in_array('position', $modes, true) && !in_array((int) $personnel->position_id, $config['position_ids'], true)) {
-            return false;
-        }
-        if (in_array('gender', $modes, true) && !in_array((string) $personnel->gender, $config['genders'], true)) {
-            return false;
-        }
-        if (in_array('personnel', $modes, true) && !in_array((int) $personnel->id, $config['personnel_ids'], true)) {
-            return false;
-        }
-
-        return true;
+        return \App\Support\SurveyAudience::personnelMatches($personnel, $config);
     }
 
     private function buildAccessContext(Request $request, Survey $survey): array
@@ -663,36 +645,7 @@ class PublicSurveyController extends Controller
 
     private function normalizeAudienceConfig(mixed $value): array
     {
-        $fallback = [
-            'identity_mode' => 'none',
-            'modes' => [],
-            'unit_ids' => [],
-            'genders' => [],
-            'position_ids' => [],
-            'personnel_ids' => [],
-        ];
-
-        if (!is_array($value)) {
-            return $fallback;
-        }
-
-        $isList = array_keys($value) === range(0, count($value) - 1);
-        if ($isList) {
-            return $fallback;
-        }
-
-        $identityMode = $value['identity_mode'] ?? 'none';
-
-        return [
-            'identity_mode' => in_array($identityMode, ['none', 'personnel_code', 'national_code', 'either'], true)
-                ? $identityMode
-                : 'none',
-            'modes' => array_values(array_filter((array) ($value['modes'] ?? []), fn ($mode) => in_array($mode, ['unit', 'gender', 'position', 'personnel'], true))),
-            'unit_ids' => array_values(array_map('intval', (array) ($value['unit_ids'] ?? []))),
-            'genders' => array_values(array_filter((array) ($value['genders'] ?? []), fn ($gender) => in_array($gender, ['male', 'female', 'other'], true))),
-            'position_ids' => array_values(array_map('intval', (array) ($value['position_ids'] ?? []))),
-            'personnel_ids' => array_values(array_map('intval', (array) ($value['personnel_ids'] ?? []))),
-        ];
+        return \App\Support\SurveyAudience::normalize($value);
     }
 
     private function normalizeDigits(string $value): string

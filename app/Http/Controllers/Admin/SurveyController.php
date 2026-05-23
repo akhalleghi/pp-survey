@@ -1402,37 +1402,7 @@ class SurveyController extends Controller
 
     private function normalizeAudienceConfig(mixed $value): array
     {
-        $fallback = [
-            'identity_mode' => 'none',
-            'modes' => [],
-            'unit_ids' => [],
-            'genders' => [],
-            'position_ids' => [],
-            'personnel_ids' => [],
-        ];
-
-        if (!is_array($value)) {
-            return $fallback;
-        }
-
-        // Backward compatibility: old format was a list of labels.
-        $isList = array_keys($value) === range(0, count($value) - 1);
-        if ($isList) {
-            return $fallback;
-        }
-
-        $identityMode = $value['identity_mode'] ?? 'none';
-
-        return [
-            'identity_mode' => in_array($identityMode, ['none', 'personnel_code', 'national_code', 'either'], true)
-                ? $identityMode
-                : 'none',
-            'modes' => array_values(array_filter((array) ($value['modes'] ?? []), fn ($mode) => in_array($mode, ['unit', 'gender', 'position', 'personnel'], true))),
-            'unit_ids' => array_values(array_map('intval', (array) ($value['unit_ids'] ?? []))),
-            'genders' => array_values(array_filter((array) ($value['genders'] ?? []), fn ($gender) => in_array($gender, ['male', 'female', 'other'], true))),
-            'position_ids' => array_values(array_map('intval', (array) ($value['position_ids'] ?? []))),
-            'personnel_ids' => array_values(array_map('intval', (array) ($value['personnel_ids'] ?? []))),
-        ];
+        return \App\Support\SurveyAudience::normalize($value);
     }
 
 }
