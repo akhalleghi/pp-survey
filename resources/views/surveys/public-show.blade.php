@@ -359,7 +359,17 @@
             border: 0;
         }
         body:has(#surveyWizard:not(.is-hidden)) {
+            align-items: flex-start;
+            justify-content: flex-start;
+            overflow-y: auto;
+            min-height: 100dvh;
+            height: auto;
+            padding-top: max(1rem, env(safe-area-inset-top, 0px));
             padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+        }
+        body:has(#surveyWizard:not(.is-hidden)) .wrap {
+            margin-inline: auto;
+            margin-top: clamp(0.5rem, 2.5vh, 1.25rem);
         }
         body:has(#surveyWizard.survey-wizard-root--single:not(.is-hidden)) {
             padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
@@ -368,6 +378,33 @@
             width: 100%;
             max-width: 560px;
             margin-inline: auto;
+        }
+        .survey-brand-logo {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin: 0 auto clamp(0.55rem, 2vw, 0.9rem);
+            padding-top: clamp(0.15rem, 1vh, 0.45rem);
+            line-height: 0;
+        }
+        .survey-brand-logo img {
+            display: block;
+            margin-inline: auto;
+            width: clamp(60px, 13vw, 88px);
+            height: clamp(60px, 13vw, 88px);
+            object-fit: contain;
+            border-radius: clamp(14px, 2.5vw, 20px);
+            background: rgba(255, 255, 255, 0.94);
+            padding: clamp(0.4rem, 1.4vw, 0.72rem);
+            box-shadow:
+                inset 0 0 0 1px rgba(15, 23, 42, 0.06),
+                0 8px 22px rgba(15, 23, 42, 0.1);
+        }
+        .survey-panel.card > .survey-brand-logo {
+            padding-top: 0;
+            margin-bottom: clamp(0.7rem, 2vw, 1rem);
         }
         .survey-wizard-root--single {
             max-width: min(100%, 640px);
@@ -405,9 +442,10 @@
             justify-content: center;
             align-items: stretch;
             min-height: 0;
+            overflow-x: hidden;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            padding: 0.75rem 0.2rem 1rem;
+            padding: 0 0.2rem 1rem;
             color: inherit;
         }
         .survey-wizard-card {
@@ -893,6 +931,16 @@
                 );
             }
         }
+        @media (max-height: 680px) {
+            .survey-brand-logo {
+                margin-bottom: 0.4rem;
+            }
+            .survey-brand-logo img {
+                width: 52px;
+                height: 52px;
+                padding: 0.35rem;
+            }
+        }
         @media (max-width: 480px) {
             .survey-wizard-root--single .survey-single-stack {
                 gap: 0.85rem;
@@ -921,6 +969,15 @@
             .intro-body { font-size: 0.93rem; padding: 0.85rem 0.88rem; }
         }
         @media (max-width: 560px) {
+            .survey-brand-logo {
+                margin-bottom: 0.5rem;
+            }
+            .survey-brand-logo img {
+                width: 56px;
+                height: 56px;
+                padding: 0.38rem;
+                border-radius: 14px;
+            }
             .survey-meta {
                 display: flex;
                 flex-wrap: nowrap;
@@ -964,6 +1021,7 @@
     <div class="wrap">
         @if ($showIntroStep)
             <div id="surveyIntro" class="survey-panel card @if ($errors->any()) is-hidden @endif">
+                @include('surveys.partials.brand-logo')
                 <div class="hero-head">
                     <div>
                         <h1>{{ $survey->title }}</h1>
@@ -1032,6 +1090,7 @@
 
         @if (!$showIntroStep && $showAccessGate && !$audiencePassed)
             <div id="surveyAccessOnly" class="survey-panel card">
+                @include('surveys.partials.brand-logo')
                 <div class="hero-head">
                     <div>
                         <h1>{{ $survey->title }}</h1>
@@ -1084,6 +1143,7 @@
                 <input type="hidden" name="personnel_code" value="{{ $submittedPersonnelCode }}">
                 <input type="hidden" name="national_code" value="{{ $submittedNationalCode }}">
 
+                @include('surveys.partials.brand-logo')
                 <div class="survey-wizard-body">
                     <div class="survey-wizard-card">
                 @if ($errors->any())
