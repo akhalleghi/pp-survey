@@ -1114,42 +1114,24 @@
                 { display: document.getElementById('end-at'), hidden: document.getElementById('end-at-iso') },
             ];
 
-            const flushPickerGregorianToHidden = (inp, fallbackHidden) => {
-                if (!(inp instanceof HTMLElement)) {
+            const syncHiddenFromPicker = (displayInput, hiddenInput, { allowDisplayFallback = false } = {}) => {
+                if (!displayInput || !hiddenInput) {
                     return;
                 }
-                const hidSel = inp.getAttribute('data-sync-hidden');
-                const hiddenEl = (hidSel && document.getElementById(hidSel)) || fallbackHidden;
-                const readG = () => inp.getAttribute('data-gdate') || inp.getAttribute('data-gDate') || '';
-                let gDate = readG();
-                const apply = () => {
-                    gDate = readG();
-                    const displayValue = String(inp.value || '').trim();
-                    if (!hiddenEl) {
-                        return;
-                    }
-                    // Fallback: اگر افزونه data-gdate نداد، همان تاریخ نمایشی (شمسی) را بفرست.
-                    // سرور خودش آن را normalize می‌کند.
-                    if (gDate) {
-                        hiddenEl.value = gDate;
-                    } else if (displayValue) {
-                        hiddenEl.value = displayValue;
-                    } else {
-                        hiddenEl.value = '';
-                    }
-                };
-                window.requestAnimationFrame(() => {
-                    apply();
-                    if (!gDate && readG()) {
-                        apply();
-                        return;
-                    }
-                    if (!readG()) {
-                        window.setTimeout(() => {
-                            apply();
-                        }, 60);
-                    }
-                });
+                const readG = () => displayInput.getAttribute('data-gdate') || displayInput.getAttribute('data-gDate') || '';
+                const gDate = String(readG() || '').trim();
+                const displayValue = String(displayInput.value || '').trim();
+                if (!displayValue) {
+                    hiddenInput.value = '';
+                    return;
+                }
+                if (gDate) {
+                    hiddenInput.value = gDate;
+                    return;
+                }
+                if (allowDisplayFallback) {
+                    hiddenInput.value = displayValue;
+                }
             };
 
             const initSurveyPublishDatePickers = () => {
@@ -1162,6 +1144,8 @@
                     if (!display || !hidden) {
                         return;
                     }
+                    display.dataset.dateDirty = '0';
+                    display.dataset.initialDisplayValue = String(display.value || '').trim();
                     try {
                         window.jQuery(display).persianDatepicker('destroy');
                     } catch (_) {
@@ -1174,10 +1158,10 @@
                         selectedBefore: !!String(display.value || '').trim(),
                         selectedDate: display.value || null,
                         onSelect: function () {
-                            flushPickerGregorianToHidden(this, hidden);
+                            display.dataset.dateDirty = '1';
+                            syncHiddenFromPicker(display, hidden, { allowDisplayFallback: true });
                         },
                     });
-                    display.addEventListener('blur', () => flushPickerGregorianToHidden(display, hidden));
                 });
             };
 
@@ -1192,6 +1176,7 @@
                     }
                     hidden.value = '';
                     display.value = '';
+                    display.dataset.dateDirty = '1';
                     initSurveyPublishDatePickers();
                 });
             });
@@ -1202,17 +1187,18 @@
                 }
                 const hidSel = display.getAttribute('data-sync-hidden');
                 const hiddenEl = (hidSel && document.getElementById(hidSel)) || fallbackHidden;
-                let g = display.getAttribute('data-gdate') || display.getAttribute('data-gDate') || '';
-                g = String(g).trim();
                 const displayValue = String(display.value || '').trim();
-                if (g) {
-                    hiddenEl.value = g;
-                } else if (displayValue) {
-                    hiddenEl.value = displayValue;
-                }
+                const isDirty = String(display.dataset.dateDirty || '0') === '1';
+                const initialDisplayValue = String(display.dataset.initialDisplayValue || '').trim();
                 if (!displayValue) {
                     hiddenEl.value = '';
+                    return;
                 }
+                // اگر کاربر تاریخ را دست نزده باشد، hidden اولیه همان مقدار پایدار ISO می‌ماند.
+                if (!isDirty && displayValue === initialDisplayValue) {
+                    return;
+                }
+                syncHiddenFromPicker(display, hiddenEl, { allowDisplayFallback: true });
             };
 
             const settingsForm = document.querySelector('.survey-settings-form');
