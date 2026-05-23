@@ -23,7 +23,7 @@ class PublicSurveyController extends Controller
 {
     public function show(Request $request, string $token): View|RedirectResponse
     {
-        if ($request->query->hasAny(['personnel_code', 'national_code', 'submitted'])) {
+        if ($request->hasAny(['personnel_code', 'national_code', 'submitted'])) {
             if ($request->boolean('submitted')) {
                 session()->flash('survey_completed', true);
             }
