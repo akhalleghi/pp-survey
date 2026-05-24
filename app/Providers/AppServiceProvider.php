@@ -8,6 +8,7 @@ use App\Support\AdminPermissions;
 use App\Support\AppFonts;
 use App\Support\AppSettings;
 use App\Support\AppTextScale;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,6 +27,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $locale = (string) config('app.locale', 'fa');
+        app()->setLocale($locale);
+        Carbon::setLocale($locale);
+
+        if (extension_loaded('intl')) {
+            \Locale::setDefault(str_contains($locale, '_') ? $locale : $locale.'_IR');
+        }
+
         View::share('appSettings', AppSettings::all());
         View::share('appFont', AppFonts::resolve());
         View::share('appFontStack', AppFonts::stack());

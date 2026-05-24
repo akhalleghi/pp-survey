@@ -93,7 +93,7 @@ class ReportsController extends Controller
         $trendData = [];
         for ($i = 29; $i >= 0; $i--) {
             $d = Carbon::now()->subDays($i)->toDateString();
-            $trendLabels[] = Carbon::parse($d)->format('m/d');
+            $trendLabels[] = jalali_date($d, 'm/d');
             $trendData[] = (int) ($trendRaw[$d] ?? 0);
         }
 
@@ -115,7 +115,7 @@ class ReportsController extends Controller
         for ($m = 0; $m < 12; $m++) {
             $dt = (clone $monthsStart)->addMonths($m);
             $key = $dt->format('Y-m');
-            $monthlyLabels[] = $dt->format('Y/m');
+            $monthlyLabels[] = jalali_date($dt, 'Y/m');
             $monthlyData[] = (int) ($monthlyRaw[$key] ?? 0);
         }
 

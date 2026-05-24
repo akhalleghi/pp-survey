@@ -17,13 +17,15 @@ return new class extends Migration
             $table->index('personnel_code');
         });
 
-        Schema::table('surveys', function (Blueprint $table) {
-            $table->foreignId('created_by_admin_user_id')
-                ->nullable()
-                ->after('unit_id')
-                ->constrained('admin_users')
-                ->nullOnDelete();
-        });
+        if (! Schema::hasColumn('surveys', 'created_by_admin_user_id')) {
+            Schema::table('surveys', function (Blueprint $table) {
+                $table->foreignId('created_by_admin_user_id')
+                    ->nullable()
+                    ->after('unit_id')
+                    ->constrained('admin_users')
+                    ->nullOnDelete();
+            });
+        }
 
         Schema::table('unit_supervisors', function (Blueprint $table) {
             $table->dropUnique(['personnel_code']);
@@ -59,10 +61,12 @@ return new class extends Migration
             $table->dropColumn('admin_user_id');
         });
 
-        Schema::table('surveys', function (Blueprint $table) {
-            $table->dropForeign(['created_by_admin_user_id']);
-            $table->dropColumn('created_by_admin_user_id');
-        });
+        if (Schema::hasColumn('surveys', 'created_by_admin_user_id')) {
+            Schema::table('surveys', function (Blueprint $table) {
+                $table->dropForeign(['created_by_admin_user_id']);
+                $table->dropColumn('created_by_admin_user_id');
+            });
+        }
 
         Schema::table('admin_users', function (Blueprint $table) {
             $table->dropIndex(['personnel_code']);
