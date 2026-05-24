@@ -6,28 +6,35 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /** @return list<string> */
+    private function surveyColumns(): array
+    {
+        return Schema::getColumnListing('surveys');
+    }
+
+    private function surveyHasColumn(string $column): bool
+    {
+        return in_array($column, $this->surveyColumns(), true);
+    }
+
     public function up(): void
     {
-        if (Schema::hasColumn('surveys', 'publish_rejection_reason')) {
-            return;
-        }
-
-        if (Schema::hasColumn('surveys', 'publish_requested_by_admin_user_id')) {
-            Schema::table('surveys', function (Blueprint $table) {
-                $table->text('publish_rejection_reason')->nullable()->after('publish_requested_by_admin_user_id');
-            });
-
+        if ($this->surveyHasColumn('publish_rejection_reason')) {
             return;
         }
 
         Schema::table('surveys', function (Blueprint $table) {
-            $table->text('publish_rejection_reason')->nullable();
+            $column = $table->text('publish_rejection_reason')->nullable();
+
+            if ($this->surveyHasColumn('publish_requested_by_admin_user_id')) {
+                $column->after('publish_requested_by_admin_user_id');
+            }
         });
     }
 
     public function down(): void
     {
-        if (! Schema::hasColumn('surveys', 'publish_rejection_reason')) {
+        if (! $this->surveyHasColumn('publish_rejection_reason')) {
             return;
         }
 
