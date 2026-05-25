@@ -633,6 +633,16 @@
                             </select>
                         </div>
                     </div>
+                    <div class="audience-target" data-audience-target="company">
+                        <div class="sms-field">
+                            <label>شرکت‌ها</label>
+                            <select name="audience_company_ids[]" multiple size="5">
+                                @foreach ($companies as $company)
+                                    <option value="{{ $company->id }}">{{ $company->name }} ({{ $company->type_label }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
                     <div class="audience-target" data-audience-target="personnel">
                         <div class="sms-field">
                             <label>افراد مشخص</label>

@@ -93,6 +93,7 @@ final class SmsRecipientResolver
             'unit_ids' => $payload['audience_unit_ids'] ?? [],
             'genders' => $payload['audience_genders'] ?? [],
             'position_ids' => $payload['audience_position_ids'] ?? [],
+            'company_ids' => $payload['audience_company_ids'] ?? [],
             'personnel_ids' => $payload['audience_personnel_ids'] ?? [],
         ]);
 

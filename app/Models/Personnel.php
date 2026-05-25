@@ -25,6 +25,7 @@ class Personnel extends Model
         'mobile',
         'position_id',
         'unit_id',
+        'company_id',
         'gender',
         'national_code',
         'birth_date',
@@ -42,5 +43,10 @@ class Personnel extends Model
     public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class);
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
     }
 }

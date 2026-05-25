@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
+use App\Models\Company;
 use App\Models\Personnel;
 use App\Models\Position;
 use App\Models\Survey;
@@ -71,6 +72,33 @@ class ReportsController extends Controller
                 ->orderByDesc('response_count')
                 ->limit(12)
                 ->get();
+        }
+
+        // پاسخ‌ها به تفکیک شرکت (فعال‌ترین شرکت‌ها)
+        $companyActivity = collect();
+        if ($surveyIds->isNotEmpty()) {
+            $typeLabels = Company::typeLabels();
+            $companyActivity = SurveyResponse::query()
+                ->whereIn('survey_responses.survey_id', $surveyIds)
+                ->where('survey_responses.status', 'submitted')
+                ->join('personnel', 'personnel.id', '=', 'survey_responses.personnel_id')
+                ->join('companies', 'companies.id', '=', 'personnel.company_id')
+                ->whereNotNull('personnel.company_id')
+                ->select(
+                    'companies.id',
+                    'companies.name',
+                    'companies.type',
+                    DB::raw('count(survey_responses.id) as response_count')
+                )
+                ->groupBy('companies.id', 'companies.name', 'companies.type')
+                ->orderByDesc('response_count')
+                ->limit(12)
+                ->get()
+                ->map(function ($row) use ($typeLabels) {
+                    $row->display_name = $row->name.' ('.($typeLabels[$row->type] ?? $row->type).')';
+
+                    return $row;
+                });
         }
 
         // روند ۳۰ روز اخیر (ثبت پاسخ نهایی)
@@ -177,6 +205,7 @@ class ReportsController extends Controller
             'avgResponsesPerSurvey' => $avgResponsesPerSurvey,
             'completionRate' => $completionRate,
             'unitActivity' => $unitActivity,
+            'companyActivity' => $companyActivity,
             'trendLabels' => $trendLabels,
             'trendData' => $trendData,
             'monthlyLabels' => $monthlyLabels,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\Personnel;
 use App\Models\Position;
 use App\Models\SmsCampaign;
@@ -91,6 +92,7 @@ class SmsManagementController extends Controller
             'personnelOptions' => $personnelOptions,
             'units' => Unit::query()->orderBy('name')->get(['id', 'name']),
             'positions' => Position::query()->orderBy('name')->get(['id', 'name']),
+            'companies' => Company::query()->orderBy('name')->get(['id', 'name', 'type']),
             'genderOptions' => Personnel::GENDERS,
             'targetingModes' => SmsTargetingMode::labels(),
             'targetingIcons' => SmsTargetingMode::icons(),
@@ -98,6 +100,7 @@ class SmsManagementController extends Controller
                 'unit' => 'واحد سازمانی',
                 'gender' => 'جنسیت',
                 'position' => 'سمت',
+                'company' => 'شرکت',
                 'personnel' => 'افراد مشخص',
             ],
             'activeProvider' => $activeProvider,
@@ -278,13 +281,15 @@ class SmsManagementController extends Controller
             'targeting_mode' => ['required', 'string', Rule::in(SmsTargetingMode::all())],
             'message' => ['required', 'string', 'min:10', 'max:900'],
             'audience_modes' => ['nullable', 'array'],
-            'audience_modes.*' => [Rule::in(['unit', 'gender', 'position', 'personnel'])],
+            'audience_modes.*' => [Rule::in(['unit', 'gender', 'position', 'company', 'personnel'])],
             'audience_unit_ids' => ['nullable', 'array'],
             'audience_unit_ids.*' => ['integer', 'exists:units,id'],
             'audience_genders' => ['nullable', 'array'],
             'audience_genders.*' => [Rule::in(array_keys(Personnel::GENDERS))],
             'audience_position_ids' => ['nullable', 'array'],
             'audience_position_ids.*' => ['integer', 'exists:positions,id'],
+            'audience_company_ids' => ['nullable', 'array'],
+            'audience_company_ids.*' => ['integer', 'exists:companies,id'],
             'audience_personnel_ids' => ['nullable', 'array'],
             'audience_personnel_ids.*' => ['integer', 'exists:personnel,id'],
             'personnel_ids' => ['nullable', 'array'],

@@ -332,6 +332,17 @@
                         @endif
                     </div>
                     <div class="report-chart-box">
+                        <h4>فعال‌ترین شرکت‌ها (بر اساس پاسخ ثبت‌شده)</h4>
+                        <p class="sub">سهم شرکت‌های پرسنل پاسخ‌دهنده از پاسخ‌های نهایی — تا ۱۲ شرکت برتر</p>
+                        @if ($companyActivity->isEmpty())
+                            <p class="chart-empty">هنوز پاسخ ثبت‌شده‌ای با شرکت مشخص برای این نمودار وجود ندارد.</p>
+                        @else
+                            <div class="chart-canvas-wrap tall" dir="ltr">
+                                <canvas id="chartCompanies" aria-label="نمودار شرکت‌ها"></canvas>
+                            </div>
+                        @endif
+                    </div>
+                    <div class="report-chart-box">
                         <h4>روند پاسخ در ۳۰ روز اخیر</h4>
                         <p class="sub">تعداد پاسخ‌های ثبت‌نهایی به تفکیک روز</p>
                         <div class="chart-canvas-wrap" dir="ltr">
@@ -405,6 +416,8 @@
                 var monthlyData = @json($monthlyData);
                 var unitNames = @json($unitActivity->pluck('name'));
                 var unitCounts = @json($unitActivity->pluck('response_count'));
+                var companyNames = @json($companyActivity->pluck('display_name'));
+                var companyCounts = @json($companyActivity->pluck('response_count'));
                 var onFlag = {{ (int) $surveysActiveFlagOn }};
                 var offFlag = {{ (int) $surveysActiveFlagOff }};
                 var withLink = {{ (int) $withPublicLink }};
@@ -462,6 +475,35 @@
                                     data: unitCounts,
                                     backgroundColor: 'rgba(214,17,25,0.75)',
                                     borderColor: 'rgba(214,17,25,0.95)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                indexAxis: 'y',
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: { rtl: true }
+                                },
+                                scales: {
+                                    x: { beginAtZero: true, ticks: { precision: 0 } },
+                                    y: { ticks: { font: { size: 11 } } }
+                                }
+                            }
+                        });
+                    }
+
+                    if (companyNames.length && document.getElementById('chartCompanies')) {
+                        new Chart(document.getElementById('chartCompanies').getContext('2d'), {
+                            type: 'bar',
+                            data: {
+                                labels: companyNames,
+                                datasets: [{
+                                    label: 'پاسخ ثبت‌شده',
+                                    data: companyCounts,
+                                    backgroundColor: C.teal || 'rgba(13,148,136,0.75)',
+                                    borderColor: 'rgba(13,148,136,0.95)',
                                     borderWidth: 1
                                 }]
                             },

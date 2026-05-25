@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\Personnel;
 use App\Models\Position;
 use App\Models\Unit;
@@ -25,10 +26,11 @@ class PersonnelController extends Controller
         $search = $request->query('search');
         $unitFilter = $request->query('unit');
         $positionFilter = $request->query('position');
+        $companyFilter = $request->query('company');
         $genderFilter = $request->query('gender');
 
         $personnel = Personnel::query()
-            ->with(['unit', 'position'])
+            ->with(['unit', 'position', 'company'])
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('first_name', 'like', "%{$search}%")
@@ -40,6 +42,7 @@ class PersonnelController extends Controller
             })
             ->when($unitFilter, fn ($query) => $query->where('unit_id', $unitFilter))
             ->when($positionFilter, fn ($query) => $query->where('position_id', $positionFilter))
+            ->when($companyFilter, fn ($query) => $query->where('company_id', $companyFilter))
             ->when($genderFilter, fn ($query) => $query->where('gender', $genderFilter))
             ->latest()
             ->paginate(10)
@@ -47,21 +50,24 @@ class PersonnelController extends Controller
                 'search' => $search,
                 'unit' => $unitFilter,
                 'position' => $positionFilter,
+                'company' => $companyFilter,
                 'gender' => $genderFilter,
             ]);
 
         $units = Unit::query()->orderBy('name')->get();
         $positions = Position::query()->orderBy('name')->get();
+        $companies = Company::query()->orderBy('name')->get();
         $genders = Personnel::GENDERS;
 
         $filters = [
             'search' => $search,
             'unit' => $unitFilter,
             'position' => $positionFilter,
+            'company' => $companyFilter,
             'gender' => $genderFilter,
         ];
 
-        return view('admin.personnel', compact('personnel', 'units', 'positions', 'genders', 'filters'));
+        return view('admin.personnel', compact('personnel', 'units', 'positions', 'companies', 'genders', 'filters'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -73,6 +79,7 @@ class PersonnelController extends Controller
             'mobile' => ['required', 'string', 'max:20'],
             'position_id' => ['required', 'exists:positions,id'],
             'unit_id' => ['required', 'exists:units,id'],
+            'company_id' => ['required', 'exists:companies,id'],
             'gender' => ['required', Rule::in(array_keys(Personnel::GENDERS))],
             'national_code' => ['required', 'string', 'max:32', 'unique:personnel,national_code'],
             'birth_date' => ['required', 'date'],
@@ -99,6 +106,7 @@ class PersonnelController extends Controller
             'mobile' => ['required', 'string', 'max:20'],
             'position_id' => ['required', 'exists:positions,id'],
             'unit_id' => ['required', 'exists:units,id'],
+            'company_id' => ['required', 'exists:companies,id'],
             'gender' => ['required', Rule::in(array_keys(Personnel::GENDERS))],
             'national_code' => [
                 'required',
@@ -128,8 +136,8 @@ class PersonnelController extends Controller
     public function downloadTemplate()
     {
         $rows = [
-            ['first_name', 'last_name', 'personnel_code', 'mobile', 'position_id', 'unit_id', 'gender', 'national_code', 'birth_date'],
-            ['Ali', 'Ahmadi', "'00123", '09120000000', 1, 2, 1, '1234567890', '1400/01/01'],
+            ['first_name', 'last_name', 'personnel_code', 'mobile', 'position_id', 'unit_id', 'company_id', 'gender', 'national_code', 'birth_date'],
+            ['Ali', 'Ahmadi', "'00123", '09120000000', 1, 2, 1, 1, '1234567890', '1400/01/01'],
         ];
 
         $filename = 'personnel-template.xlsx';
@@ -181,6 +189,7 @@ class PersonnelController extends Controller
             'mobile',
             'position_id',
             'unit_id',
+            'company_id',
             'gender',
             'national_code',
             'birth_date',
@@ -217,6 +226,7 @@ class PersonnelController extends Controller
                 'mobile' => ['required', 'string', 'max:20'],
                 'position_id' => ['required'],
                 'unit_id' => ['required'],
+                'company_id' => ['required'],
                 'gender' => ['required'],
                 'national_code' => ['required', 'string', 'max:32'],
                 'birth_date' => ['required'],
@@ -244,6 +254,14 @@ class PersonnelController extends Controller
                 continue;
             }
 
+            $companyId = $this->normalizeId($payload['company_id']);
+            $company = $companyId ? Company::find($companyId) : null;
+            if (!$company) {
+                $errors[] = "ردیف {$excelRow}: شرکت با شناسه «{$payload['company_id']}» یافت نشد.";
+                $skipped++;
+                continue;
+            }
+
             $gender = $this->normalizeGender($payload['gender']);
             if (!$gender) {
                 $errors[] = "ردیف {$excelRow}: مقدار جنسیت «{$payload['gender']}» معتبر نیست.";
@@ -266,6 +284,7 @@ class PersonnelController extends Controller
                 'mobile' => $payload['mobile'],
                 'position_id' => $position->id,
                 'unit_id' => $unit->id,
+                'company_id' => $company->id,
                 'gender' => $gender,
                 'national_code' => $payload['national_code'],
                 'birth_date' => $birthDate,
@@ -305,6 +324,9 @@ class PersonnelController extends Controller
         }
         if (Str::contains($value, 'position')) {
             return 'position_id';
+        }
+        if (Str::contains($value, 'company')) {
+            return 'company_id';
         }
 
         $value = str_replace(['(', ')'], '', $value);

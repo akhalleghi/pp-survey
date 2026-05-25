@@ -18,6 +18,8 @@ final class AdminPermissions
 
     public const ORG_SUPERVISORS = 'org.supervisors';
 
+    public const ORG_COMPANIES = 'org.companies';
+
     public const SETTINGS = 'settings';
 
     public const SURVEYS = 'surveys';
@@ -40,6 +42,7 @@ final class AdminPermissions
             self::ORG_POSITIONS => 'چارت سمت‌ها',
             self::ORG_PERSONNEL => 'پرسنل سازمان',
             self::ORG_SUPERVISORS => 'سرپرستان واحدها',
+            self::ORG_COMPANIES => 'شرکت‌ها',
             self::SETTINGS => 'تنظیمات سازمان',
             self::SURVEYS => 'نظرسنجی‌ها',
             self::REPORTS => 'گزارشات',
@@ -204,6 +207,13 @@ final class AdminPermissions
                         'href' => route('admin.unit-supervisors.index'),
                         'icon' => 'fa-user-shield',
                         'route' => 'admin.unit-supervisors.index',
+                    ],
+                    [
+                        'label' => 'شرکت‌ها',
+                        'permission' => self::ORG_COMPANIES,
+                        'href' => route('admin.companies.index'),
+                        'icon' => 'fa-briefcase',
+                        'route' => 'admin.companies.index',
                     ],
                 ],
             ],

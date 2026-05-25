@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Admin\Concerns\AuthorizesSurveyAccess;
 use App\Models\AdminUser;
+use App\Models\Company;
 use App\Models\Personnel;
 use App\Models\Position;
 use App\Models\Survey;
@@ -152,6 +153,7 @@ class SurveyController extends Controller
             'unit' => 'براساس واحد',
             'gender' => 'براساس جنسیت',
             'position' => 'براساس سمت',
+            'company' => 'براساس شرکت',
             'personnel' => 'انتخابی توسط ادمین',
         ];
         $survey->load('creator');
@@ -196,6 +198,7 @@ class SurveyController extends Controller
         }
         $units = $unitsQuery->get(['id', 'name']);
         $positions = Position::query()->orderBy('name')->get(['id', 'name']);
+        $companies = Company::query()->orderBy('name')->get(['id', 'name', 'type']);
         $personnelOptions = Personnel::query()
             ->orderBy('first_name')
             ->orderBy('last_name')
@@ -219,6 +222,7 @@ class SurveyController extends Controller
                 'backgroundImages',
                 'units',
                 'positions',
+                'companies',
                 'personnelOptions',
                 'audienceConfig',
                 'publicThemeForForm',
@@ -344,7 +348,7 @@ class SurveyController extends Controller
             'is_anonymous' => ['nullable', 'boolean'],
             'require_auth' => ['nullable', 'boolean'],
             'audience_modes' => ['nullable', 'array'],
-            'audience_modes.*' => ['string', Rule::in(['unit', 'gender', 'position', 'personnel'])],
+            'audience_modes.*' => ['string', Rule::in(['unit', 'gender', 'position', 'company', 'personnel'])],
             'access_identity_mode' => ['required', Rule::in(['none', 'personnel_code', 'national_code', 'either'])],
             'audience_unit_ids' => ['nullable', 'array'],
             'audience_unit_ids.*' => ['integer', 'exists:units,id'],
@@ -352,6 +356,8 @@ class SurveyController extends Controller
             'audience_genders.*' => ['string', Rule::in(['male', 'female', 'other'])],
             'audience_position_ids' => ['nullable', 'array'],
             'audience_position_ids.*' => ['integer', 'exists:positions,id'],
+            'audience_company_ids' => ['nullable', 'array'],
+            'audience_company_ids.*' => ['integer', 'exists:companies,id'],
             'audience_personnel_ids' => ['nullable', 'array'],
             'audience_personnel_ids.*' => ['integer', 'exists:personnel,id'],
             'thank_you_message' => ['nullable', 'string', 'max:255'],
@@ -378,6 +384,7 @@ class SurveyController extends Controller
             'unit_ids' => in_array('unit', $selectedModes, true) ? array_values(array_unique(array_map('intval', $validated['audience_unit_ids'] ?? []))) : [],
             'genders' => in_array('gender', $selectedModes, true) ? array_values(array_unique($validated['audience_genders'] ?? [])) : [],
             'position_ids' => in_array('position', $selectedModes, true) ? array_values(array_unique(array_map('intval', $validated['audience_position_ids'] ?? []))) : [],
+            'company_ids' => in_array('company', $selectedModes, true) ? array_values(array_unique(array_map('intval', $validated['audience_company_ids'] ?? []))) : [],
             'personnel_ids' => in_array('personnel', $selectedModes, true) ? array_values(array_unique(array_map('intval', $validated['audience_personnel_ids'] ?? []))) : [],
         ];
 

@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\SmsManagementController;
 use App\Http\Controllers\Admin\SmsPanelSettingsController;
 use App\Http\Controllers\Admin\SurveyController;
 use App\Http\Controllers\Admin\SurveyQuestionController;
+use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\UnitController;
 use App\Http\Controllers\Admin\UnitSupervisorController;
 use App\Http\Controllers\PublicSurveyController;
@@ -73,6 +74,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::middleware('admin.permission:org.supervisors')->group(function () {
             Route::resource('unit-supervisors', UnitSupervisorController::class)->only(['index', 'store', 'update', 'destroy']);
+        });
+
+        Route::middleware('admin.permission:org.companies')->group(function () {
+            Route::resource('companies', CompanyController::class)->only(['index', 'store', 'update', 'destroy']);
         });
 
         Route::middleware('admin.permission:settings')->group(function () {

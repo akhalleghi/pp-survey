@@ -125,6 +125,16 @@
                 <a href="{{ route('admin.positions.index') }}" class="primary-link">مدیریت سمت‌ها</a>
             </div>
         @endif
+        @if (!$admin || $admin->hasPermission(\App\Support\AdminPermissions::ORG_COMPANIES))
+            <div class="panel">
+                <h3>
+                    <i class="fa-solid fa-building" aria-hidden="true"></i>
+                    شرکت‌ها
+                </h3>
+                <p>شرکت‌های پیمانکار و کارفرما را تعریف و مدیریت کنید.</p>
+                <a href="{{ route('admin.companies.index') }}" class="primary-link">مدیریت شرکت‌ها</a>
+            </div>
+        @endif
         @if (!$admin || $admin->hasPermission(\App\Support\AdminPermissions::SURVEYS))
             <div class="panel">
                 <h3>

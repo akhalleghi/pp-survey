@@ -9,6 +9,7 @@
         $selectedModes = old('audience_modes', $audienceConfig['modes'] ?? []);
         $selectedUnits = old('audience_unit_ids', $audienceConfig['unit_ids'] ?? []);
         $selectedPositions = old('audience_position_ids', $audienceConfig['position_ids'] ?? []);
+        $selectedCompanies = old('audience_company_ids', $audienceConfig['company_ids'] ?? []);
         $selectedGenders = old('audience_genders', $audienceConfig['genders'] ?? []);
         $selectedPersonnel = old('audience_personnel_ids', $audienceConfig['personnel_ids'] ?? []);
         $selectedIdentityMode = old('access_identity_mode', $audienceConfig['identity_mode'] ?? 'none');
@@ -841,6 +842,19 @@
                                 </option>
                             @endforeach
                         </select>
+                    </label>
+                </div>
+                <div class="audience-target" data-audience-target="company">
+                    <label class="ss-field">
+                        <span>شرکت‌های مجاز</span>
+                        <select name="audience_company_ids[]" multiple size="6">
+                            @foreach ($companies as $company)
+                                <option value="{{ $company->id }}" @selected(in_array((string) $company->id, array_map('strval', $selectedCompanies), true))>
+                                    {{ $company->name }} ({{ $company->type_label }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <span class="hint">فقط پرسنل شرکت‌های انتخاب‌شده مجاز خواهند بود.</span>
                     </label>
                 </div>
                 <div class="audience-target" data-audience-target="personnel">

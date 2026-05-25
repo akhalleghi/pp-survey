@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Company;
 use App\Models\Personnel;
 use App\Models\Position;
 use App\Models\Unit;
@@ -16,6 +17,7 @@ final class SurveyAudience
      *     unit_ids: list<int>,
      *     genders: list<string>,
      *     position_ids: list<int>,
+     *     company_ids: list<int>,
      *     personnel_ids: list<int>
      * }
      */
@@ -27,6 +29,7 @@ final class SurveyAudience
             'unit_ids' => [],
             'genders' => [],
             'position_ids' => [],
+            'company_ids' => [],
             'personnel_ids' => [],
         ];
 
@@ -47,11 +50,12 @@ final class SurveyAudience
             static fn ($gender) => in_array($gender, ['male', 'female', 'other'], true)
         ));
         $positionIds = array_values(array_map('intval', (array) ($value['position_ids'] ?? [])));
+        $companyIds = array_values(array_map('intval', (array) ($value['company_ids'] ?? [])));
         $personnelIds = array_values(array_map('intval', (array) ($value['personnel_ids'] ?? [])));
 
         $modes = array_values(array_filter(
             (array) ($value['modes'] ?? []),
-            static fn ($mode) => in_array($mode, ['unit', 'gender', 'position', 'personnel'], true)
+            static fn ($mode) => in_array($mode, ['unit', 'gender', 'position', 'company', 'personnel'], true)
         ));
 
         if ($modes === []) {
@@ -63,6 +67,9 @@ final class SurveyAudience
             }
             if ($positionIds !== []) {
                 $modes[] = 'position';
+            }
+            if ($companyIds !== []) {
+                $modes[] = 'company';
             }
             if ($personnelIds !== []) {
                 $modes[] = 'personnel';
@@ -77,6 +84,7 @@ final class SurveyAudience
             'unit_ids' => $unitIds,
             'genders' => $genders,
             'position_ids' => $positionIds,
+            'company_ids' => $companyIds,
             'personnel_ids' => $personnelIds,
         ];
     }
@@ -130,6 +138,15 @@ final class SurveyAudience
             );
         }
 
+        if (in_array('company', $modes, true)) {
+            $companyIds = $config['company_ids'] ?? [];
+            $query->when(
+                $companyIds !== [],
+                fn (Builder $q) => $q->whereIn('company_id', $companyIds),
+                fn (Builder $q) => $q->whereRaw('0 = 1')
+            );
+        }
+
         if (in_array('personnel', $modes, true)) {
             $personnelIds = $config['personnel_ids'] ?? [];
             $query->when(
@@ -164,6 +181,10 @@ final class SurveyAudience
             return false;
         }
 
+        if (in_array('company', $modes, true) && ! in_array((int) $personnel->company_id, $config['company_ids'] ?? [], true)) {
+            return false;
+        }
+
         if (in_array('personnel', $modes, true) && ! in_array((int) $personnel->id, $config['personnel_ids'] ?? [], true)) {
             return false;
         }
@@ -183,6 +204,7 @@ final class SurveyAudience
             'unit_ids' => $input['unit_ids'] ?? [],
             'genders' => $input['genders'] ?? [],
             'position_ids' => $input['position_ids'] ?? [],
+            'company_ids' => $input['company_ids'] ?? [],
             'personnel_ids' => $input['personnel_ids'] ?? [],
         ]);
     }
@@ -218,6 +240,12 @@ final class SurveyAudience
         if (in_array('position', $config['modes'], true)) {
             $names = Position::query()->whereIn('id', $config['position_ids'])->orderBy('name')->pluck('name');
             $parts[] = 'سمت: '.($names->isNotEmpty() ? $names->implode('، ') : '—');
+        }
+
+        if (in_array('company', $config['modes'], true)) {
+            $companies = Company::query()->whereIn('id', $config['company_ids'])->orderBy('name')->get(['name', 'type']);
+            $labels = $companies->map(static fn (Company $c) => $c->name.' ('.$c->type_label.')');
+            $parts[] = 'شرکت: '.($labels->isNotEmpty() ? $labels->implode('، ') : '—');
         }
 
         if (in_array('personnel', $config['modes'], true)) {

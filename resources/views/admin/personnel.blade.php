@@ -13,12 +13,14 @@
         'search' => request('search'),
         'unit' => request('unit'),
         'position' => request('position'),
+        'company' => request('company'),
         'gender' => request('gender'),
     ];
 @endphp
 
 @section('content')
     <link rel="stylesheet" href="{{ asset('vendor/persian-datepicker-behzadi/persianDatepicker-default.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/select2/select2.min.css') }}">
     <style>
         .personnel-wrapper {
             display: flex;
@@ -254,10 +256,12 @@
             background: rgba(15, 23, 42, 0.55);
             backdrop-filter: blur(4px);
             display: none;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
             z-index: 100;
-            padding: 1rem;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: max(0.5rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.65rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
         }
         .modal.open {
             display: flex;
@@ -272,6 +276,46 @@
             display: flex;
             flex-direction: column;
             gap: 1.25rem;
+            margin: auto;
+            flex-shrink: 0;
+        }
+        .modal-dialog.personnel-modal-shell {
+            width: min(640px, 100%);
+            max-height: min(88vh, 52rem);
+            max-height: min(88dvh, 52rem);
+            padding: 0;
+            gap: 0;
+            overflow: hidden;
+            min-height: 0;
+        }
+        .personnel-modal-form {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+            gap: 0;
+        }
+        .personnel-modal-shell .modal-header {
+            flex: 0 0 auto;
+            padding: 1.15rem 1.4rem 0.85rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+        }
+        .personnel-modal-shell .modal-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            padding: 1rem 1.4rem 1.15rem;
+        }
+        .personnel-modal-shell .modal-actions {
+            flex: 0 0 auto;
+            margin-top: 0;
+            padding: 0.85rem 1.4rem max(1.15rem, env(safe-area-inset-bottom));
+            border-top: 1px solid rgba(15, 23, 42, 0.08);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, #fff 35%);
+            box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.05);
         }
         .modal-header {
             display: flex;
@@ -305,6 +349,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.45rem;
+            min-width: 0;
         }
         .modal-body label {
             font-weight: 600;
@@ -340,6 +385,25 @@
             display: flex;
             gap: 0.75rem;
             flex-wrap: wrap;
+        }
+        .select2-container--default .select2-selection--single {
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.15);
+            height: 48px;
+            display: flex;
+            align-items: center;
+            font-family: var(--app-font-family);
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: var(--slate);
+            line-height: 48px;
+            padding-right: 1rem;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            top: 10px;
+        }
+        .select2-container {
+            width: 100% !important;
         }
         .download-template {
             border: none;
@@ -377,6 +441,20 @@
             }
             .personnel-card-grid {
                 display: grid;
+            }
+        }
+        @media (min-width: 769px) {
+            .modal {
+                align-items: center;
+            }
+        }
+        @media (max-width: 768px) {
+            .personnel-modal-shell {
+                max-height: min(92dvh, 100%);
+                border-radius: 22px;
+            }
+            .personnel-modal-shell .modal-body {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -433,6 +511,14 @@
                     </option>
                 @endforeach
             </select>
+            <select name="company" class="filter-control">
+                <option value="">همه شرکت‌ها</option>
+                @foreach ($companies as $company)
+                    <option value="{{ $company->id }}" {{ (string) ($filters['company'] ?? '') === (string) $company->id ? 'selected' : '' }}>
+                        {{ $company->name }}
+                    </option>
+                @endforeach
+            </select>
             <select name="gender" class="filter-control">
                 <option value="">همه جنسیت ها</option>
                 @foreach ($genders as $key => $label)
@@ -448,18 +534,18 @@
         </form>
     </div>
     <div class="modal {{ $shouldOpenBulkModal ? 'open' : '' }}" id="bulkImportModal" data-open="{{ $shouldOpenBulkModal ? 'true' : 'false' }}">
-        <div class="modal-dialog">
+        <div class="modal-dialog personnel-modal-shell">
             <div class="modal-header">
                 <h3>بارگذاری یکجا پرسنل</h3>
                 <button type="button" class="modal-close" data-modal-close>&times;</button>
             </div>
-            <form method="POST" action="{{ route('admin.personnel.bulk-import') }}" enctype="multipart/form-data">
+            <form class="personnel-modal-form" method="POST" action="{{ route('admin.personnel.bulk-import') }}" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="form" value="bulk">
                 <div class="modal-body">
                     <div class="field" style="grid-column: 1 / -1;">
                         <div class="bulk-hint">
-                            فایل اکسل باید دارای ستون‌های <strong>first_name, last_name, personnel_code, mobile, position_id, unit_id, gender, national_code, birth_date</strong> باشد.
+                            فایل اکسل باید دارای ستون‌های <strong>first_name, last_name, personnel_code, mobile, position_id, unit_id, company_id, gender, national_code, birth_date</strong> باشد.
                             برای ستون‌های شناسه (سمت، واحد و جنسیت) مقدار عددی همان شناسه ثبت‌شده در سیستم را وارد کنید. تاریخ تولد را می‌توانید به میلادی (YYYY-MM-DD) یا شمسی (YYYY/MM/DD) بنویسید.
                         </div>
                     </div>
@@ -473,7 +559,7 @@
                     <div class="field">
                         <label>راهنمای سریع</label>
                         <ul style="margin:0; padding-right: 1rem; color: var(--muted); line-height: 1.8;">
-                            <li>در ستون‌های position_id و unit_id شناسه عددی سمت و واحد را درج کنید (مثلاً 1 برای مدیرعامل).</li>
+                            <li>در ستون‌های position_id، unit_id و company_id شناسه عددی سمت، واحد و شرکت را درج کنید.</li>
                             <li>در ستون gender از اعداد 1 (مرد)، 2 (زن) یا 3 (سایر) استفاده کنید.</li>
                             <li>برای جلوگیری از حذف صفرهای ابتدای کد پرسنلی، ستون personnel_code را روی حالت «متن» تنظیم کنید یا مقدار را با '00123 وارد نمایید.</li>
                             <li>پیش از بارگذاری، از فایل نمونه برای مشاهده ساختار صحیح استفاده کنید.</li>
@@ -501,6 +587,7 @@
                             <th>شماره موبایل</th>
                             <th>سمت</th>
                             <th>واحد</th>
+                            <th>شرکت</th>
                             <th>جنسیت</th>
                             <th>کد ملی</th>
                             <th>تاریخ تولد</th>
@@ -517,6 +604,7 @@
                                 <td>{{ $member->mobile }}</td>
                                 <td>{{ $member->position?->name ?? '—' }}</td>
                                 <td>{{ $member->unit?->name ?? '—' }}</td>
+                                <td>{{ $member->company?->name ?? '—' }}</td>
                                 <td>{{ $genders[$member->gender] ?? $member->gender }}</td>
                                 <td>{{ $member->national_code }}</td>
                                 <td>{{ jalali_date($member->birth_date) }}</td>
@@ -530,6 +618,7 @@
                                             data-mobile="{{ e($member->mobile) }}"
                                             data-position-id="{{ $member->position_id }}"
                                             data-unit-id="{{ $member->unit_id }}"
+                                            data-company-id="{{ $member->company_id }}"
                                             data-gender="{{ $member->gender }}"
                                             data-national-code="{{ e($member->national_code) }}"
                                             data-birth-date="{{ optional($member->birth_date)->format('Y-m-d') }}"
@@ -576,6 +665,10 @@
                                 <strong>{{ $member->unit?->name ?? '—' }}</strong>
                             </div>
                             <div>
+                                <span>شرکت</span>
+                                <strong>{{ $member->company?->name ?? '—' }}</strong>
+                            </div>
+                            <div>
                                 <span>جنسیت</span>
                                 <strong>{{ $genders[$member->gender] ?? $member->gender }}</strong>
                             </div>
@@ -596,6 +689,7 @@
                                         data-mobile="{{ e($member->mobile) }}"
                                         data-position-id="{{ $member->position_id }}"
                                         data-unit-id="{{ $member->unit_id }}"
+                                        data-company-id="{{ $member->company_id }}"
                                         data-gender="{{ $member->gender }}"
                                         data-national-code="{{ e($member->national_code) }}"
                                         data-birth-date="{{ optional($member->birth_date)->format('Y-m-d') }}"
@@ -622,12 +716,12 @@
     </div>
 
     <div class="modal {{ $shouldOpenCreateModal ? 'open' : '' }}" id="createPersonnelModal" data-open="{{ $shouldOpenCreateModal ? 'true' : 'false' }}">
-        <div class="modal-dialog">
+        <div class="modal-dialog personnel-modal-shell">
             <div class="modal-header">
                 <h3>افزودن پرسنل جدید</h3>
                 <button type="button" class="modal-close" data-modal-close>&times;</button>
             </div>
-            <form method="POST" action="{{ route('admin.personnel.store') }}">
+            <form class="personnel-modal-form" method="POST" action="{{ route('admin.personnel.store') }}">
                 @csrf
                 <input type="hidden" name="form" value="create">
                 <div class="modal-body">
@@ -690,7 +784,7 @@
                     </div>
                     <div class="field">
                         <label for="create-unit">واحد</label>
-                        <select id="create-unit" name="unit_id">
+                        <select id="create-unit" name="unit_id" class="personnel-select2" data-placeholder="انتخاب واحد" data-no-results="واحدی یافت نشد">
                             <option value="">انتخاب واحد</option>
                             @foreach ($units as $unit)
                                 <option value="{{ $unit->id }}" {{ ($shouldOpenCreateModal && (string) old('unit_id') === (string) $unit->id) ? 'selected' : '' }}>
@@ -700,6 +794,20 @@
                         </select>
                         @if ($errors->createPersonnel->has('unit_id'))
                             <span class="error-text">{{ $errors->createPersonnel->first('unit_id') }}</span>
+                        @endif
+                    </div>
+                    <div class="field">
+                        <label for="create-company">شرکت</label>
+                        <select id="create-company" name="company_id" class="personnel-select2" data-placeholder="انتخاب شرکت" data-no-results="شرکتی یافت نشد">
+                            <option value="">انتخاب شرکت</option>
+                            @foreach ($companies as $company)
+                                <option value="{{ $company->id }}" {{ ($shouldOpenCreateModal && (string) old('company_id') === (string) $company->id) ? 'selected' : '' }}>
+                                    {{ $company->name }} ({{ $company->type_label }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @if ($errors->createPersonnel->has('company_id'))
+                            <span class="error-text">{{ $errors->createPersonnel->first('company_id') }}</span>
                         @endif
                     </div>
                     <div class="field">
@@ -724,12 +832,12 @@
     </div>
 
     <div class="modal {{ $shouldOpenEditModal ? 'open' : '' }}" id="editPersonnelModal" data-open="{{ $shouldOpenEditModal ? 'true' : 'false' }}" data-old-edit-id="{{ $shouldOpenEditModal ? $editingPersonnelId : '' }}">
-        <div class="modal-dialog">
+        <div class="modal-dialog personnel-modal-shell">
             <div class="modal-header">
                 <h3>ویرایش اطلاعات پرسنل</h3>
                 <button type="button" class="modal-close" data-modal-close>&times;</button>
             </div>
-            <form method="POST" action="#">
+            <form class="personnel-modal-form" method="POST" action="#">
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="form" value="update">
@@ -794,7 +902,7 @@
                     </div>
                     <div class="field">
                         <label for="edit-unit">واحد</label>
-                        <select id="edit-unit" name="unit_id">
+                        <select id="edit-unit" name="unit_id" class="personnel-select2" data-placeholder="انتخاب واحد" data-no-results="واحدی یافت نشد">
                             <option value="">انتخاب واحد</option>
                             @foreach ($units as $unit)
                                 <option value="{{ $unit->id }}" {{ ($shouldOpenEditModal && (string) old('unit_id') === (string) $unit->id) ? 'selected' : '' }}>
@@ -804,6 +912,20 @@
                         </select>
                         @if ($errors->updatePersonnel->has('unit_id'))
                             <span class="error-text">{{ $errors->updatePersonnel->first('unit_id') }}</span>
+                        @endif
+                    </div>
+                    <div class="field">
+                        <label for="edit-company">شرکت</label>
+                        <select id="edit-company" name="company_id" class="personnel-select2" data-placeholder="انتخاب شرکت" data-no-results="شرکتی یافت نشد">
+                            <option value="">انتخاب شرکت</option>
+                            @foreach ($companies as $company)
+                                <option value="{{ $company->id }}" {{ ($shouldOpenEditModal && (string) old('company_id') === (string) $company->id) ? 'selected' : '' }}>
+                                    {{ $company->name }} ({{ $company->type_label }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @if ($errors->updatePersonnel->has('company_id'))
+                            <span class="error-text">{{ $errors->updatePersonnel->first('company_id') }}</span>
                         @endif
                     </div>
                     <div class="field">
@@ -828,8 +950,48 @@
     </div>
 
     <script src="{{ asset('vendor/persian-datepicker-behzadi/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ asset('vendor/select2/select2.min.js') }}"></script>
     <script src="{{ asset('vendor/persian-datepicker-behzadi/persianDatepicker.min.js') }}"></script>
     <script>
+        const syncPersonnelSelect2 = (selectEl, value) => {
+            if (!selectEl) {
+                return;
+            }
+            selectEl.value = value || '';
+            if (window.jQuery) {
+                jQuery(selectEl).trigger('change.select2');
+            }
+        };
+
+        const initPersonnelSelect2 = () => {
+            if (!window.jQuery || !window.jQuery.fn || typeof window.jQuery.fn.select2 !== 'function') {
+                return;
+            }
+            jQuery('.personnel-select2').each(function () {
+                const $select = jQuery(this);
+                if ($select.data('select2-initialized')) {
+                    return;
+                }
+                const parentModal = $select.closest('.modal');
+                const placeholder = $select.data('placeholder') || 'انتخاب کنید';
+                const noResults = $select.data('noResults') || 'نتیجه‌ای یافت نشد';
+                $select.select2({
+                    width: '100%',
+                    dir: 'rtl',
+                    placeholder,
+                    allowClear: true,
+                    dropdownParent: parentModal.length ? parentModal : undefined,
+                    language: {
+                        noResults: () => noResults,
+                    },
+                });
+                const $container = $select.next('.select2-container');
+                $container.attr('data-keep-latin-numbers', '');
+                jQuery(document.body).find('.select2-dropdown').attr('data-keep-latin-numbers', '');
+                $select.data('select2-initialized', true);
+            });
+        };
+
         const gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         const jDaysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
         const pad2 = (num) => String(num).padStart(2, '0');
@@ -947,6 +1109,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             initPersianDatepickerInputs();
+            initPersonnelSelect2();
             const body = document.body;
             const createModal = document.getElementById('createPersonnelModal');
             const editModal = document.getElementById('editPersonnelModal');
@@ -996,6 +1159,7 @@
                 birth_date: document.getElementById('edit-birth-date'),
                 position_id: document.getElementById('edit-position'),
                 unit_id: document.getElementById('edit-unit'),
+                company_id: document.getElementById('edit-company'),
                 gender: document.getElementById('edit-gender'),
                 personnel_id: editModal?.querySelector('input[name="personnel_id"]'),
             };
@@ -1016,7 +1180,8 @@
                     editFields.birth_date.dispatchEvent(new Event('syncJalaliDisplay'));
                 }
                 if (editFields.position_id) editFields.position_id.value = data.positionId || '';
-                if (editFields.unit_id) editFields.unit_id.value = data.unitId || '';
+                syncPersonnelSelect2(editFields.unit_id, data.unitId);
+                syncPersonnelSelect2(editFields.company_id, data.companyId);
                 if (editFields.gender) editFields.gender.value = data.gender || '';
             };
 
@@ -1033,6 +1198,7 @@
                         birthDate: btn.dataset.birthDate,
                         positionId: btn.dataset.positionId,
                         unitId: btn.dataset.unitId,
+                        companyId: btn.dataset.companyId,
                         gender: btn.dataset.gender,
                     });
                     openModal(editModal);
