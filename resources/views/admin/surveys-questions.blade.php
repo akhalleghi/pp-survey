@@ -10,21 +10,65 @@
             --panel: #fff;
             --border: rgba(15, 23, 42, 0.08);
         }
+        .content:has(.designer-wrap) {
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 1.25rem;
+        }
         .designer-wrap {
+            --designer-panel-h: calc(100dvh - 10.5rem);
             display: grid;
             grid-template-columns: minmax(0, 1fr) 320px;
             gap: 1.5rem;
-            align-items: start;
+            align-items: stretch;
+            flex: 1;
+            min-height: 0;
+            max-height: var(--designer-panel-h);
         }
         .designer-canvas {
             background: var(--panel);
             border: 1px solid var(--border);
             border-radius: 26px;
-            padding: 1.5rem;
-            min-height: 480px;
+            padding: 0;
+            min-height: 0;
+            max-height: var(--designer-panel-h);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .designer-canvas-head {
+            flex-shrink: 0;
+            padding: 1.5rem 1.5rem 0;
             display: flex;
             flex-direction: column;
             gap: 1rem;
+        }
+        .designer-canvas-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 0 1.5rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scrollbar-gutter: stable;
+        }
+        .designer-canvas-scroll::-webkit-scrollbar,
+        .designer-side-scroll::-webkit-scrollbar {
+            width: 7px;
+        }
+        .designer-canvas-scroll::-webkit-scrollbar-thumb,
+        .designer-side-scroll::-webkit-scrollbar-thumb {
+            background: rgba(15, 23, 42, 0.18);
+            border-radius: 999px;
+        }
+        .designer-canvas-scroll::-webkit-scrollbar-track,
+        .designer-side-scroll::-webkit-scrollbar-track {
+            background: transparent;
         }
         .survey-header {
             display: flex;
@@ -54,8 +98,45 @@
         .question-card header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             gap: 1rem;
+        }
+        .question-card-title-wrap {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            min-width: 0;
+            flex: 1;
+        }
+        .question-num {
+            flex-shrink: 0;
+            min-width: 2.15rem;
+            height: 2.15rem;
+            padding: 0 0.45rem;
+            border-radius: 12px;
+            background: rgba(214, 17, 25, 0.12);
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 0.88rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        .question-num--guide {
+            background: rgba(15, 23, 42, 0.07);
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+        .question-card-text {
+            min-width: 0;
+            flex: 1;
+        }
+        .question-card-text strong {
+            display: block;
+            line-height: 1.5;
+            word-break: break-word;
         }
         .question-meta {
             display: flex;
@@ -116,12 +197,27 @@
             background: var(--panel);
             border: 1px solid var(--border);
             border-radius: 22px;
-            padding: 1.25rem;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            max-height: var(--designer-panel-h);
+            overflow: hidden;
+        }
+        .designer-side-head {
+            flex-shrink: 0;
+            padding: 1.25rem 1.25rem 0.75rem;
+        }
+        .designer-side-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 0 1.25rem 1.25rem;
             display: flex;
             flex-direction: column;
             gap: 1rem;
-            position: sticky;
-            top: 1rem;
+            scrollbar-gutter: stable;
         }
         .type-grid {
             display: grid;
@@ -207,11 +303,22 @@
             cursor: pointer;
         }
         @media (max-width: 1024px) {
+            .content:has(.designer-wrap) {
+                overflow: visible;
+            }
             .designer-wrap {
                 grid-template-columns: 1fr;
+                max-height: none;
             }
+            .designer-canvas,
             .designer-side {
-                position: static;
+                max-height: none;
+            }
+            .designer-canvas-scroll {
+                max-height: min(58vh, 520px);
+            }
+            .designer-side-scroll {
+                max-height: min(72vh, 640px);
             }
             .type-grid {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -227,34 +334,55 @@
         }
     </style>
 
-    <div class="designer-wrap">
-        <section class="designer-canvas">
-            @include('admin.partials.survey-publish-rejection-notice', ['survey' => $survey])
+    @php
+        $toFaDigits = static fn (int|string $value): string => str_replace(
+            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+            ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'],
+            (string) $value
+        );
+    @endphp
 
-            @if (session('status'))
-                <div style="border:1px solid rgba(22,163,74,.28); background:rgba(22,163,74,.08); color:#166534; border-radius:14px; padding:.7rem .9rem; font-size:.9rem;">
-                    {{ session('status') }}
-                </div>
-            @endif
-            <div class="survey-header">
-                <div>
-                    <h2>طراحی سوالات: {{ $survey->title }}</h2>
-                    <div class="question-meta">
-                        <span>واحد: {{ $survey->unit?->name ?? 'نامشخص' }}</span>
-                        <span>وضعیت: {{ $survey->status }}</span>
+    <div class="designer-wrap">
+        <section class="designer-canvas" aria-label="فهرست سوالات">
+            <div class="designer-canvas-head">
+                @include('admin.partials.survey-publish-rejection-notice', ['survey' => $survey])
+
+                @if (session('status'))
+                    <div style="border:1px solid rgba(22,163,74,.28); background:rgba(22,163,74,.08); color:#166534; border-radius:14px; padding:.7rem .9rem; font-size:.9rem;">
+                        {{ session('status') }}
                     </div>
+                @endif
+                <div class="survey-header">
+                    <div>
+                        <h2>طراحی سوالات: {{ $survey->title }}</h2>
+                        <div class="question-meta">
+                            <span>واحد: {{ $survey->unit?->name ?? 'نامشخص' }}</span>
+                            <span>وضعیت: {{ $survey->status }}</span>
+                        </div>
+                    </div>
+                    <span class="badge">{{ $toFaDigits($survey->questions->count()) }} آیتم</span>
                 </div>
-                <span class="badge">{{ $survey->questions->count() }} سوال</span>
             </div>
 
+            <div class="designer-canvas-scroll">
             @forelse ($survey->questions as $question)
+                @php
+                    $isDisplayOnly = !empty($questionTypes[$question->type]['is_display_only']);
+                @endphp
                 <article class="question-card">
                     <header>
-                        <div>
-                            <strong>{{ $question->title }}</strong>
-                            <div class="question-meta">
-                                <span>نوع: {{ $questionTypes[$question->type]['label'] ?? $question->type }}</span>
-                                <span>{{ $question->is_required ? 'اجباری' : 'اختیاری' }}</span>
+                        <div class="question-card-title-wrap">
+                            <span class="question-num {{ $isDisplayOnly ? 'question-num--guide' : '' }}" aria-hidden="true">{{ $toFaDigits($loop->iteration) }}</span>
+                            <div class="question-card-text">
+                                <strong>{{ $question->title }}</strong>
+                                <div class="question-meta">
+                                    <span>نوع: {{ $questionTypes[$question->type]['label'] ?? $question->type }}</span>
+                                    @if ($isDisplayOnly)
+                                        <span>بدون پاسخ</span>
+                                    @else
+                                        <span>{{ $question->is_required ? 'اجباری' : 'اختیاری' }}</span>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                         <div class="question-actions">
@@ -342,16 +470,18 @@
                 </article>
             @empty
                 <div class="question-card" style="text-align:center;">
-                    هنوز سوالی ثبت نشده. از ستون سمت راست یک نوع سوال اضافه کنید.
+                    هنوز آیتمی ثبت نشده. از ستون کناری نوع سوال را انتخاب کنید و فرم را تکمیل کنید.
                 </div>
             @endforelse
+            </div>
         </section>
 
-        <aside class="designer-side">
-            <div>
+        <aside class="designer-side" aria-label="افزودن سوال جدید">
+            <div class="designer-side-head">
                 <strong>افزودن سوال جدید</strong>
-                <p class="question-meta">نوع سوال را انتخاب کنید و فرم را تکمیل کنید.</p>
+                <p class="question-meta" style="margin:.35rem 0 0;">نوع سوال را انتخاب کنید و فرم را تکمیل کنید.</p>
             </div>
+            <div class="designer-side-scroll">
             @if ($errors->any())
                 <div class="question-meta" style="color: #dc2626;">
                     لطفا خطاهای فرم را بررسی کنید.
@@ -360,7 +490,7 @@
 
             <div class="type-grid" id="questionTypeGrid">
                 @foreach ($questionTypes as $key => $type)
-                    <button type="button" class="type-btn" data-type="{{ $key }}" data-has-options="{{ $type['has_options'] ? '1' : '0' }}">
+                    <button type="button" class="type-btn" data-type="{{ $key }}" data-has-options="{{ $type['has_options'] ? '1' : '0' }}" data-is-display-only="{{ !empty($type['is_display_only']) ? '1' : '0' }}">
                         {{ $type['label'] }}
                     </button>
                 @endforeach
@@ -371,7 +501,7 @@
                 <input type="hidden" name="type" id="questionTypeInput" value="short_text">
 
                 <div class="form-field">
-                    <label for="questionTitle">عنوان سوال</label>
+                    <label for="questionTitle" id="questionTitleLabel">عنوان سوال</label>
                     <input id="questionTitle" name="title" type="text" placeholder="مثلاً میزان رضایت شما؟" required>
                     @error('title')
                         <small class="question-meta" style="color: #dc2626;">{{ $message }}</small>
@@ -379,12 +509,17 @@
                 </div>
 
                 <div class="form-field">
-                    <label for="questionDescription">توضیح کوتاه (اختیاری)</label>
+                    <label for="questionDescription" id="questionDescriptionLabel">توضیح کوتاه (اختیاری)</label>
                     <textarea id="questionDescription" name="description" rows="2" placeholder="راهنمایی برای پاسخ دهنده"></textarea>
+                    @error('description')
+                        <small class="question-meta" style="color: #dc2626;">{{ $message }}</small>
+                    @enderror
                 </div>
 
-                <label class="inline-toggle">
-                    <input type="checkbox" name="is_required" value="1">
+                <p class="question-meta" id="staticTextHint" style="display:none;">این آیتم فقط برای نمایش متن راهنماست و پاسخی از شرکت‌کننده دریافت نمی‌کند.</p>
+
+                <label class="inline-toggle" id="requiredToggleWrapper">
+                    <input type="checkbox" name="is_required" value="1" id="questionRequiredInput">
                     سوال اجباری باشد
                 </label>
 
@@ -461,6 +596,7 @@
 
                 <button type="submit" class="save-btn">ثبت سوال</button>
             </form>
+            </div>
         </aside>
     </div>
 
@@ -490,10 +626,20 @@
             const optionsWrapper = document.getElementById('optionsWrapper');
             const optionList = document.getElementById('optionList');
             const addOptionBtn = document.getElementById('addOptionBtn');
+            const settingsWrapper = document.getElementById('settingsWrapper');
+            const requiredToggleWrapper = document.getElementById('requiredToggleWrapper');
+            const requiredInput = document.getElementById('questionRequiredInput');
+            const titleLabel = document.getElementById('questionTitleLabel');
+            const titleInput = document.getElementById('questionTitle');
+            const descriptionLabel = document.getElementById('questionDescriptionLabel');
+            const descriptionInput = document.getElementById('questionDescription');
+            const staticTextHint = document.getElementById('staticTextHint');
 
             const settingsGroups = {
                 short_text: ['text'],
                 long_text: ['text'],
+                static_text_short: [],
+                static_text_long: [],
                 multiple_choice: ['choice'],
                 checkboxes: ['choice'],
                 dropdown: ['choice'],
@@ -508,7 +654,7 @@
                 file_upload: ['file']
             };
 
-            const setActiveType = (type, hasOptions) => {
+            const setActiveType = (type, hasOptions, isDisplayOnly) => {
                 typeInput.value = type;
                 typeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.type === type));
                 optionsWrapper.style.display = hasOptions ? 'block' : 'none';
@@ -517,6 +663,9 @@
                     input.required = hasOptions;
                 });
                 const activeGroups = settingsGroups[type] || [];
+                if (settingsWrapper) {
+                    settingsWrapper.style.display = isDisplayOnly ? 'none' : 'block';
+                }
                 document.querySelectorAll('[data-setting-group]').forEach((el) => {
                     el.style.display = activeGroups.includes(el.dataset.settingGroup) ? 'block' : 'none';
                     const input = el.querySelector('input');
@@ -524,15 +673,55 @@
                         input.disabled = !activeGroups.includes(el.dataset.settingGroup);
                     }
                 });
+                if (requiredToggleWrapper) {
+                    requiredToggleWrapper.style.display = isDisplayOnly ? 'none' : 'inline-flex';
+                }
+                if (requiredInput && isDisplayOnly) {
+                    requiredInput.checked = false;
+                }
+                if (staticTextHint) {
+                    staticTextHint.style.display = isDisplayOnly ? 'block' : 'none';
+                }
+                if (titleLabel && titleInput && descriptionLabel && descriptionInput) {
+                    if (type === 'static_text_short') {
+                        titleLabel.textContent = 'متن نمایشی (کوتاه)';
+                        titleInput.placeholder = 'مثلاً لطفاً قبل از ادامه، راهنما را بخوانید.';
+                        titleInput.required = true;
+                        descriptionLabel.textContent = 'زیرنویس (اختیاری)';
+                        descriptionInput.placeholder = 'توضیح تکمیلی کوتاه';
+                        descriptionInput.required = false;
+                        descriptionInput.rows = 2;
+                    } else if (type === 'static_text_long') {
+                        titleLabel.textContent = 'عنوان (اختیاری)';
+                        titleInput.placeholder = 'مثلاً راهنمای تکمیل فرم';
+                        titleInput.required = false;
+                        descriptionLabel.textContent = 'متن نمایشی (بلند)';
+                        descriptionInput.placeholder = 'متن توضیحات یا راهنمای کامل را اینجا بنویسید…';
+                        descriptionInput.required = true;
+                        descriptionInput.rows = 6;
+                    } else {
+                        titleLabel.textContent = 'عنوان سوال';
+                        titleInput.placeholder = 'مثلاً میزان رضایت شما؟';
+                        titleInput.required = true;
+                        descriptionLabel.textContent = 'توضیح کوتاه (اختیاری)';
+                        descriptionInput.placeholder = 'راهنمایی برای پاسخ دهنده';
+                        descriptionInput.required = false;
+                        descriptionInput.rows = 2;
+                    }
+                }
             };
 
             typeButtons.forEach((btn) => {
                 btn.addEventListener('click', () => {
-                    setActiveType(btn.dataset.type, btn.dataset.hasOptions === '1');
+                    setActiveType(
+                        btn.dataset.type,
+                        btn.dataset.hasOptions === '1',
+                        btn.dataset.isDisplayOnly === '1'
+                    );
                 });
             });
 
-            setActiveType('short_text', false);
+            setActiveType('short_text', false, false);
 
             const rebuildOptionNames = () => {
                 const rows = optionList.querySelectorAll('.option-row');

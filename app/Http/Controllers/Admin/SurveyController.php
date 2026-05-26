@@ -819,6 +819,10 @@ class SurveyController extends Controller
         DB::transaction(function () use ($response, $survey, $answersInput) {
             $saved = 0;
             foreach ($survey->questions as $question) {
+                if ($question->isStaticDisplay()) {
+                    continue;
+                }
+
                 $raw = $answersInput[$question->id] ?? null;
                 $file = request()->file('answers.' . $question->id . '.file');
                 $normalized = $this->normalizeResponseAnswer($question, $raw, $file, $response);

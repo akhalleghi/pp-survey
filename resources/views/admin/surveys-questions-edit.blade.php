@@ -70,7 +70,7 @@
 
                 <div class="type-grid" id="questionTypeGrid">
                     @foreach ($questionTypes as $key => $type)
-                        <button type="button" class="type-btn {{ $selectedType === $key ? 'active' : '' }}" data-type="{{ $key }}" data-has-options="{{ $type['has_options'] ? '1' : '0' }}">
+                        <button type="button" class="type-btn {{ $selectedType === $key ? 'active' : '' }}" data-type="{{ $key }}" data-has-options="{{ $type['has_options'] ? '1' : '0' }}" data-is-display-only="{{ !empty($type['is_display_only']) ? '1' : '0' }}">
                             {{ $type['label'] }}
                         </button>
                     @endforeach
@@ -78,15 +78,22 @@
 
                 <div class="form-grid">
                     <div class="field">
-                        <label>عنوان سوال</label>
-                        <input type="text" name="title" required value="{{ old('title', $question->title) }}">
+                        <label id="questionTitleLabel">عنوان سوال</label>
+                        <input type="text" id="questionTitle" name="title" required value="{{ old('title', $question->title) }}">
+                        @error('title')
+                            <small style="color:#dc2626;">{{ $message }}</small>
+                        @enderror
                     </div>
                     <div class="field">
-                        <label>توضیح کوتاه</label>
-                        <textarea name="description" rows="2">{{ old('description', $question->description) }}</textarea>
+                        <label id="questionDescriptionLabel">توضیح کوتاه</label>
+                        <textarea id="questionDescription" name="description" rows="2">{{ old('description', $question->description) }}</textarea>
+                        @error('description')
+                            <small style="color:#dc2626;">{{ $message }}</small>
+                        @enderror
                     </div>
-                    <label style="display:inline-flex; gap:.45rem; align-items:center;">
-                        <input type="checkbox" name="is_required" value="1" @checked(old('is_required', $question->is_required))>
+                    <p id="staticTextHint" style="display:none; margin:0; color:var(--muted); font-size:.85rem;">این آیتم فقط برای نمایش متن راهنماست و پاسخی از شرکت‌کننده دریافت نمی‌کند.</p>
+                    <label id="requiredToggleWrapper" style="display:inline-flex; gap:.45rem; align-items:center;">
+                        <input type="checkbox" id="questionRequiredInput" name="is_required" value="1" @checked(old('is_required', $question->is_required))>
                         سوال اجباری باشد
                     </label>
                 </div>
@@ -163,12 +170,21 @@
             const optionsWrapper = document.getElementById('optionsWrapper');
             const optionList = document.getElementById('optionList');
             const addOptionBtn = document.getElementById('addOptionBtn');
+            const settingsWrapper = document.getElementById('settingsWrapper');
+            const requiredToggleWrapper = document.getElementById('requiredToggleWrapper');
+            const requiredInput = document.getElementById('questionRequiredInput');
+            const titleLabel = document.getElementById('questionTitleLabel');
+            const titleInput = document.getElementById('questionTitle');
+            const descriptionLabel = document.getElementById('questionDescriptionLabel');
+            const descriptionInput = document.getElementById('questionDescription');
+            const staticTextHint = document.getElementById('staticTextHint');
             const settingsGroups = {
-                short_text: ['text'], long_text: ['text'], multiple_choice: ['choice'], checkboxes: ['choice'],
+                short_text: ['text'], long_text: ['text'], static_text_short: [], static_text_long: [],
+                multiple_choice: ['choice'], checkboxes: ['choice'],
                 dropdown: ['choice'], rating: ['choice', 'rating'], number: ['number'], email: [], date: ['date'],
                 phone: ['text'], url: ['text'], yes_no: ['choice'], linear_scale: ['choice', 'rating'], file_upload: ['file'],
             };
-            const setActiveType = (type, hasOptions) => {
+            const setActiveType = (type, hasOptions, isDisplayOnly) => {
                 typeInput.value = type;
                 typeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.type === type));
                 optionsWrapper.style.display = hasOptions ? 'block' : 'none';
@@ -177,11 +193,44 @@
                     input.required = hasOptions;
                 });
                 const activeGroups = settingsGroups[type] || [];
+                if (settingsWrapper) {
+                    settingsWrapper.style.display = isDisplayOnly ? 'none' : 'block';
+                }
                 document.querySelectorAll('[data-setting-group]').forEach((el) => {
                     el.style.display = activeGroups.includes(el.dataset.settingGroup) ? 'block' : 'none';
                     const input = el.querySelector('input');
                     if (input) input.disabled = !activeGroups.includes(el.dataset.settingGroup);
                 });
+                if (requiredToggleWrapper) {
+                    requiredToggleWrapper.style.display = isDisplayOnly ? 'none' : 'inline-flex';
+                }
+                if (requiredInput && isDisplayOnly) {
+                    requiredInput.checked = false;
+                }
+                if (staticTextHint) {
+                    staticTextHint.style.display = isDisplayOnly ? 'block' : 'none';
+                }
+                if (titleLabel && titleInput && descriptionLabel && descriptionInput) {
+                    if (type === 'static_text_short') {
+                        titleLabel.textContent = 'متن نمایشی (کوتاه)';
+                        titleInput.required = true;
+                        descriptionLabel.textContent = 'زیرنویس (اختیاری)';
+                        descriptionInput.required = false;
+                        descriptionInput.rows = 2;
+                    } else if (type === 'static_text_long') {
+                        titleLabel.textContent = 'عنوان (اختیاری)';
+                        titleInput.required = false;
+                        descriptionLabel.textContent = 'متن نمایشی (بلند)';
+                        descriptionInput.required = true;
+                        descriptionInput.rows = 6;
+                    } else {
+                        titleLabel.textContent = 'عنوان سوال';
+                        titleInput.required = true;
+                        descriptionLabel.textContent = 'توضیح کوتاه';
+                        descriptionInput.required = false;
+                        descriptionInput.rows = 2;
+                    }
+                }
             };
             const rebuildOptionNames = () => {
                 const rows = optionList.querySelectorAll('.option-row');
@@ -210,10 +259,10 @@
                 row.remove();
                 rebuildOptionNames();
             });
-            typeButtons.forEach((btn) => btn.addEventListener('click', () => setActiveType(btn.dataset.type, btn.dataset.hasOptions === '1')));
+            typeButtons.forEach((btn) => btn.addEventListener('click', () => setActiveType(btn.dataset.type, btn.dataset.hasOptions === '1', btn.dataset.isDisplayOnly === '1')));
             const selected = @json($selectedType);
             const selectedBtn = document.querySelector(`.type-btn[data-type="${selected}"]`);
-            setActiveType(selected, selectedBtn?.dataset.hasOptions === '1');
+            setActiveType(selected, selectedBtn?.dataset.hasOptions === '1', selectedBtn?.dataset.isDisplayOnly === '1');
         });
     </script>
 @endsection

@@ -29,6 +29,8 @@ class SurveyQuestionController extends Controller
     private const SUPPORTED_TYPES = [
         'short_text',
         'long_text',
+        'static_text_short',
+        'static_text_long',
         'multiple_choice',
         'checkboxes',
         'dropdown',
@@ -67,7 +69,9 @@ class SurveyQuestionController extends Controller
             'type' => $validated['type'],
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
-            'is_required' => $request->boolean('is_required'),
+            'is_required' => in_array($validated['type'], SurveyQuestion::staticDisplayTypes(), true)
+                ? false
+                : $request->boolean('is_required'),
             'settings' => $validated['settings'] ?? [],
         ]);
 
@@ -120,7 +124,9 @@ class SurveyQuestionController extends Controller
             'type' => $validated['type'],
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
-            'is_required' => $request->boolean('is_required'),
+            'is_required' => in_array($validated['type'], SurveyQuestion::staticDisplayTypes(), true)
+                ? false
+                : $request->boolean('is_required'),
             'settings' => $validated['settings'] ?? [],
         ]);
 
@@ -150,20 +156,22 @@ class SurveyQuestionController extends Controller
     private function questionTypes(): array
     {
         return [
-            'short_text' => ['label' => 'متن کوتاه', 'has_options' => false],
-            'long_text' => ['label' => 'متن بلند', 'has_options' => false],
-            'multiple_choice' => ['label' => 'چندگزینه ای', 'has_options' => true],
-            'checkboxes' => ['label' => 'چندگزینه ای چندانتخابی', 'has_options' => true],
-            'dropdown' => ['label' => 'لیست کشویی', 'has_options' => true],
-            'rating' => ['label' => 'درجه بندی سفارشی', 'has_options' => true],
-            'number' => ['label' => 'عدد', 'has_options' => false],
-            'email' => ['label' => 'ایمیل', 'has_options' => false],
-            'date' => ['label' => 'تاریخ', 'has_options' => false],
-            'phone' => ['label' => 'شماره تماس', 'has_options' => false],
-            'url' => ['label' => 'آدرس وب', 'has_options' => false],
-            'yes_no' => ['label' => 'بله / خیر', 'has_options' => true],
-            'linear_scale' => ['label' => 'مقیاس خطی', 'has_options' => true],
-            'file_upload' => ['label' => 'آپلود فایل', 'has_options' => false],
+            'short_text' => ['label' => 'متن کوتاه', 'has_options' => false, 'is_display_only' => false],
+            'long_text' => ['label' => 'متن بلند', 'has_options' => false, 'is_display_only' => false],
+            'static_text_short' => ['label' => 'متن ثابت کوتاه', 'has_options' => false, 'is_display_only' => true],
+            'static_text_long' => ['label' => 'متن ثابت بلند', 'has_options' => false, 'is_display_only' => true],
+            'multiple_choice' => ['label' => 'چندگزینه ای', 'has_options' => true, 'is_display_only' => false],
+            'checkboxes' => ['label' => 'چندگزینه ای چندانتخابی', 'has_options' => true, 'is_display_only' => false],
+            'dropdown' => ['label' => 'لیست کشویی', 'has_options' => true, 'is_display_only' => false],
+            'rating' => ['label' => 'درجه بندی سفارشی', 'has_options' => true, 'is_display_only' => false],
+            'number' => ['label' => 'عدد', 'has_options' => false, 'is_display_only' => false],
+            'email' => ['label' => 'ایمیل', 'has_options' => false, 'is_display_only' => false],
+            'date' => ['label' => 'تاریخ', 'has_options' => false, 'is_display_only' => false],
+            'phone' => ['label' => 'شماره تماس', 'has_options' => false, 'is_display_only' => false],
+            'url' => ['label' => 'آدرس وب', 'has_options' => false, 'is_display_only' => false],
+            'yes_no' => ['label' => 'بله / خیر', 'has_options' => true, 'is_display_only' => false],
+            'linear_scale' => ['label' => 'مقیاس خطی', 'has_options' => true, 'is_display_only' => false],
+            'file_upload' => ['label' => 'آپلود فایل', 'has_options' => false, 'is_display_only' => false],
         ];
     }
 
@@ -187,6 +195,14 @@ class SurveyQuestionController extends Controller
             'options.*.value' => ['nullable', 'string', 'max:255'],
         ];
 
+        if ($type === 'static_text_short') {
+            $rules['title'] = ['required', 'string', 'max:500'];
+            $rules['description'] = ['nullable', 'string', 'max:1000'];
+        } elseif ($type === 'static_text_long') {
+            $rules['title'] = ['nullable', 'string', 'max:255'];
+            $rules['description'] = ['required', 'string', 'max:5000'];
+        }
+
         if (in_array($type, $typesWithOptions, true)) {
             $rules['options'] = ['required', 'array', 'min:2'];
             $rules['options.*.label'] = ['required', 'string', 'max:255'];
@@ -194,6 +210,22 @@ class SurveyQuestionController extends Controller
         }
 
         $validated = $request->validate($rules);
+
+        $validated['title'] = trim(strip_tags((string) $validated['title']));
+        if (array_key_exists('description', $validated) && $validated['description'] !== null) {
+            $validated['description'] = trim(strip_tags((string) $validated['description']));
+            if ($validated['description'] === '') {
+                $validated['description'] = null;
+            }
+        }
+
+        if (in_array($type, SurveyQuestion::staticDisplayTypes(), true)) {
+            $validated['settings'] = [];
+            $validated['options'] = [];
+            if ($type === 'static_text_long' && $validated['title'] === '') {
+                $validated['title'] = 'متن راهنما';
+            }
+        }
 
         if ($type === 'file_upload') {
             $settings = $validated['settings'] ?? [];

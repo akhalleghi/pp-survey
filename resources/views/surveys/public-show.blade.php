@@ -560,6 +560,44 @@
         .survey-wizard-root .rating-slider {
             accent-color: var(--primary);
         }
+        .survey-wizard-root .wizard-static-block {
+            padding: 0.85rem 1rem;
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.04);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: none;
+        }
+        .survey-wizard-root .wizard-static-block .static-text-primary {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1.65;
+            color: var(--pub-text, #0f172a);
+        }
+        .survey-wizard-root .wizard-static-block .static-text-secondary {
+            margin: 0.45rem 0 0;
+            font-size: 0.92rem;
+            line-height: 1.7;
+            color: var(--pub-muted);
+        }
+        .survey-wizard-root .wizard-static-block .static-text-heading {
+            margin: 0 0 0.5rem;
+            font-size: 1.05rem;
+            font-weight: 800;
+            line-height: 1.55;
+            color: var(--pub-text, #0f172a);
+        }
+        .survey-wizard-root .wizard-static-block .static-text-body {
+            margin: 0;
+            font-size: 0.95rem;
+            line-height: 1.85;
+            color: var(--pub-text, #0f172a);
+            white-space: pre-wrap;
+        }
+        .survey-wizard-root--single .survey-single-q.wizard-static-block {
+            background: rgba(15, 23, 42, 0.035);
+            border-style: dashed;
+        }
         .survey-wizard-root .error-text {
             color: var(--pub-error);
         }
@@ -1182,10 +1220,16 @@
                         </div>
                         <div class="survey-single-stack">
                     @endif
+                    @php $answerableQuestionIndex = 0; @endphp
                     @foreach ($survey->questions as $question)
+                        @php
+                            $questionIndexForDisplay = $question->isStaticDisplay()
+                                ? null
+                                : ++$answerableQuestionIndex;
+                        @endphp
                         @include('surveys.partials.public-question-fields', [
                             'question' => $question,
-                            'questionIndex' => $loop->iteration,
+                            'questionIndex' => $questionIndexForDisplay,
                             'existingAnswers' => $existingAnswers,
                             'toFaDigits' => $toFaDigits,
                             'questionCssClass' => $questionsDisplaySinglePage
@@ -1401,7 +1445,12 @@
 
             const toFaDigitsJs = (num) => String(num).replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
 
+            const isDisplayOnlyQuestion = (question) => question.dataset.displayOnly === '1';
+
             const isQuestionAnswered = (question) => {
+                if (isDisplayOnlyQuestion(question)) {
+                    return true;
+                }
                 const required = question.dataset.required === '1';
                 if (!required) return true;
                 if (question.dataset.type === 'rating') {
@@ -1464,16 +1513,17 @@
             };
 
             const getProgressPercent = () => {
-                if (!questions.length) return 0;
+                const answerable = questions.filter((q) => !isDisplayOnlyQuestion(q));
+                if (!answerable.length) return 100;
                 let done = 0;
-                questions.forEach((q) => {
+                answerable.forEach((q) => {
                     if (q.dataset.required === '1') {
                         if (isQuestionAnswered(q)) done += 1;
                     } else if (hasProgressInput(q)) {
                         done += 1;
                     }
                 });
-                return Math.round((done / questions.length) * 100);
+                return Math.round((done / answerable.length) * 100);
             };
 
             const prevBtn = document.getElementById('prevQuestion');

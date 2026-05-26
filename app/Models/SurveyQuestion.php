@@ -38,4 +38,15 @@ class SurveyQuestion extends Model
     {
         return $this->hasMany(SurveyResponseAnswer::class, 'question_id');
     }
+
+    /** @return list<string> */
+    public static function staticDisplayTypes(): array
+    {
+        return ['static_text_short', 'static_text_long'];
+    }
+
+    public function isStaticDisplay(): bool
+    {
+        return in_array($this->type, self::staticDisplayTypes(), true);
+    }
 }

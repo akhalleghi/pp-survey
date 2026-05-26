@@ -1,9 +1,29 @@
 @php
     /** @var \App\Models\SurveyQuestion $question */
-    $questionIndex = (int) ($questionIndex ?? 1);
+    $questionIndex = isset($questionIndex) ? (int) $questionIndex : null;
     $existingAnswers = $existingAnswers ?? [];
     $toFaDigits = $toFaDigits ?? static fn ($v) => (string) $v;
+    $isStatic = $question->isStaticDisplay();
 @endphp
+@if ($isStatic)
+    <div class="{{ ($questionCssClass ?? 'question wizard-question') }} wizard-static-block" data-question data-display-only="1" data-question-id="{{ $question->id }}" data-required="0" data-type="{{ $question->type }}" role="note" aria-label="متن راهنما">
+        @if ($question->type === 'static_text_short')
+            <div class="static-text-short">
+                <p class="static-text-primary">{{ $question->title }}</p>
+                @if ($question->description)
+                    <p class="static-text-secondary">{{ $question->description }}</p>
+                @endif
+            </div>
+        @else
+            <div class="static-text-long">
+                @if (filled($question->title) && $question->title !== 'متن راهنما')
+                    <h3 class="static-text-heading">{{ $question->title }}</h3>
+                @endif
+                <div class="static-text-body">{!! nl2br(e($question->description)) !!}</div>
+            </div>
+        @endif
+    </div>
+@else
 <div class="{{ $questionCssClass ?? 'question wizard-question' }}" data-question data-question-id="{{ $question->id }}" data-required="{{ $question->is_required ? '1' : '0' }}" data-type="{{ $question->type }}">
     @if ($question->description)
         <p class="q-section-line">{{ $toFaDigits($questionIndex) }} — {{ $question->description }}</p>
@@ -140,3 +160,4 @@
     @endif
     <div class="error-text" hidden>لطفا این سوال را پاسخ دهید.</div>
 </div>
+@endif

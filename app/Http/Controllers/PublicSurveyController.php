@@ -108,8 +108,8 @@ class PublicSurveyController extends Controller
             }
         }
 
-        $questionsCount = $survey->questions->count();
-        $estimatedDurationMinutes = max(2, (int) ceil($questionsCount * 0.8));
+        $questionsCount = $survey->questions->reject(fn ($q) => $q->isStaticDisplay())->count();
+        $estimatedDurationMinutes = max(2, (int) ceil(max(1, $questionsCount) * 0.8));
         $participantDisplayName = null;
         if ($resolvedPersonnel) {
             $participantDisplayName = trim($resolvedPersonnel->first_name . ' ' . $resolvedPersonnel->last_name);
@@ -487,7 +487,7 @@ class PublicSurveyController extends Controller
     {
         $messages = [];
         foreach ($questions as $question) {
-            if (!$question->is_required) {
+            if ($question->isStaticDisplay() || !$question->is_required) {
                 continue;
             }
             $raw = $answersInput[$question->id] ?? null;
@@ -502,6 +502,10 @@ class PublicSurveyController extends Controller
 
     private function isQuestionAnswered(SurveyQuestion $question, mixed $raw, Request $request, int $questionId): bool
     {
+        if ($question->isStaticDisplay()) {
+            return true;
+        }
+
         if (in_array($question->type, ['multiple_choice', 'dropdown', 'yes_no', 'linear_scale'], true)) {
             return is_array($raw) ? !empty($raw['option_id'] ?? null) : !empty($raw);
         }
@@ -536,6 +540,10 @@ class PublicSurveyController extends Controller
     {
         $saved = 0;
         foreach ($questions as $question) {
+            if ($question->isStaticDisplay()) {
+                continue;
+            }
+
             $raw = $answersInput[$question->id] ?? null;
             $file = $request->file('answers.' . $question->id . '.file');
             $normalized = $this->normalizeAnswer($question, $raw, $file, $response);

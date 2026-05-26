@@ -65,6 +65,15 @@
 
             @foreach ($survey->questions as $question)
                 <div class="q">
+                    @if ($question->isStaticDisplay())
+                        <h4>{{ $question->title }}</h4>
+                        @if ($question->type === 'static_text_long' && $question->description)
+                            <div class="desc" style="white-space:pre-wrap;">{!! nl2br(e($question->description)) !!}</div>
+                        @elseif ($question->description)
+                            <p class="desc">{{ $question->description }}</p>
+                        @endif
+                        <p class="muted" style="margin-top:.35rem;">متن راهنما — بدون پاسخ</p>
+                    @else
                     <h4>{{ $question->title }}</h4>
                     @if ($question->description)
                         <p class="desc">{{ $question->description }}</p>
@@ -134,6 +143,7 @@
                                 </label>
                             @endforeach
                         </div>
+                    @endif
                     @endif
                 </div>
             @endforeach
