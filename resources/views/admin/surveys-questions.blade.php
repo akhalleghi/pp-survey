@@ -18,6 +18,31 @@
             flex-direction: column;
             padding-bottom: 1.25rem;
         }
+        .designer-page-top {
+            flex-shrink: 0;
+            margin-bottom: 1rem;
+        }
+        .designer-back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            border-radius: 14px;
+            padding: 0.55rem 1rem;
+            font-weight: 600;
+            font-size: 0.88rem;
+            text-decoration: none;
+            background: rgba(15, 23, 42, 0.07);
+            color: var(--slate);
+            transition: background 0.15s ease;
+        }
+        .designer-back-link:hover {
+            background: rgba(15, 23, 42, 0.11);
+            color: var(--slate);
+        }
+        .designer-back-link i {
+            font-size: 0.82rem;
+            opacity: 0.85;
+        }
         .designer-wrap {
             --designer-panel-h: calc(100dvh - 10.5rem);
             display: grid;
@@ -341,6 +366,13 @@
             (string) $value
         );
     @endphp
+
+    <div class="designer-page-top">
+        <a href="{{ route('admin.surveys.index') }}" class="designer-back-link">
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            برگشت به لیست نظرسنجی‌ها
+        </a>
+    </div>
 
     <div class="designer-wrap">
         <section class="designer-canvas" aria-label="فهرست سوالات">
