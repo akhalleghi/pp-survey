@@ -210,6 +210,118 @@
             box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
         }
         .access-error { margin-top: 0.5rem; color: var(--primary-dark); font-size: 0.75rem; }
+        .access-steps {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            margin-bottom: 0.65rem;
+            flex-wrap: wrap;
+        }
+        .access-step {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--muted);
+            padding: 0.22rem 0.55rem;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.04);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+        }
+        .access-step.is-active {
+            color: var(--primary-dark);
+            background: rgba(var(--primary-rgb), 0.1);
+            border-color: rgba(var(--primary-rgb), 0.22);
+        }
+        .access-step.is-done {
+            color: #166534;
+            background: rgba(22, 163, 74, 0.1);
+            border-color: rgba(22, 163, 74, 0.2);
+        }
+        .access-step-divider {
+            flex: 1;
+            min-width: 1.2rem;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(15, 23, 42, 0.08), rgba(var(--primary-rgb), 0.25));
+            border-radius: 999px;
+        }
+        .access-gate--otp {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(var(--primary-rgb), 0.04));
+        }
+        .otp-mobile-mask {
+            direction: ltr;
+            display: inline-block;
+            font-family: ui-monospace, monospace;
+            letter-spacing: 0.04em;
+            color: var(--primary-dark);
+        }
+        .otp-notice {
+            margin: 0.55rem 0 0.65rem;
+            padding: 0.5rem 0.65rem;
+            border-radius: 10px;
+            background: rgba(22, 163, 74, 0.1);
+            border: 1px solid rgba(22, 163, 74, 0.2);
+            color: #166534;
+            font-size: 0.76rem;
+            font-weight: 600;
+        }
+        .otp-input-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            margin-top: 0.65rem;
+            font-size: 0.77rem;
+            color: var(--slate);
+        }
+        .otp-code-input {
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            border-radius: 12px;
+            padding: 0.72rem 0.85rem;
+            font-family: ui-monospace, monospace;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: 0.45em;
+            text-align: center;
+            width: 100%;
+            max-width: 280px;
+            margin: 0 auto;
+            display: block;
+            direction: ltr;
+            transition: border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+        .otp-code-input:focus {
+            outline: none;
+            border-color: rgba(var(--primary-rgb), 0.45);
+            box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+        }
+        .otp-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.85rem;
+        }
+        .btn.ghost {
+            background: transparent;
+            color: var(--slate);
+            border: 1px solid rgba(15, 23, 42, 0.14);
+        }
+        .btn.ghost:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+        .otp-resend-timer {
+            font-variant-numeric: tabular-nums;
+            direction: ltr;
+            display: inline-block;
+            margin-inline-start: 0.25rem;
+        }
+        .otp-security-hint {
+            margin: 0.75rem 0 0;
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-align: center;
+            line-height: 1.6;
+        }
         .btn {
             border: none;
             border-radius: 12px;
@@ -298,6 +410,117 @@
             text-overflow: ellipsis;
         }
         .error-text { color: var(--primary-dark); font-size: 0.74rem; margin-top: 0.34rem; }
+        .file-upload-zone {
+            margin-top: 0.4rem;
+        }
+        .file-upload-drop {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1.2rem 1rem;
+            border: 2px dashed rgba(var(--primary-rgb), 0.38);
+            border-radius: 16px;
+            background: linear-gradient(
+                165deg,
+                rgba(var(--primary-rgb), 0.07) 0%,
+                rgba(255, 255, 255, 0.82) 100%
+            );
+            cursor: pointer;
+            text-align: center;
+            transition:
+                border-color 0.2s ease,
+                background 0.2s ease,
+                box-shadow 0.2s ease,
+                transform 0.15s ease;
+        }
+        .file-upload-drop:hover {
+            border-color: rgba(var(--primary-rgb), 0.58);
+            background: linear-gradient(
+                165deg,
+                rgba(var(--primary-rgb), 0.11) 0%,
+                rgba(255, 255, 255, 0.95) 100%
+            );
+            box-shadow: 0 10px 28px -14px rgba(var(--primary-rgb), 0.45);
+        }
+        .file-upload-drop.is-dragover {
+            border-color: var(--primary);
+            border-style: solid;
+            background: rgba(var(--primary-rgb), 0.12);
+            box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.14);
+            transform: scale(1.01);
+        }
+        .file-upload-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 3.1rem;
+            height: 3.1rem;
+            border-radius: 50%;
+            background: rgba(var(--primary-rgb), 0.12);
+            color: var(--primary);
+        }
+        .file-upload-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--pub-title, var(--slate));
+            line-height: 1.55;
+        }
+        .file-upload-hint {
+            font-size: 0.76rem;
+            color: var(--pub-muted, var(--muted));
+            line-height: 1.65;
+            max-width: 26rem;
+        }
+        .file-upload-selected {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.72rem 0.85rem;
+            border-radius: 14px;
+            border: 1px solid rgba(var(--primary-rgb), 0.22);
+            background: rgba(var(--primary-rgb), 0.07);
+        }
+        .file-upload-selected-main {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            min-width: 0;
+            flex: 1;
+        }
+        .file-upload-selected-icon {
+            flex-shrink: 0;
+            color: var(--primary);
+        }
+        .file-upload-selected-name {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--pub-title, var(--slate));
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .file-upload-clear {
+            flex-shrink: 0;
+            border: none;
+            border-radius: 10px;
+            padding: 0.38rem 0.7rem;
+            font-size: 0.76rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            background: rgba(220, 38, 38, 0.12);
+            color: #b91c1c;
+        }
+        .file-upload-clear:hover {
+            background: rgba(220, 38, 38, 0.18);
+        }
+        .survey-wizard-root .question.error .file-upload-drop {
+            border-color: rgba(220, 38, 38, 0.55);
+            background: rgba(254, 242, 242, 0.75);
+        }
         .wizard-actions {
             display: flex;
             justify-content: space-between;
@@ -775,8 +998,7 @@
             line-height: 1.2;
         }
         .survey-completion-chip__label {
-            font-size: 0.78rem;
-            font-weight: 800;
+            font-size: 0.78rem;            font-weight: 800;
             color: var(--pub-title);
             white-space: nowrap;
             letter-spacing: 0.01em;
@@ -1072,7 +1294,23 @@
             .card { border-radius: 16px; padding: 0.78rem; }
             .hero-head { flex-direction: column; gap: 0.45rem; }
             .badge { align-self: flex-start; }
-            .survey-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .survey-meta {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.45rem;
+            }
+            .meta-card {
+                min-width: 0;
+                padding: 0.48rem 0.55rem;
+            }
+            .meta-card .label {
+                font-size: 0.68rem;
+                line-height: 1.3;
+            }
+            .meta-card .value {
+                font-size: 0.76rem;
+                line-height: 1.35;
+                word-break: break-word;
+            }
             .intro-body { font-size: 0.93rem; padding: 0.85rem 0.88rem; }
         }
         @media (max-width: 560px) {
@@ -1087,33 +1325,45 @@
             }
             .survey-meta {
                 display: flex;
-                flex-wrap: nowrap;
-                overflow-x: auto;
-                gap: 0.45rem;
-                margin: 0.6rem 0 0.75rem;
-                padding-bottom: 0.15rem;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: thin;
+                flex-direction: column;
+                gap: 0;
+                margin: 0.55rem 0 0.68rem;
+                padding: 0;
+                overflow: visible;
+                border: 1px solid rgba(15, 23, 42, 0.09);
+                border-radius: 12px;
+                background: linear-gradient(135deg, rgba(15, 23, 42, 0.015), rgba(15, 23, 42, 0.04));
             }
             .meta-card {
-                min-width: max-content;
-                flex: 0 0 auto;
-                border-radius: 999px;
-                padding: 0.34rem 0.62rem;
-                display: inline-flex;
                 flex-direction: row;
                 align-items: center;
-                gap: 0.35rem;
-                background: rgba(15, 23, 42, 0.055);
+                justify-content: space-between;
+                gap: 0.55rem;
+                min-width: 0;
+                padding: 0.5rem 0.65rem;
+                border-radius: 0;
+                border: none;
+                border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+                background: transparent;
             }
-            .meta-card .label,
-            .meta-card .value {
-                font-size: 0.7rem;
-                line-height: 1.2;
+            .meta-card:last-child {
+                border-bottom: none;
+            }
+            .meta-card .label {
+                flex: 0 0 auto;
+                font-size: 0.69rem;
+                line-height: 1.35;
                 white-space: nowrap;
             }
             .meta-card .value {
+                flex: 1 1 auto;
+                min-width: 0;
+                text-align: end;
+                font-size: 0.72rem;
                 font-weight: 800;
+                line-height: 1.4;
+                white-space: normal;
+                word-break: break-word;
             }
             .access-grid { grid-template-columns: 1fr; }
             .wizard-actions { flex-direction: column-reverse; }
@@ -1139,20 +1389,7 @@
                     <span class="badge">آماده شروع</span>
                 </div>
 
-                <div class="survey-meta">
-                    <div class="meta-card">
-                        <span class="label">تعداد سوالات</span>
-                        <span class="value">{{ $questionsCount }} سوال</span>
-                    </div>
-                    <div class="meta-card">
-                        <span class="label">زمان تقریبی تکمیل</span>
-                        <span class="value">{{ number_format($estimatedDurationMinutes) }} دقیقه</span>
-                    </div>
-                    <div class="meta-card">
-                        <span class="label">نحوه پاسخ‌دهی</span>
-                        <span class="value">{{ $questionsDisplaySinglePage ? 'همهٔ سوالات در یک صفحه' : 'مرحله‌ای، سوال‌به‌سوال' }}</span>
-                    </div>
-                </div>
+                @include('surveys.partials.survey-start-meta')
 
                 @if ($participantDisplayName && $audiencePassed)
                     <div class="participant-chip">✓ پاسخ‌دهنده تایید شد: {{ $participantDisplayName }}</div>
@@ -1163,31 +1400,20 @@
                 @endif
 
                 @if ($showAccessGate && !$audiencePassed)
-                    <form class="access-gate" method="POST" action="{{ route('surveys.public.access', $survey->public_token) }}">
-                        @csrf
-                        <h2>تایید اطلاعات پرسنلی</h2>
-                        <p class="helper">برای ورود به فرم، اطلاعات مورد نیاز را وارد کنید.</p>
-                        <div class="access-grid">
-                            @if (in_array($identityMode, ['personnel_code', 'either'], true))
-                                <label>
-                                    <span>کد پرسنلی</span>
-                                    <input type="text" name="personnel_code" value="{{ $submittedPersonnelCode }}" autocomplete="off">
-                                </label>
-                            @endif
-                            @if (in_array($identityMode, ['national_code', 'either'], true))
-                                <label>
-                                    <span>کد ملی</span>
-                                    <input type="text" name="national_code" value="{{ $submittedNationalCode }}" autocomplete="off">
-                                </label>
-                            @endif
-                        </div>
-                        @if ($accessError)
-                            <div class="access-error">{{ $accessError }}</div>
-                        @endif
-                        <div style="text-align: center; margin-top: 0.75rem;">
-                            <button type="submit" class="btn primary" style="min-width: 200px;">بررسی و شروع</button>
-                        </div>
-                    </form>
+                    @include('surveys.partials.public-access-gate', [
+                        'survey' => $survey,
+                        'identityMode' => $identityMode,
+                        'requireSmsOtp' => $requireSmsOtp ?? false,
+                        'showOtpStep' => $showOtpStep ?? false,
+                        'submittedPersonnelCode' => $submittedPersonnelCode,
+                        'submittedNationalCode' => $submittedNationalCode,
+                        'accessError' => $accessError,
+                        'maskedMobile' => $maskedMobile ?? null,
+                        'otpNotice' => $otpNotice ?? null,
+                        'otpCooldownSeconds' => $otpCooldownSeconds ?? 0,
+                        'otpCodeLength' => $otpCodeLength ?? 6,
+                        'toFaDigits' => $toFaDigits,
+                    ])
                 @else
                     <div style="text-align: center; margin-top: 0.25rem;">
                         <button type="button" class="btn primary" id="startSurveyBtn" style="min-width: 220px;">شروع نظرسنجی</button>
@@ -1208,41 +1434,21 @@
                     </div>
                     <span class="badge">تایید هویت</span>
                 </div>
-                <div class="survey-meta">
-                    <div class="meta-card">
-                        <span class="label">تعداد سوالات</span>
-                        <span class="value">{{ $questionsCount }} سوال</span>
-                    </div>
-                    <div class="meta-card">
-                        <span class="label">زمان تقریبی تکمیل</span>
-                        <span class="value">{{ number_format($estimatedDurationMinutes) }} دقیقه</span>
-                    </div>
-                </div>
-                <form class="access-gate" method="POST" action="{{ route('surveys.public.access', $survey->public_token) }}">
-                    @csrf
-                    <h2>تایید اطلاعات پرسنلی</h2>
-                    <p class="helper">برای ورود به فرم، اطلاعات مورد نیاز را وارد کنید.</p>
-                    <div class="access-grid">
-                        @if (in_array($identityMode, ['personnel_code', 'either'], true))
-                            <label>
-                                <span>کد پرسنلی</span>
-                                <input type="text" name="personnel_code" value="{{ $submittedPersonnelCode }}" autocomplete="off">
-                            </label>
-                        @endif
-                        @if (in_array($identityMode, ['national_code', 'either'], true))
-                            <label>
-                                <span>کد ملی</span>
-                                <input type="text" name="national_code" value="{{ $submittedNationalCode }}" autocomplete="off">
-                            </label>
-                        @endif
-                    </div>
-                    @if ($accessError)
-                        <div class="access-error">{{ $accessError }}</div>
-                    @endif
-                    <div style="text-align: center; margin-top: 0.75rem;">
-                        <button type="submit" class="btn primary" style="min-width: 200px;">بررسی و ورود</button>
-                    </div>
-                </form>
+                @include('surveys.partials.survey-start-meta')
+                @include('surveys.partials.public-access-gate', [
+                    'survey' => $survey,
+                    'identityMode' => $identityMode,
+                    'requireSmsOtp' => $requireSmsOtp ?? false,
+                    'showOtpStep' => $showOtpStep ?? false,
+                    'submittedPersonnelCode' => $submittedPersonnelCode,
+                    'submittedNationalCode' => $submittedNationalCode,
+                    'accessError' => $accessError,
+                    'maskedMobile' => $maskedMobile ?? null,
+                    'otpNotice' => $otpNotice ?? null,
+                    'otpCooldownSeconds' => $otpCooldownSeconds ?? 0,
+                    'otpCodeLength' => $otpCodeLength ?? 6,
+                    'toFaDigits' => $toFaDigits,
+                ])
             </div>
         @endif
 
@@ -1497,6 +1703,98 @@
 
             document.getElementById('startSurveyBtn')?.addEventListener('click', showWizard);
 
+            const toFaDigitsJs = (num) => String(num).replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
+
+            const initSurveyOtpGate = () => {
+                const otpGate = document.getElementById('surveyOtpGate');
+                if (!otpGate) return;
+
+                const resendBtn = document.getElementById('otpResendBtn');
+                const resendTimer = document.getElementById('otpResendTimer');
+                const otpInput = document.getElementById('otpCodeInput');
+                const csrf = document.querySelector('#surveyOtpGate input[name="_token"]')?.value || '';
+                const resendUrl = @json(route('surveys.public.otp.resend', $survey->public_token));
+                let cooldown = parseInt(otpGate.dataset.cooldown || '0', 10) || 0;
+                let timerId = null;
+
+                const toLatinDigits = (value) => String(value || '').replace(/[۰-۹٠-٩]/g, (d) => {
+                    const map = {'۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9','٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
+                    return map[d] ?? d;
+                });
+
+                otpInput?.addEventListener('input', () => {
+                    const cleaned = toLatinDigits(otpInput.value).replace(/\D/g, '');
+                    if (otpInput.value !== cleaned) {
+                        otpInput.value = cleaned;
+                    }
+                });
+
+                const renderCooldown = () => {
+                    if (!resendBtn || !resendTimer) return;
+                    if (cooldown > 0) {
+                        resendBtn.disabled = true;
+                        resendTimer.hidden = false;
+                        resendTimer.textContent = `(${toFaDigitsJs(cooldown)} ثانیه)`;
+                    } else {
+                        resendBtn.disabled = false;
+                        resendTimer.hidden = true;
+                        resendTimer.textContent = '';
+                    }
+                };
+
+                const tickCooldown = () => {
+                    cooldown = Math.max(0, cooldown - 1);
+                    renderCooldown();
+                    if (cooldown <= 0 && timerId) {
+                        clearInterval(timerId);
+                        timerId = null;
+                    }
+                };
+
+                renderCooldown();
+                if (cooldown > 0) {
+                    timerId = setInterval(tickCooldown, 1000);
+                }
+
+                resendBtn?.addEventListener('click', async () => {
+                    if (resendBtn.disabled) return;
+                    resendBtn.disabled = true;
+                    try {
+                        const response = await fetch(resendUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrf,
+                            },
+                            body: JSON.stringify({}),
+                        });
+                        const data = await response.json();
+                        let notice = otpGate.querySelector('.otp-notice');
+                        if (!notice && data.message) {
+                            notice = document.createElement('div');
+                            notice.className = 'otp-notice';
+                            notice.setAttribute('role', 'status');
+                            otpGate.querySelector('.otp-form')?.before(notice);
+                        }
+                        if (notice) {
+                            notice.textContent = data.message || '';
+                        }
+                        cooldown = parseInt(data.cooldown_seconds || '0', 10) || 0;
+                        if (!data.ok && cooldown <= 0) {
+                            cooldown = 60;
+                        }
+                        renderCooldown();
+                        if (cooldown > 0 && !timerId) {
+                            timerId = setInterval(tickCooldown, 1000);
+                        }
+                    } catch (error) {
+                        resendBtn.disabled = false;
+                    }
+                });
+            };
+            initSurveyOtpGate();
+
             if (!showIntroStep && (!showAccessGate || audiencePassed)) {
                 introEl?.classList.add('is-hidden');
                 wizardEl?.classList.remove('is-hidden');
@@ -1522,9 +1820,60 @@
                 }
             }
 
-            const toFaDigitsJs = (num) => String(num).replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
-
             const isDisplayOnlyQuestion = (question) => question.dataset.displayOnly === '1';
+
+            const isValidEmail = (value) => {
+                const v = String(value || '').trim();
+                if (!v) {
+                    return true;
+                }
+                return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+            };
+
+            const getQuestionValidationError = (question) => {
+                if (isDisplayOnlyQuestion(question)) {
+                    return null;
+                }
+
+                const type = question.dataset.type;
+                const required = question.dataset.required === '1';
+
+                if (type === 'email') {
+                    const input = question.querySelector('input[name$="[value]"]');
+                    const value = input?.value.trim() ?? '';
+                    if (!value) {
+                        return required ? 'لطفاً این سوال را پاسخ دهید.' : null;
+                    }
+                    if (!isValidEmail(value)) {
+                        return 'آدرس ایمیل واردشده معتبر نیست. لطفاً یک ایمیل صحیح وارد کنید (مثال: name@example.com).';
+                    }
+                    return null;
+                }
+
+                if (required && !isQuestionAnswered(question)) {
+                    return 'لطفاً این سوال را پاسخ دهید.';
+                }
+
+                return null;
+            };
+
+            const showQuestionError = (question, message) => {
+                const errorText = question.querySelector('[data-error-text]');
+                question.classList.add('error');
+                if (errorText) {
+                    errorText.textContent = message;
+                    errorText.hidden = false;
+                }
+            };
+
+            const clearQuestionError = (question) => {
+                const errorText = question.querySelector('[data-error-text]');
+                question.classList.remove('error');
+                if (errorText) {
+                    errorText.textContent = 'لطفاً این سوال را پاسخ دهید.';
+                    errorText.hidden = true;
+                }
+            };
 
             const isQuestionAnswered = (question) => {
                 if (isDisplayOnlyQuestion(question)) {
@@ -1690,16 +2039,13 @@
             nextBtn?.addEventListener('click', () => {
                 if (finished) return;
                 const current = questions[index];
-                const errorText = current?.querySelector('.error-text');
-                const answered = current ? isQuestionAnswered(current) : true;
-                if (!answered) {
-                    current.classList.add('error');
-                    if (errorText) errorText.hidden = false;
+                const validationError = current ? getQuestionValidationError(current) : null;
+                if (validationError) {
+                    showQuestionError(current, validationError);
                     return;
                 }
                 if (current) {
-                    current.classList.remove('error');
-                    if (errorText) errorText.hidden = true;
+                    clearQuestionError(current);
                 }
 
                 if (index < questions.length - 1) {
@@ -1722,17 +2068,15 @@
                     let ok = true;
                     let firstInvalid = null;
                     questions.forEach((q) => {
-                        const errorText = q.querySelector('.error-text');
-                        if (!isQuestionAnswered(q)) {
+                        const validationError = getQuestionValidationError(q);
+                        if (validationError) {
                             ok = false;
                             if (!firstInvalid) {
                                 firstInvalid = q;
                             }
-                            q.classList.add('error');
-                            if (errorText) errorText.hidden = false;
+                            showQuestionError(q, validationError);
                         } else {
-                            q.classList.remove('error');
-                            if (errorText) errorText.hidden = true;
+                            clearQuestionError(q);
                         }
                     });
                     if (!ok) {
@@ -1778,6 +2122,117 @@
                 rangeInput.addEventListener('input', syncRating);
                 syncRating();
             });
+
+            document.querySelectorAll('[data-question][data-type="email"] input[name$="[value]"]').forEach((input) => {
+                input.addEventListener('blur', () => {
+                    const question = input.closest('[data-question]');
+                    if (!question) {
+                        return;
+                    }
+                    const validationError = getQuestionValidationError(question);
+                    if (validationError) {
+                        showQuestionError(question, validationError);
+                    } else {
+                        clearQuestionError(question);
+                    }
+                });
+                input.addEventListener('input', () => {
+                    const question = input.closest('[data-question]');
+                    if (!question || question.classList.contains('error')) {
+                        return;
+                    }
+                    if (!getQuestionValidationError(question)) {
+                        clearQuestionError(question);
+                    }
+                });
+            });
+
+            const initFileUploadZones = () => {
+                document.querySelectorAll('[data-file-upload-zone]').forEach((zone) => {
+                    const input = zone.querySelector('.file-upload-input');
+                    const drop = zone.querySelector('.file-upload-drop');
+                    const selected = zone.querySelector('[data-file-selected]');
+                    const nameEl = zone.querySelector('[data-file-name]');
+                    const clearBtn = zone.querySelector('[data-file-clear]');
+                    const question = zone.closest('[data-question]');
+                    const currentFileInput = zone.querySelector('input[type="hidden"][name$="[current_file]"]');
+                    const currentFileNameInput = zone.querySelector('input[type="hidden"][name$="[current_file_name]"]');
+                    if (!input || !drop) {
+                        return;
+                    }
+
+                    const syncUi = () => {
+                        const hasNewFile = input.files && input.files.length > 0;
+                        const hasCurrent = !!(currentFileInput && currentFileInput.value.trim().length > 0);
+                        if (hasNewFile) {
+                            drop.hidden = true;
+                            if (selected) {
+                                selected.hidden = false;
+                            }
+                            if (nameEl) {
+                                nameEl.textContent = input.files[0].name;
+                            }
+                            return;
+                        }
+                        if (hasCurrent) {
+                            drop.hidden = true;
+                            if (selected) {
+                                selected.hidden = false;
+                            }
+                            if (nameEl) {
+                                nameEl.textContent = currentFileNameInput?.value?.trim() || 'فایل قبلی';
+                            }
+                            return;
+                        }
+                        drop.hidden = false;
+                        if (selected) {
+                            selected.hidden = true;
+                        }
+                    };
+
+                    ['dragenter', 'dragover'].forEach((eventName) => {
+                        drop.addEventListener(eventName, (event) => {
+                            event.preventDefault();
+                            drop.classList.add('is-dragover');
+                        });
+                    });
+                    ['dragleave', 'drop'].forEach((eventName) => {
+                        drop.addEventListener(eventName, (event) => {
+                            event.preventDefault();
+                            drop.classList.remove('is-dragover');
+                        });
+                    });
+                    drop.addEventListener('drop', (event) => {
+                        const files = event.dataTransfer?.files;
+                        if (!files || !files.length) {
+                            return;
+                        }
+                        input.files = files;
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                    input.addEventListener('change', () => {
+                        if (question) {
+                            clearQuestionError(question);
+                        }
+                        syncUi();
+                        updateProgressUI();
+                    });
+                    clearBtn?.addEventListener('click', () => {
+                        input.value = '';
+                        if (currentFileInput) {
+                            currentFileInput.value = '';
+                        }
+                        if (currentFileNameInput) {
+                            currentFileNameInput.value = '';
+                        }
+                        syncUi();
+                        updateProgressUI();
+                    });
+                    syncUi();
+                });
+            };
+
+            initFileUploadZones();
             surveyForm?.addEventListener('change', () => {
                 updateProgressUI();
                 if (allowPartial) {

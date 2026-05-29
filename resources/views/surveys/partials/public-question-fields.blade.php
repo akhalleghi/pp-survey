@@ -36,8 +36,18 @@
         </h3>
     @endif
 
-    @if (in_array($question->type, ['short_text', 'email', 'phone', 'url'], true))
+    @if (in_array($question->type, ['short_text', 'phone', 'url'], true))
         <input type="text" class="input" name="answers[{{ $question->id }}][value]" placeholder="{{ $question->type === 'short_text' ? 'حروف فارسی' : 'پاسخ شما' }}"
+            value="{{ $existingAnswers[$question->id]['text'] ?? '' }}">
+    @elseif ($question->type === 'email')
+        <input
+            type="email"
+            class="input"
+            name="answers[{{ $question->id }}][value]"
+            placeholder="مثال: name@example.com"
+            inputmode="email"
+            autocomplete="email"
+            dir="ltr"
             value="{{ $existingAnswers[$question->id]['text'] ?? '' }}">
     @elseif ($question->type === 'long_text')
         <textarea rows="3" class="input" name="answers[{{ $question->id }}][value]" placeholder="پاسخ شما">{{ $existingAnswers[$question->id]['text'] ?? '' }}</textarea>
@@ -140,24 +150,51 @@
             $maxKb = (int) ($fileCfg['max_file_size_kb'] ?? 0);
             $existingFilePath = $existingAnswers[$question->id]['file_path'] ?? null;
             $existingFileName = $existingAnswers[$question->id]['file_name'] ?? null;
+            $acceptAttr = !empty($allowedExt)
+                ? collect($allowedExt)->map(fn ($x) => '.' . ltrim($x, '.'))->implode(',')
+                : null;
         @endphp
-        <input type="file" class="input" name="answers[{{ $question->id }}][file]" @if(!empty($allowedExt)) accept="{{ collect($allowedExt)->map(fn ($x) => '.' . ltrim($x, '.'))->implode(',') }}" @endif>
-        <input type="hidden" name="answers[{{ $question->id }}][current_file]" value="{{ $existingFilePath }}">
-        <input type="hidden" name="answers[{{ $question->id }}][current_file_name]" value="{{ $existingFileName }}">
-        <div class="q-desc" style="margin-top:.45rem;">
-            @if (!empty($allowedExt))
-                پسوند مجاز: {{ implode('، ', $allowedExt) }}
-            @endif
-            @if ($maxKb > 0)
-                <span style="margin-right:.4rem;">حداکثر حجم: {{ number_format($maxKb) }}KB</span>
-            @endif
-        </div>
-        @if ($existingFilePath && $existingFileName)
-            <div class="q-desc" style="margin-top:.15rem;">
-                فایل فعلی: {{ $existingFileName }}
+        <div class="file-upload-zone" data-file-upload-zone>
+            <input
+                type="file"
+                class="file-upload-input"
+                id="file-upload-{{ $question->id }}"
+                name="answers[{{ $question->id }}][file]"
+                @if($acceptAttr) accept="{{ $acceptAttr }}" @endif
+                hidden>
+            <label class="file-upload-drop" for="file-upload-{{ $question->id }}">
+                <span class="file-upload-icon" aria-hidden="true">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4 4 4" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16.5v1.8A2.2 2.2 0 006.2 20.5h11.6a2.2 2.2 0 002.2-2.2v-1.8" />
+                    </svg>
+                </span>
+                <span class="file-upload-title">فایل را اینجا رها کنید یا برای انتخاب کلیک کنید</span>
+                <span class="file-upload-hint">
+                    @if (!empty($allowedExt))
+                        فرمت‌های مجاز: {{ implode('، ', $allowedExt) }}
+                    @endif
+                    @if ($maxKb > 0)
+                        @if (!empty($allowedExt)) — @endif
+                        حداکثر حجم: {{ number_format($maxKb) }} کیلوبایت
+                    @endif
+                </span>
+            </label>
+            <div class="file-upload-selected" data-file-selected @if(!$existingFilePath) hidden @endif>
+                <div class="file-upload-selected-main">
+                    <span class="file-upload-selected-icon" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M7 4h7l5 5v11a1 1 0 01-1 1H7a1 1 0 01-1-1V5a1 1 0 011-1z" />
+                        </svg>
+                    </span>
+                    <span class="file-upload-selected-name" data-file-name>{{ $existingFileName ?: 'فایل انتخاب‌شده' }}</span>
+                </div>
+                <button type="button" class="file-upload-clear" data-file-clear>حذف فایل</button>
             </div>
-        @endif
+            <input type="hidden" name="answers[{{ $question->id }}][current_file]" value="{{ $existingFilePath }}">
+            <input type="hidden" name="answers[{{ $question->id }}][current_file_name]" value="{{ $existingFileName }}">
+        </div>
     @endif
-    <div class="error-text" hidden>لطفا این سوال را پاسخ دهید.</div>
+    <div class="error-text" data-error-text hidden>لطفاً این سوال را پاسخ دهید.</div>
 </div>
 @endif

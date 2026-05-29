@@ -26,6 +26,12 @@ Route::get('surveys/public/{token}', [PublicSurveyController::class, 'show'])->n
 Route::post('surveys/public/{token}/access', [PublicSurveyController::class, 'verifyAccess'])
     ->middleware('throttle:15,1')
     ->name('surveys.public.access');
+Route::post('surveys/public/{token}/otp/resend', [PublicSurveyController::class, 'resendOtp'])
+    ->middleware('throttle:6,1')
+    ->name('surveys.public.otp.resend');
+Route::post('surveys/public/{token}/otp/verify', [PublicSurveyController::class, 'verifyOtp'])
+    ->middleware('throttle:12,1')
+    ->name('surveys.public.otp.verify');
 Route::post('surveys/public/{token}/draft', [PublicSurveyController::class, 'saveDraft'])->name('surveys.public.draft');
 Route::post('surveys/public/{token}/submit', [PublicSurveyController::class, 'submit'])->name('surveys.public.submit');
 

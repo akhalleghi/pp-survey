@@ -13,6 +13,7 @@ final class SurveyAudience
     /**
      * @return array{
      *     identity_mode: string,
+     *     require_sms_otp: bool,
      *     modes: list<string>,
      *     unit_ids: list<int>,
      *     genders: list<string>,
@@ -25,6 +26,7 @@ final class SurveyAudience
     {
         $fallback = [
             'identity_mode' => 'none',
+            'require_sms_otp' => false,
             'modes' => [],
             'unit_ids' => [],
             'genders' => [],
@@ -80,6 +82,7 @@ final class SurveyAudience
             'identity_mode' => in_array($identityMode, ['none', 'personnel_code', 'national_code', 'either'], true)
                 ? $identityMode
                 : 'none',
+            'require_sms_otp' => (bool) ($value['require_sms_otp'] ?? false),
             'modes' => $modes,
             'unit_ids' => $unitIds,
             'genders' => $genders,
@@ -200,6 +203,7 @@ final class SurveyAudience
     {
         return self::normalize([
             'identity_mode' => $input['identity_mode'] ?? 'none',
+            'require_sms_otp' => (bool) ($input['require_sms_otp'] ?? false),
             'modes' => $input['modes'] ?? [],
             'unit_ids' => $input['unit_ids'] ?? [],
             'genders' => $input['genders'] ?? [],

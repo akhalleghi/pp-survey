@@ -350,6 +350,7 @@ class SurveyController extends Controller
             'audience_modes' => ['nullable', 'array'],
             'audience_modes.*' => ['string', Rule::in(['unit', 'gender', 'position', 'company', 'personnel'])],
             'access_identity_mode' => ['required', Rule::in(['none', 'personnel_code', 'national_code', 'either'])],
+            'require_sms_otp' => ['nullable', 'boolean'],
             'audience_unit_ids' => ['nullable', 'array'],
             'audience_unit_ids.*' => ['integer', 'exists:units,id'],
             'audience_genders' => ['nullable', 'array'],
@@ -378,8 +379,17 @@ class SurveyController extends Controller
                 ->withInput();
         }
 
+        $requireSmsOtp = $request->boolean('require_sms_otp')
+            && ($validated['access_identity_mode'] ?? 'none') !== 'none';
+        if ($request->boolean('require_sms_otp') && ($validated['access_identity_mode'] ?? 'none') === 'none') {
+            return back()
+                ->withErrors(['require_sms_otp' => 'برای فعال‌سازی احراز هویت پیامکی، ابتدا روش احراز هویت پرسنلی را مشخص کنید.'], 'updateSurvey')
+                ->withInput();
+        }
+
         $audienceFilters = [
             'identity_mode' => $validated['access_identity_mode'] ?? 'none',
+            'require_sms_otp' => $requireSmsOtp,
             'modes' => $selectedModes,
             'unit_ids' => in_array('unit', $selectedModes, true) ? array_values(array_unique(array_map('intval', $validated['audience_unit_ids'] ?? []))) : [],
             'genders' => in_array('gender', $selectedModes, true) ? array_values(array_unique($validated['audience_genders'] ?? [])) : [],

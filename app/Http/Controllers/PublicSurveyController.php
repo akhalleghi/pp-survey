@@ -7,6 +7,7 @@ use App\Models\Survey;
 use App\Models\SurveyQuestion;
 use App\Models\SurveyResponse;
 use App\Models\SurveyResponseAnswer;
+use App\Services\Survey\SurveySmsOtpService;
 use App\Support\PublicSurveyAccessSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,10 @@ use Illuminate\View\View;
 
 class PublicSurveyController extends Controller
 {
+    public function __construct(
+        private readonly SurveySmsOtpService $surveySmsOtpService,
+    ) {}
+
     public function show(Request $request, string $token): View|RedirectResponse
     {
         if ($request->hasAny(['personnel_code', 'national_code', 'submitted'])) {
@@ -66,11 +71,23 @@ class PublicSurveyController extends Controller
         $context = $this->buildAccessContext($survey);
         $identityMode = $context['identity_mode'];
         $needsIdentity = $context['needs_identity'];
+        $requireSmsOtp = $context['require_sms_otp'];
+        $showOtpStep = $context['show_otp_step'];
         $submittedPersonnelCode = old('personnel_code', '');
         $submittedNationalCode = old('national_code', '');
         $accessError = $context['access_error'] ?: session('access_error');
         $resolvedPersonnel = $context['resolved_personnel'];
+        $pendingPersonnel = $context['pending_personnel'];
         $audiencePassed = $context['audience_passed'];
+        $otpNotice = session('otp_notice');
+        $otpCooldownSeconds = (int) session('otp_cooldown', 0);
+        if ($showOtpStep && $pendingPersonnel && $otpCooldownSeconds <= 0) {
+            $otpCooldownSeconds = $this->surveySmsOtpService->resendCooldownRemaining($survey, $pendingPersonnel);
+        }
+        $maskedMobile = $pendingPersonnel
+            ? SurveySmsOtpService::maskMobile((string) $pendingPersonnel->mobile)
+            : null;
+        $otpCodeLength = (int) config('survey_otp.code_length', 6);
         $activeResponse = null;
         $existingAnswers = [];
 
@@ -139,6 +156,13 @@ class PublicSurveyController extends Controller
             'audiencePassed',
             'accessError',
             'identityMode',
+            'requireSmsOtp',
+            'showOtpStep',
+            'pendingPersonnel',
+            'maskedMobile',
+            'otpNotice',
+            'otpCooldownSeconds',
+            'otpCodeLength',
             'submittedPersonnelCode',
             'submittedNationalCode',
             'estimatedDurationMinutes',
@@ -169,9 +193,88 @@ class PublicSurveyController extends Controller
                 ->with('access_error', $context['access_error'] ?: 'اطلاعات وارد شده معتبر نیست.');
         }
 
-        PublicSurveyAccessSession::grant($survey, $context['resolved_personnel']);
+        $personnel = $context['resolved_personnel'];
+        $audienceConfig = $this->normalizeAudienceConfig($survey->audience_filters);
+
+        if ($this->requiresSmsOtp($audienceConfig)) {
+            $sendResult = $this->surveySmsOtpService->sendForPersonnel($survey, $personnel);
+            if (! $sendResult['ok']) {
+                return redirect()
+                    ->route('surveys.public.show', ['token' => $token])
+                    ->withInput($request->only(['personnel_code', 'national_code']))
+                    ->with('access_error', $sendResult['message']);
+            }
+
+            PublicSurveyAccessSession::setPendingOtp($survey, $personnel);
+
+            return redirect()
+                ->route('surveys.public.show', ['token' => $token])
+                ->with('otp_notice', $sendResult['message'])
+                ->with('otp_cooldown', $sendResult['cooldown_seconds'] ?? 0);
+        }
+
+        PublicSurveyAccessSession::grant($survey, $personnel);
 
         return redirect()->route('surveys.public.show', ['token' => $token]);
+    }
+
+    public function resendOtp(Request $request, string $token): JsonResponse
+    {
+        $survey = Survey::where('public_token', $token)->firstOrFail();
+        if (! $this->surveyIsAccessible($survey)) {
+            return response()->json(['ok' => false, 'message' => 'دسترسی به این نظرسنجی ممکن نیست.'], 403);
+        }
+
+        $pendingPersonnel = PublicSurveyAccessSession::resolvePendingPersonnel($survey);
+        if (! $pendingPersonnel) {
+            return response()->json(['ok' => false, 'message' => 'نشست تایید پیامکی یافت نشد. لطفاً دوباره اطلاعات پرسنلی را وارد کنید.'], 403);
+        }
+
+        $sendResult = $this->surveySmsOtpService->sendForPersonnel($survey, $pendingPersonnel);
+
+        return response()->json([
+            'ok' => $sendResult['ok'],
+            'message' => $sendResult['message'],
+            'cooldown_seconds' => $sendResult['cooldown_seconds'] ?? 0,
+        ], $sendResult['ok'] ? 200 : 429);
+    }
+
+    public function verifyOtp(Request $request, string $token): RedirectResponse
+    {
+        $survey = Survey::where('public_token', $token)->firstOrFail();
+        if (! $this->surveyIsAccessible($survey)) {
+            return redirect()->route('surveys.public.show', ['token' => $token]);
+        }
+
+        $pendingPersonnel = PublicSurveyAccessSession::resolvePendingPersonnel($survey);
+        if (! $pendingPersonnel) {
+            return redirect()
+                ->route('surveys.public.show', ['token' => $token])
+                ->with('access_error', 'نشست تایید پیامکی منقضی شده است. لطفاً دوباره اطلاعات پرسنلی را وارد کنید.');
+        }
+
+        $audienceConfig = $this->normalizeAudienceConfig($survey->audience_filters);
+        if (! $this->matchesAudienceFilters($pendingPersonnel, $audienceConfig)) {
+            PublicSurveyAccessSession::clear($survey);
+
+            return redirect()
+                ->route('surveys.public.show', ['token' => $token])
+                ->with('access_error', 'شما مجاز به شرکت در این نظرسنجی نیستید.');
+        }
+
+        $otpCode = $this->normalizeDigits(trim((string) $request->input('otp_code', '')));
+        $verifyResult = $this->surveySmsOtpService->verify($survey, $pendingPersonnel, $otpCode);
+        if (! $verifyResult['ok']) {
+            return redirect()
+                ->route('surveys.public.show', ['token' => $token])
+                ->with('access_error', $verifyResult['message']);
+        }
+
+        PublicSurveyAccessSession::grant($survey, $pendingPersonnel, true);
+
+        return redirect()
+            ->route('surveys.public.show', ['token' => $token])
+            ->with('otp_notice', $verifyResult['message']);
     }
 
     public function saveDraft(Request $request, string $token): JsonResponse
@@ -191,20 +294,28 @@ class PublicSurveyController extends Controller
             return response()->json(['ok' => false, 'message' => 'فرمت پاسخ‌ها معتبر نیست.'], 422);
         }
 
-        $response = DB::transaction(function () use ($survey, $context, $answersInput, $request) {
-            $response = $this->findOrCreateEditableResponse($survey, $context['resolved_personnel'], false);
-            $count = $this->persistAnswers($response, $survey->questions, $answersInput, $request);
-            $payload = [
-                'answers_count' => $count,
-                'last_seen_at' => now(),
-            ];
-            // ویرایش پاسخ ثبت‌شده: وضعیت را به پیش‌نویس برنگردان؛ فقط پاسخ‌ها به‌روز می‌شوند.
-            if ($response->status !== 'submitted') {
-                $payload['status'] = 'draft';
-            }
-            $response->update($payload);
-            return $response;
-        });
+        try {
+            $response = DB::transaction(function () use ($survey, $context, $answersInput, $request) {
+                $this->assertAnswerFormatsValid($survey->questions, $answersInput);
+                $response = $this->findOrCreateEditableResponse($survey, $context['resolved_personnel'], false);
+                $count = $this->persistAnswers($response, $survey->questions, $answersInput, $request);
+                $payload = [
+                    'answers_count' => $count,
+                    'last_seen_at' => now(),
+                ];
+                // ویرایش پاسخ ثبت‌شده: وضعیت را به پیش‌نویس برنگردان؛ فقط پاسخ‌ها به‌روز می‌شوند.
+                if ($response->status !== 'submitted') {
+                    $payload['status'] = 'draft';
+                }
+                $response->update($payload);
+                return $response;
+            });
+        } catch (ValidationException $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => collect($e->errors())->flatten()->first() ?: 'داده‌های واردشده معتبر نیست.',
+            ], 422);
+        }
 
         return response()->json(['ok' => true, 'response_id' => $response->id]);
     }
@@ -243,6 +354,7 @@ class PublicSurveyController extends Controller
 
         try {
             DB::transaction(function () use ($survey, $context, $answersInput, $request) {
+                $this->assertAnswerFormatsValid($survey->questions, $answersInput);
                 $response = $this->findOrCreateEditableResponse($survey, $context['resolved_personnel'], true);
                 $count = $this->persistAnswers($response, $survey->questions, $answersInput, $request);
                 $this->assertRequiredQuestionsAnswered($survey->questions, $answersInput, $request);
@@ -317,18 +429,32 @@ class PublicSurveyController extends Controller
         $audienceConfig = $this->normalizeAudienceConfig($survey->audience_filters);
         $identityMode = $audienceConfig['identity_mode'];
         $needsIdentity = $identityMode !== 'none';
+        $requireSmsOtp = $this->requiresSmsOtp($audienceConfig);
         $accessError = null;
         $resolvedPersonnel = null;
+        $pendingPersonnel = null;
+        $showOtpStep = false;
         $audiencePassed = true;
 
         if ($needsIdentity) {
+            $pendingPersonnel = PublicSurveyAccessSession::resolvePendingPersonnel($survey);
             $resolvedPersonnel = PublicSurveyAccessSession::resolvePersonnel($survey);
-            if (! $resolvedPersonnel) {
+
+            if ($requireSmsOtp && $resolvedPersonnel && ! PublicSurveyAccessSession::isSmsVerified($survey)) {
+                PublicSurveyAccessSession::clear($survey);
+                $resolvedPersonnel = null;
+            }
+
+            if ($pendingPersonnel) {
+                $showOtpStep = true;
+                $audiencePassed = false;
+            } elseif (! $resolvedPersonnel) {
                 $audiencePassed = false;
             } else {
                 $audiencePassed = $this->matchesAudienceFilters($resolvedPersonnel, $audienceConfig);
                 if (! $audiencePassed) {
                     PublicSurveyAccessSession::clear($survey);
+                    $resolvedPersonnel = null;
                     $accessError = 'شما مجاز به شرکت در این نظرسنجی نیستید.';
                 }
             }
@@ -337,8 +463,11 @@ class PublicSurveyController extends Controller
         return [
             'identity_mode' => $identityMode,
             'needs_identity' => $needsIdentity,
+            'require_sms_otp' => $requireSmsOtp,
+            'show_otp_step' => $showOtpStep,
             'access_error' => $accessError,
             'resolved_personnel' => $resolvedPersonnel,
+            'pending_personnel' => $pendingPersonnel,
             'audience_passed' => $audiencePassed,
         ];
     }
@@ -495,6 +624,30 @@ class PublicSurveyController extends Controller
                 $messages['answers.' . $question->id] = 'تکمیل سوال «' . $question->title . '» الزامی است.';
             }
         }
+        if ($messages !== []) {
+            throw ValidationException::withMessages($messages);
+        }
+    }
+
+    private function assertAnswerFormatsValid($questions, array $answersInput): void
+    {
+        $messages = [];
+        foreach ($questions as $question) {
+            if ($question->isStaticDisplay() || $question->type !== 'email') {
+                continue;
+            }
+
+            $raw = $answersInput[$question->id] ?? null;
+            $value = trim((string) (is_array($raw) ? ($raw['value'] ?? '') : ($raw ?? '')));
+            if ($value === '') {
+                continue;
+            }
+
+            if (filter_var($value, FILTER_VALIDATE_EMAIL) === false) {
+                $messages['answers.' . $question->id] = 'آدرس ایمیل واردشده معتبر نیست. لطفاً یک ایمیل صحیح وارد کنید (مثال: name@example.com).';
+            }
+        }
+
         if ($messages !== []) {
             throw ValidationException::withMessages($messages);
         }
@@ -696,12 +849,43 @@ class PublicSurveyController extends Controller
         if ($value === '') {
             return null;
         }
+
+        if ($question->type === 'email' && filter_var($value, FILTER_VALIDATE_EMAIL) === false) {
+            throw ValidationException::withMessages([
+                'answers.' . $question->id => 'آدرس ایمیل واردشده معتبر نیست. لطفاً یک ایمیل صحیح وارد کنید (مثال: name@example.com).',
+            ]);
+        }
+
         return array_merge($base, ['answer_text' => $value]);
     }
 
     private function normalizeAudienceConfig(mixed $value): array
     {
         return \App\Support\SurveyAudience::normalize($value);
+    }
+
+    private function requiresSmsOtp(array $audienceConfig): bool
+    {
+        return ($audienceConfig['identity_mode'] ?? 'none') !== 'none'
+            && (bool) ($audienceConfig['require_sms_otp'] ?? false);
+    }
+
+    private function surveyIsAccessible(Survey $survey): bool
+    {
+        if ($survey->status !== 'active') {
+            return false;
+        }
+        if ($survey->start_at && now()->lt($survey->start_at)) {
+            return false;
+        }
+        if ($survey->end_at && now()->isAfter($survey->end_at->copy()->endOfDay())) {
+            return false;
+        }
+        if ($survey->require_auth && ! Auth::check()) {
+            return false;
+        }
+
+        return true;
     }
 
     private function optionBelongsToQuestion(SurveyQuestion $question, int $optionId): bool

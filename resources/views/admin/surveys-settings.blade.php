@@ -13,6 +13,7 @@
         $selectedGenders = old('audience_genders', $audienceConfig['genders'] ?? []);
         $selectedPersonnel = old('audience_personnel_ids', $audienceConfig['personnel_ids'] ?? []);
         $selectedIdentityMode = old('access_identity_mode', $audienceConfig['identity_mode'] ?? 'none');
+        $requireSmsOtp = (bool) old('require_sms_otp', $audienceConfig['require_sms_otp'] ?? false);
     @endphp
     <link rel="stylesheet" href="{{ asset('vendor/persian-datepicker-behzadi/persianDatepicker-default.css') }}">
     <style>
@@ -788,6 +789,17 @@
                             <span class="hint" style="color: #dc2626;">{{ $message }}</span>
                         @enderror
                     </label>
+                    <label class="ss-toggle" id="requireSmsOtpWrap">
+                        <input type="hidden" name="require_sms_otp" value="0">
+                        <input type="checkbox" name="require_sms_otp" value="1" id="requireSmsOtp" @checked($requireSmsOtp)>
+                        <div>
+                            <strong>نیاز به احراز هویت پیامکی</strong>
+                            <span class="desc">پس از تایید کد پرسنلی/ملی، کد تایید به موبایل ثبت‌شده ارسال می‌شود. پنل پیامک باید فعال باشد.</span>
+                        </div>
+                    </label>
+                    @error('require_sms_otp', 'updateSurvey')
+                        <span class="hint" style="color: #dc2626; display: block; margin-top: 0.35rem;">{{ $message }}</span>
+                    @enderror
                 </div>
                 <div class="ss-field" style="margin-top: 0.65rem;">
                     <span>گروه‌های هدف</span>
@@ -1236,6 +1248,23 @@
             };
             modeCheckboxes.forEach((checkbox) => checkbox.addEventListener('change', syncAudienceTargets));
             syncAudienceTargets();
+
+            const requireSmsOtp = document.getElementById('requireSmsOtp');
+            const requireSmsOtpWrap = document.getElementById('requireSmsOtpWrap');
+            const syncSmsOtpToggle = () => {
+                const identityEnabled = identityMode && identityMode.value !== 'none';
+                if (requireSmsOtpWrap) {
+                    requireSmsOtpWrap.classList.toggle('is-disabled', !identityEnabled);
+                }
+                if (requireSmsOtp && !identityEnabled) {
+                    requireSmsOtp.checked = false;
+                    requireSmsOtp.disabled = true;
+                } else if (requireSmsOtp) {
+                    requireSmsOtp.disabled = false;
+                }
+            };
+            identityMode?.addEventListener('change', syncSmsOtpToggle);
+            syncSmsOtpToggle();
 
             const cssColorToHex6 = (raw) => {
                 const v = String(raw || '').trim();
