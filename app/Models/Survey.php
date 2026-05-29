@@ -88,7 +88,7 @@ class Survey extends Model
 
     public function questions()
     {
-        return $this->hasMany(SurveyQuestion::class)->orderBy('position');
+        return $this->hasMany(SurveyQuestion::class)->orderBy('position')->orderBy('id');
     }
 
     public function responses()

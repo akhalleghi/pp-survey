@@ -117,6 +117,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('surveys/{survey}/questions', [SurveyQuestionController::class, 'store'])->name('surveys.questions.store');
             Route::get('surveys/{survey}/questions/{question}/edit', [SurveyQuestionController::class, 'edit'])->name('surveys.questions.edit');
             Route::put('surveys/{survey}/questions/{question}', [SurveyQuestionController::class, 'update'])->name('surveys.questions.update');
+            Route::post('surveys/{survey}/questions/{question}/move', [SurveyQuestionController::class, 'move'])->name('surveys.questions.move');
             Route::delete('surveys/{survey}/questions/{question}', [SurveyQuestionController::class, 'destroy'])->name('surveys.questions.destroy');
         });
     });

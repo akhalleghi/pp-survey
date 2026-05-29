@@ -172,7 +172,40 @@
         }
         .question-actions {
             display: flex;
+            flex-wrap: wrap;
             gap: 0.5rem;
+            align-items: center;
+        }
+        .question-reorder {
+            display: inline-flex;
+            gap: 0.35rem;
+            align-items: center;
+        }
+        .question-reorder form {
+            margin: 0;
+        }
+        .question-reorder .reorder-btn {
+            border: none;
+            border-radius: 10px;
+            width: 2rem;
+            height: 2rem;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            cursor: pointer;
+            background: rgba(15, 23, 42, 0.08);
+            color: var(--slate);
+        }
+        .question-reorder .reorder-btn:hover:not(.disabled) {
+            background: rgba(15, 23, 42, 0.14);
+        }
+        .question-reorder .reorder-btn.disabled {
+            background: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+            cursor: not-allowed;
+            pointer-events: none;
         }
         .question-actions button {
             border: none;
@@ -384,6 +417,16 @@
                         {{ session('status') }}
                     </div>
                 @endif
+                @if (session('error'))
+                    <div style="border:1px solid rgba(220,38,38,.28); background:rgba(220,38,38,.08); color:#b91c1c; border-radius:14px; padding:.7rem .9rem; font-size:.9rem;">
+                        {{ session('error') }}
+                    </div>
+                @endif
+                @if (!($canReorderQuestions ?? true))
+                    <div style="border:1px solid rgba(148,163,184,.35); background:rgba(148,163,184,.12); color:#475569; border-radius:14px; padding:.7rem .9rem; font-size:.88rem;">
+                        به دلیل ثبت پاسخ در این نظرسنجی، امکان تغییر ترتیب سوالات وجود ندارد.
+                    </div>
+                @endif
                 <div class="survey-header">
                     <div>
                         <h2>طراحی سوالات: {{ $survey->title }}</h2>
@@ -421,6 +464,36 @@
                             @php
                                 $hasAnswers = $question->answers->isNotEmpty();
                             @endphp
+                            @if ($canReorderQuestions ?? false)
+                                <div class="question-reorder" aria-label="تغییر ترتیب سوال">
+                                    @if ($loop->first)
+                                        <span class="reorder-btn disabled" title="این سوال در ابتدای فهرست است" aria-hidden="true">
+                                            <i class="fa-solid fa-chevron-up"></i>
+                                        </span>
+                                    @else
+                                        <form method="POST" action="{{ route('admin.surveys.questions.move', [$survey, $question]) }}">
+                                            @csrf
+                                            <input type="hidden" name="direction" value="up">
+                                            <button type="submit" class="reorder-btn" title="انتقال به بالا" aria-label="انتقال سوال به بالا">
+                                                <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    @endif
+                                    @if ($loop->last)
+                                        <span class="reorder-btn disabled" title="این سوال در انتهای فهرست است" aria-hidden="true">
+                                            <i class="fa-solid fa-chevron-down"></i>
+                                        </span>
+                                    @else
+                                        <form method="POST" action="{{ route('admin.surveys.questions.move', [$survey, $question]) }}">
+                                            @csrf
+                                            <input type="hidden" name="direction" value="down">
+                                            <button type="submit" class="reorder-btn" title="انتقال به پایین" aria-label="انتقال سوال به پایین">
+                                                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
+                            @endif
                             @if ($hasAnswers)
                                 <a class="ghost disabled" title="به دلیل ثبت پاسخ، ویرایش این سوال غیرفعال است.">ویرایش</a>
                             @else

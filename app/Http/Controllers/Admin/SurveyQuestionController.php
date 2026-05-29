@@ -9,6 +9,7 @@ use App\Models\SurveyQuestion;
 use App\Models\SurveyQuestionOption;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -51,8 +52,9 @@ class SurveyQuestionController extends Controller
 
         $survey->load(['questions.options', 'questions.answers']);
         $questionTypes = $this->questionTypes();
+        $canReorderQuestions = $this->canReorderQuestions($survey);
 
-        return view('admin.surveys-questions', compact('survey', 'questionTypes'));
+        return view('admin.surveys-questions', compact('survey', 'questionTypes', 'canReorderQuestions'));
     }
 
     public function store(Request $request, Survey $survey): RedirectResponse
@@ -135,6 +137,62 @@ class SurveyQuestionController extends Controller
         return redirect()
             ->route('admin.surveys.questions.index', $survey)
             ->with('status', 'سوال با موفقیت ویرایش شد.');
+    }
+
+    public function move(Request $request, Survey $survey, SurveyQuestion $question): RedirectResponse
+    {
+        $this->authorizeSurveyAccess($survey);
+
+        if ($question->survey_id !== $survey->id) {
+            abort(404);
+        }
+
+        if (!$this->canReorderQuestions($survey)) {
+            return redirect()
+                ->route('admin.surveys.questions.index', $survey)
+                ->with('error', 'به دلیل ثبت پاسخ در این نظرسنجی، امکان تغییر ترتیب سوالات وجود ندارد.');
+        }
+
+        $direction = $request->validate([
+            'direction' => ['required', Rule::in(['up', 'down'])],
+        ])['direction'];
+
+        $orderedQuestionIds = $survey->questions()
+            ->orderBy('position')
+            ->orderBy('id')
+            ->pluck('id')
+            ->values()
+            ->all();
+
+        $currentIndex = array_search($question->id, $orderedQuestionIds, true);
+
+        if ($currentIndex === false) {
+            return redirect()->route('admin.surveys.questions.index', $survey);
+        }
+
+        $neighborIndex = $direction === 'up' ? $currentIndex - 1 : $currentIndex + 1;
+
+        if ($neighborIndex < 0 || $neighborIndex >= count($orderedQuestionIds)) {
+            return redirect()->route('admin.surveys.questions.index', $survey);
+        }
+
+        [$orderedQuestionIds[$currentIndex], $orderedQuestionIds[$neighborIndex]] = [
+            $orderedQuestionIds[$neighborIndex],
+            $orderedQuestionIds[$currentIndex],
+        ];
+
+        DB::transaction(function () use ($survey, $orderedQuestionIds): void {
+            foreach ($orderedQuestionIds as $index => $questionId) {
+                SurveyQuestion::query()
+                    ->where('survey_id', $survey->id)
+                    ->whereKey($questionId)
+                    ->update(['position' => $index + 1]);
+            }
+        });
+
+        return redirect()
+            ->route('admin.surveys.questions.index', $survey)
+            ->with('status', 'ترتیب سوال با موفقیت تغییر کرد.');
     }
 
     public function destroy(Survey $survey, SurveyQuestion $question): RedirectResponse
@@ -294,5 +352,10 @@ class SurveyQuestionController extends Controller
     private function canEditQuestion(SurveyQuestion $question): bool
     {
         return $question->answers()->exists() === false;
+    }
+
+    private function canReorderQuestions(Survey $survey): bool
+    {
+        return $survey->responses()->doesntExist();
     }
 }
