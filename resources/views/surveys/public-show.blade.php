@@ -372,7 +372,7 @@
             margin-top: clamp(0.5rem, 2.5vh, 1.25rem);
         }
         body:has(#surveyWizard.survey-wizard-root--single:not(.is-hidden)) {
-            padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+            padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
         }
         .survey-wizard-root {
             width: 100%;
@@ -737,11 +737,94 @@
             padding-bottom: 1rem;
             border-bottom: 1px solid rgba(15, 23, 42, 0.07);
         }
+        .survey-wizard-root--single .survey-wizard-body {
+            padding-bottom: 1.25rem;
+        }
+        .survey-completion-chip {
+            --completion-pct: 0;
+            position: fixed;
+            bottom: max(0.85rem, env(safe-area-inset-bottom, 0px));
+            inset-inline-end: max(0.85rem, env(safe-area-inset-inline-end, 0px));
+            z-index: 40;
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            min-width: 9.5rem;
+            max-width: 11rem;
+            padding: 0.78rem 0.92rem 0.85rem;
+            border-radius: 18px;
+            background: linear-gradient(
+                155deg,
+                rgba(255, 255, 255, 0.99) 0%,
+                rgba(var(--primary-rgb), 0.1) 100%
+            );
+            border: 2px solid rgba(var(--primary-rgb), 0.42);
+            box-shadow:
+                0 12px 36px -8px rgba(var(--primary-rgb), 0.45),
+                0 6px 16px -6px rgba(15, 23, 42, 0.2),
+                0 0 0 1px rgba(255, 255, 255, 0.75) inset;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            pointer-events: none;
+        }
+        .survey-completion-chip__row {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.2rem;
+            line-height: 1.2;
+        }
+        .survey-completion-chip__label {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: var(--pub-title);
+            white-space: nowrap;
+            letter-spacing: 0.01em;
+        }
+        .survey-completion-chip__value {
+            font-size: 1.28rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            color: var(--primary);
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            line-height: 1;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+        }
+        .survey-completion-chip__bar {
+            height: 7px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.1);
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.1);
+        }
+        .survey-completion-chip__fill {
+            display: block;
+            height: 100%;
+            width: 0%;
+            border-radius: inherit;
+            background: linear-gradient(
+                90deg,
+                var(--primary),
+                rgba(var(--primary-dark-rgb), 0.95)
+            );
+            box-shadow: 0 0 10px rgba(var(--primary-rgb), 0.45);
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .survey-completion-chip__value--mobile {
+            display: none;
+            font-size: 0.82rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            color: var(--primary);
+            line-height: 1;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
         .survey-single-intro {
-            margin-bottom: 1.1rem;
+            margin-bottom: 0.85rem;
         }
         .survey-single-lead {
-            margin: 0 0 0.85rem;
+            margin: 0;
             font-size: 0.86rem;
             line-height: 1.75;
             color: var(--pub-muted);
@@ -749,51 +832,6 @@
             border-radius: 14px;
             background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.07) 0%, rgba(15, 23, 42, 0.04) 100%);
             border: 1px solid rgba(var(--primary-rgb), 0.12);
-        }
-        .survey-single-progress {
-            padding: 0.72rem 0.82rem 0.82rem;
-            border-radius: 16px;
-            background: rgba(248, 250, 252, 0.92);
-            border: 1px solid var(--pub-card-border);
-            margin-bottom: 0.15rem;
-        }
-        .survey-single-progress-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-            margin-bottom: 0.5rem;
-        }
-        .survey-single-progress-title {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--pub-title);
-        }
-        .survey-single-progress-pct {
-            font-size: 0.8rem;
-            font-weight: 800;
-            font-variant-numeric: tabular-nums;
-            color: var(--primary);
-            letter-spacing: 0.02em;
-        }
-        .survey-single-progress-track {
-            height: 8px;
-            border-radius: 999px;
-            background: var(--pub-track-bg);
-            overflow: hidden;
-            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
-        }
-        .survey-single-progress-fill {
-            display: block;
-            height: 100%;
-            width: 0%;
-            border-radius: inherit;
-            background: linear-gradient(
-                90deg,
-                rgba(var(--primary-rgb), 0.92),
-                rgba(var(--primary-dark-rgb), 0.88)
-            );
-            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .survey-single-stack {
             display: flex;
@@ -990,6 +1028,37 @@
             .survey-single-lead {
                 font-size: 0.82rem;
                 padding: 0.62rem 0.72rem;
+            }
+            .survey-completion-chip {
+                bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+                inset-inline-end: max(0.75rem, env(safe-area-inset-inline-end, 0px));
+                min-width: 0;
+                max-width: none;
+                width: 4.15rem;
+                height: 4.15rem;
+                padding: 0;
+                border-radius: 50%;
+                align-items: center;
+                justify-content: center;
+                gap: 0;
+                border-width: 0;
+                background:
+                    radial-gradient(closest-side, rgba(255, 255, 255, 0.99) 66%, transparent 68%),
+                    conic-gradient(
+                        var(--primary) calc(var(--completion-pct) * 1%),
+                        rgba(15, 23, 42, 0.12) 0
+                    );
+                box-shadow:
+                    0 10px 28px -6px rgba(var(--primary-rgb), 0.5),
+                    0 4px 14px rgba(15, 23, 42, 0.18);
+            }
+            .survey-completion-chip__row,
+            .survey-completion-chip__bar,
+            .survey-completion-chip__row .survey-completion-chip__value {
+                display: none;
+            }
+            .survey-completion-chip__value--mobile {
+                display: block;
             }
         }
         .survey-wizard-empty {
@@ -1206,17 +1275,8 @@
                     @if ($questionsDisplaySinglePage)
                         <div class="survey-single-intro">
                             <p class="survey-single-lead">
-                                همهٔ سوالات در همین صفحه است. موارد دارای علامت <span class="q-required-star" aria-hidden="true">*</span><span class="sr-only">ستاره</span> اجباری هستند؛ پس از تکمیل، پایین صفحه دکمهٔ ثبت را بزنید.
+                                 موارد دارای علامت <span class="q-required-star" aria-hidden="true">*</span><span class="sr-only">ستاره</span> اجباری هستند؛ پس از تکمیل، پایین صفحه دکمهٔ ثبت را بزنید.
                             </p>
-                            <div class="survey-single-progress" role="region" aria-label="پیشرفت تکمیل فرم" aria-live="polite">
-                                <div class="survey-single-progress-row">
-                                    <span class="survey-single-progress-title">پیشرفت تکمیل</span>
-                                    <span class="survey-single-progress-pct" id="singleProgressPercentLabel">۰٪</span>
-                                </div>
-                                <div class="survey-single-progress-track" aria-hidden="true">
-                                    <span class="survey-single-progress-fill" id="singleProgressFill"></span>
-                                </div>
-                            </div>
                         </div>
                         <div class="survey-single-stack">
                     @endif
@@ -1247,6 +1307,25 @@
                 @endif
                     </div>
                 </div>
+
+                @if ($questionsDisplaySinglePage && $survey->questions->isNotEmpty())
+                    <div
+                        class="survey-completion-chip"
+                        id="singleProgressChip"
+                        role="status"
+                        aria-live="polite"
+                        aria-label="درصد تکمیل: ۰٪"
+                    >
+                        <div class="survey-completion-chip__row">
+                            <span class="survey-completion-chip__label">درصد تکمیل:</span>
+                            <span class="survey-completion-chip__value" id="singleProgressPercentLabel">۰٪</span>
+                        </div>
+                        <div class="survey-completion-chip__bar" aria-hidden="true">
+                            <span class="survey-completion-chip__fill" id="singleProgressFill"></span>
+                        </div>
+                        <span class="survey-completion-chip__value survey-completion-chip__value--mobile" id="singleProgressPercentMobile" aria-hidden="true">۰٪</span>
+                    </div>
+                @endif
 
                 @if ($survey->questions->isNotEmpty() && ! $questionsDisplaySinglePage)
                     <footer class="wizard-footer-bar" role="navigation" aria-label="پیمایش و پیشرفت">
@@ -1533,17 +1612,27 @@
             const progressPercentLabel = document.getElementById('progressPercentLabel');
             const singleProgressFill = document.getElementById('singleProgressFill');
             const singleProgressPercentLabel = document.getElementById('singleProgressPercentLabel');
+            const singleProgressPercentMobile = document.getElementById('singleProgressPercentMobile');
+            const singleProgressChip = document.getElementById('singleProgressChip');
             let finished = false;
 
             const updateProgressUI = () => {
                 const p = getProgressPercent();
+                const faPct = `${toFaDigitsJs(p)}٪`;
                 if (progressFill) progressFill.style.width = `${p}%`;
                 if (progressPercentLabel) {
                     progressPercentLabel.textContent = `${toFaDigitsJs(p)}٪ را پاسخ داده‌اید`;
                 }
+                if (singleProgressChip) {
+                    singleProgressChip.style.setProperty('--completion-pct', String(p));
+                    singleProgressChip.setAttribute('aria-label', `درصد تکمیل: ${faPct}`);
+                }
                 if (singleProgressFill) singleProgressFill.style.width = `${p}%`;
                 if (singleProgressPercentLabel) {
-                    singleProgressPercentLabel.textContent = `${toFaDigitsJs(p)}٪ تکمیل‌شده`;
+                    singleProgressPercentLabel.textContent = faPct;
+                }
+                if (singleProgressPercentMobile) {
+                    singleProgressPercentMobile.textContent = faPct;
                 }
             };
 
