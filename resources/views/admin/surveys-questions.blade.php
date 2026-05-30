@@ -879,8 +879,9 @@
             const rebuildOptionNames = () => {
                 const rows = optionList.querySelectorAll('.option-row');
                 rows.forEach((row, index) => {
-                    const labelInput = row.querySelector('input[name$="[label]"]');
-                    const valueInput = row.querySelector('input[name$="[value]"]');
+                    const textInputs = row.querySelectorAll('input[type="text"]');
+                    const labelInput = textInputs[0];
+                    const valueInput = textInputs[1];
                     if (labelInput) {
                         labelInput.name = `options[${index}][label]`;
                     }
