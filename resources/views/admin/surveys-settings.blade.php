@@ -339,6 +339,162 @@
         .audience-target.is-hidden {
             display: none;
         }
+        .dual-listbox {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+            gap: 0.85rem;
+            align-items: stretch;
+            margin-top: 0.35rem;
+        }
+        .dlb-panel {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 16px;
+            background: #fff;
+            overflow: hidden;
+            box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+        }
+        .dlb-panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.65rem 0.85rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(15, 23, 42, 0.03);
+        }
+        .dlb-panel-head strong {
+            font-size: 0.86rem;
+            color: var(--slate);
+        }
+        .dlb-count {
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: var(--primary-dark, #b30e15);
+            background: rgba(214, 17, 25, 0.1);
+            border-radius: 999px;
+            padding: 0.15rem 0.55rem;
+            white-space: nowrap;
+        }
+        .dlb-search-wrap {
+            position: relative;
+            padding: 0.65rem 0.75rem 0.45rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        }
+        .dlb-search-wrap i {
+            position: absolute;
+            top: 50%;
+            right: 1.15rem;
+            transform: translateY(-50%);
+            color: var(--muted);
+            font-size: 0.82rem;
+            pointer-events: none;
+        }
+        .dlb-search {
+            width: 100%;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 12px;
+            padding: 0.58rem 2.1rem 0.58rem 0.75rem;
+            font-family: inherit;
+            font-size: 0.84rem;
+            background: rgba(248, 250, 252, 0.85);
+        }
+        .dlb-search:focus {
+            outline: none;
+            border-color: rgba(214, 17, 25, 0.45);
+            box-shadow: 0 0 0 3px rgba(214, 17, 25, 0.08);
+        }
+        .dlb-list {
+            list-style: none;
+            margin: 0;
+            padding: 0.35rem;
+            max-height: 280px;
+            overflow: auto;
+            min-height: 200px;
+        }
+        .dlb-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            padding: 0.55rem 0.65rem;
+            border-radius: 12px;
+            cursor: pointer;
+            user-select: none;
+            border: 1px solid transparent;
+            transition: background 0.12s ease, border-color 0.12s ease;
+        }
+        .dlb-item:hover {
+            background: rgba(15, 23, 42, 0.04);
+        }
+        .dlb-item.is-highlighted {
+            background: rgba(214, 17, 25, 0.08);
+            border-color: rgba(214, 17, 25, 0.22);
+        }
+        .dlb-item-name {
+            font-size: 0.86rem;
+            font-weight: 600;
+            color: var(--slate);
+            line-height: 1.45;
+        }
+        .dlb-item-meta {
+            font-size: 0.76rem;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+        .dlb-empty {
+            padding: 1.5rem 0.85rem;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+        .dlb-controls {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.25rem 0;
+        }
+        .dlb-btn {
+            width: 42px;
+            height: 38px;
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            border-radius: 12px;
+            background: #fff;
+            color: var(--slate);
+            cursor: pointer;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+        }
+        .dlb-btn:hover:not(:disabled) {
+            background: rgba(214, 17, 25, 0.08);
+            border-color: rgba(214, 17, 25, 0.35);
+            color: var(--primary-dark, #b30e15);
+        }
+        .dlb-btn:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+        .dlb-btn:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+        .dlb-hint {
+            margin-top: 0.55rem;
+        }
+        @media (max-width: 860px) {
+            .dual-listbox {
+                grid-template-columns: 1fr;
+            }
+            .dlb-controls {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
         .theme-color-row .theme-color-inner {
             display: flex;
             align-items: center;
@@ -870,19 +1026,74 @@
                     </label>
                 </div>
                 <div class="audience-target" data-audience-target="personnel">
-                    <label class="ss-field">
+                    @php
+                        $personnelPickerItems = collect($personnelOptions)->map(function ($person) {
+                            return [
+                                'id' => (int) $person->id,
+                                'name' => trim($person->first_name . ' ' . $person->last_name),
+                                'personnel_code' => (string) ($person->personnel_code ?? ''),
+                                'national_code' => (string) ($person->national_code ?? ''),
+                            ];
+                        })->values()->all();
+                        $selectedPersonnelIds = array_values(array_map('intval', (array) $selectedPersonnel));
+                    @endphp
+                    <div class="ss-field">
                         <span>افراد مجاز (انتخابی)</span>
-                        <select name="audience_personnel_ids[]" multiple size="8">
-                            @foreach ($personnelOptions as $person)
-                                @php
-                                    $fullName = trim($person->first_name . ' ' . $person->last_name);
-                                @endphp
-                                <option value="{{ $person->id }}" @selected(in_array((string) $person->id, array_map('strval', $selectedPersonnel), true))>
-                                    {{ $fullName }} - پرسنلی: {{ $person->personnel_code }} - ملی: {{ $person->national_code }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
+                        <div
+                            id="surveyPersonnelDualListbox"
+                            class="dual-listbox"
+                            dir="rtl"
+                            data-personnel='@json($personnelPickerItems)'
+                            data-selected='@json($selectedPersonnelIds)'
+                        >
+                            <div class="dlb-panel dlb-panel-available">
+                                <div class="dlb-panel-head">
+                                    <strong>لیست تمام پرسنل</strong>
+                                    <span class="dlb-count" id="dlbAvailableCount">۰</span>
+                                </div>
+                                <div class="dlb-search-wrap">
+                                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                                    <input type="search" class="dlb-search" id="dlbAvailableSearch" placeholder="جستجو: نام، کد پرسنلی، کد ملی…" autocomplete="off">
+                                </div>
+                                <ul class="dlb-list" id="dlbAvailableList" role="listbox" aria-label="لیست تمام پرسنل"></ul>
+                            </div>
+
+                            <div class="dlb-controls" aria-label="انتقال پرسنل">
+                                <button type="button" class="dlb-btn" id="dlbMoveAllToSelected" title="انتقال همه به لیست انتخابی" aria-label="انتقال همه به لیست انتخابی">
+                                    <i class="fa-solid fa-angles-left" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" class="dlb-btn" id="dlbMoveToSelected" title="انتقال موارد انتخاب‌شده به لیست انتخابی" aria-label="انتقال موارد انتخاب‌شده به لیست انتخابی">
+                                    <i class="fa-solid fa-angle-left" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" class="dlb-btn" id="dlbMoveToAvailable" title="بازگرداندن موارد انتخاب‌شده" aria-label="بازگرداندن موارد انتخاب‌شده">
+                                    <i class="fa-solid fa-angle-right" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" class="dlb-btn" id="dlbMoveAllToAvailable" title="بازگرداندن همه" aria-label="بازگرداندن همه">
+                                    <i class="fa-solid fa-angles-right" aria-hidden="true"></i>
+                                </button>
+                            </div>
+
+                            <div class="dlb-panel dlb-panel-selected">
+                                <div class="dlb-panel-head">
+                                    <strong>لیست کاربران انتخابی</strong>
+                                    <span class="dlb-count" id="dlbSelectedCount">۰</span>
+                                </div>
+                                <div class="dlb-search-wrap">
+                                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                                    <input type="search" class="dlb-search" id="dlbSelectedSearch" placeholder="جستجو در انتخاب‌شده‌ها…" autocomplete="off">
+                                </div>
+                                <ul class="dlb-list" id="dlbSelectedList" role="listbox" aria-label="لیست کاربران انتخابی"></ul>
+                            </div>
+                        </div>
+                        <div id="dlbHiddenInputs"></div>
+                        <span class="hint dlb-hint">برای انتقال سریع، روی نام پرسنل دوبار کلیک کنید. از دکمه‌های وسط برای انتقال تکی یا گروهی استفاده کنید.</span>
+                        @error('audience_personnel_ids', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                        @error('audience_personnel_ids.*', 'updateSurvey')
+                            <span class="hint" style="color: #dc2626;">{{ $message }}</span>
+                        @enderror
+                    </div>
                 </div>
             </section>
 
@@ -1265,6 +1476,276 @@
             };
             identityMode?.addEventListener('change', syncSmsOtpToggle);
             syncSmsOtpToggle();
+
+            (function initSurveyPersonnelDualListbox() {
+                const root = document.getElementById('surveyPersonnelDualListbox');
+                if (!root) {
+                    return;
+                }
+
+                const parseJson = (value, fallback) => {
+                    try {
+                        return JSON.parse(value || '');
+                    } catch (_) {
+                        return fallback;
+                    }
+                };
+
+                const allPersonnel = parseJson(root.dataset.personnel, []);
+                const personnelById = new Map(allPersonnel.map((item) => [String(item.id), item]));
+                const selectedIds = new Set(parseJson(root.dataset.selected, []).map(String));
+                const availableHighlight = new Set();
+                const selectedHighlight = new Set();
+
+                const availableSearchEl = document.getElementById('dlbAvailableSearch');
+                const selectedSearchEl = document.getElementById('dlbSelectedSearch');
+                const availableListEl = document.getElementById('dlbAvailableList');
+                const selectedListEl = document.getElementById('dlbSelectedList');
+                const hiddenInputsEl = document.getElementById('dlbHiddenInputs');
+                const availableCountEl = document.getElementById('dlbAvailableCount');
+                const selectedCountEl = document.getElementById('dlbSelectedCount');
+
+                const btnMoveAllToSelected = document.getElementById('dlbMoveAllToSelected');
+                const btnMoveToSelected = document.getElementById('dlbMoveToSelected');
+                const btnMoveToAvailable = document.getElementById('dlbMoveToAvailable');
+                const btnMoveAllToAvailable = document.getElementById('dlbMoveAllToAvailable');
+
+                const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+                const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+                const toEnglishDigits = (value) => String(value || '').replace(/[۰-۹٠-٩]/g, (ch) => {
+                    const p = persianDigits.indexOf(ch);
+                    if (p >= 0) {
+                        return String(p);
+                    }
+                    const a = arabicDigits.indexOf(ch);
+                    return a >= 0 ? String(a) : ch;
+                });
+
+                const toPersianNumber = (value) => String(value).replace(/\d/g, (d) => persianDigits[Number(d)]);
+
+                const normalizeSearch = (value) => toEnglishDigits(String(value || '').trim()).toLowerCase();
+
+                const itemSearchText = (item) => normalizeSearch([
+                    item.name,
+                    item.personnel_code,
+                    item.national_code,
+                ].join(' '));
+
+                const matchesSearch = (item, query) => {
+                    if (!query) {
+                        return true;
+                    }
+                    return itemSearchText(item).includes(query);
+                };
+
+                const getAvailableItems = () => allPersonnel.filter((item) => !selectedIds.has(String(item.id)));
+                const getSelectedItems = () => Array.from(selectedIds)
+                    .map((id) => personnelById.get(String(id)))
+                    .filter(Boolean);
+
+                const toggleHighlight = (set, id) => {
+                    const key = String(id);
+                    if (set.has(key)) {
+                        set.delete(key);
+                    } else {
+                        set.add(key);
+                    }
+                };
+
+                const renderList = (listEl, items, highlightSet, emptyLabel) => {
+                    listEl.innerHTML = '';
+                    if (!items.length) {
+                        const empty = document.createElement('li');
+                        empty.className = 'dlb-empty';
+                        empty.textContent = emptyLabel;
+                        listEl.appendChild(empty);
+                        return;
+                    }
+
+                    items.forEach((item) => {
+                        const li = document.createElement('li');
+                        li.className = 'dlb-item';
+                        li.dataset.id = String(item.id);
+                        li.setAttribute('role', 'option');
+                        li.setAttribute('aria-selected', highlightSet.has(String(item.id)) ? 'true' : 'false');
+                        if (highlightSet.has(String(item.id))) {
+                            li.classList.add('is-highlighted');
+                        }
+
+                        const name = document.createElement('span');
+                        name.className = 'dlb-item-name';
+                        name.textContent = item.name || '—';
+
+                        const meta = document.createElement('span');
+                        meta.className = 'dlb-item-meta';
+                        meta.textContent = `کد پرسنلی: ${item.personnel_code || '—'} · کد ملی: ${item.national_code || '—'}`;
+
+                        li.append(name, meta);
+                        listEl.appendChild(li);
+                    });
+                };
+
+                const syncHiddenInputs = () => {
+                    hiddenInputsEl.innerHTML = '';
+                    Array.from(selectedIds)
+                        .map((id) => parseInt(id, 10))
+                        .filter((id) => !Number.isNaN(id))
+                        .sort((a, b) => a - b)
+                        .forEach((id) => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'audience_personnel_ids[]';
+                            input.value = String(id);
+                            hiddenInputsEl.appendChild(input);
+                        });
+                };
+
+                const updateCounts = () => {
+                    const availableCount = getAvailableItems().length;
+                    const selectedCount = selectedIds.size;
+                    if (availableCountEl) {
+                        availableCountEl.textContent = toPersianNumber(availableCount);
+                    }
+                    if (selectedCountEl) {
+                        selectedCountEl.textContent = toPersianNumber(selectedCount);
+                    }
+                };
+
+                const updateButtons = () => {
+                    const availableQuery = normalizeSearch(availableSearchEl?.value || '');
+                    const selectedQuery = normalizeSearch(selectedSearchEl?.value || '');
+                    const visibleAvailable = getAvailableItems().filter((item) => matchesSearch(item, availableQuery));
+                    const visibleSelected = getSelectedItems().filter((item) => matchesSearch(item, selectedQuery));
+                    const highlightedAvailable = Array.from(availableHighlight).filter((id) => !selectedIds.has(id));
+                    const highlightedSelected = Array.from(selectedHighlight).filter((id) => selectedIds.has(id));
+
+                    if (btnMoveAllToSelected) {
+                        btnMoveAllToSelected.disabled = visibleAvailable.length === 0;
+                    }
+                    if (btnMoveToSelected) {
+                        btnMoveToSelected.disabled = highlightedAvailable.length === 0;
+                    }
+                    if (btnMoveToAvailable) {
+                        btnMoveToAvailable.disabled = highlightedSelected.length === 0;
+                    }
+                    if (btnMoveAllToAvailable) {
+                        btnMoveAllToAvailable.disabled = visibleSelected.length === 0;
+                    }
+                };
+
+                const render = () => {
+                    const availableQuery = normalizeSearch(availableSearchEl?.value || '');
+                    const selectedQuery = normalizeSearch(selectedSearchEl?.value || '');
+                    const availableItems = getAvailableItems()
+                        .filter((item) => matchesSearch(item, availableQuery))
+                        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fa'));
+                    const selectedItems = getSelectedItems()
+                        .filter((item) => matchesSearch(item, selectedQuery))
+                        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fa'));
+
+                    Array.from(availableHighlight).forEach((id) => {
+                        if (selectedIds.has(id) || !personnelById.has(id)) {
+                            availableHighlight.delete(id);
+                        }
+                    });
+                    Array.from(selectedHighlight).forEach((id) => {
+                        if (!selectedIds.has(id)) {
+                            selectedHighlight.delete(id);
+                        }
+                    });
+
+                    renderList(availableListEl, availableItems, availableHighlight, 'پرسنلی برای نمایش وجود ندارد.');
+                    renderList(selectedListEl, selectedItems, selectedHighlight, 'هنوز پرسنلی انتخاب نشده است.');
+                    syncHiddenInputs();
+                    updateCounts();
+                    updateButtons();
+                };
+
+                const moveToSelected = (ids) => {
+                    ids.forEach((id) => {
+                        if (personnelById.has(String(id)) && !selectedIds.has(String(id))) {
+                            selectedIds.add(String(id));
+                        }
+                    });
+                    availableHighlight.clear();
+                    render();
+                };
+
+                const moveToAvailable = (ids) => {
+                    ids.forEach((id) => selectedIds.delete(String(id)));
+                    selectedHighlight.clear();
+                    render();
+                };
+
+                availableListEl?.addEventListener('click', (event) => {
+                    const itemEl = event.target.closest('.dlb-item');
+                    if (!itemEl) {
+                        return;
+                    }
+                    if (!event.ctrlKey && !event.metaKey) {
+                        availableHighlight.clear();
+                        selectedHighlight.clear();
+                    }
+                    toggleHighlight(availableHighlight, itemEl.dataset.id);
+                    render();
+                });
+
+                selectedListEl?.addEventListener('click', (event) => {
+                    const itemEl = event.target.closest('.dlb-item');
+                    if (!itemEl) {
+                        return;
+                    }
+                    if (!event.ctrlKey && !event.metaKey) {
+                        selectedHighlight.clear();
+                        availableHighlight.clear();
+                    }
+                    toggleHighlight(selectedHighlight, itemEl.dataset.id);
+                    render();
+                });
+
+                availableListEl?.addEventListener('dblclick', (event) => {
+                    const itemEl = event.target.closest('.dlb-item');
+                    if (!itemEl) {
+                        return;
+                    }
+                    moveToSelected([itemEl.dataset.id]);
+                });
+
+                selectedListEl?.addEventListener('dblclick', (event) => {
+                    const itemEl = event.target.closest('.dlb-item');
+                    if (!itemEl) {
+                        return;
+                    }
+                    moveToAvailable([itemEl.dataset.id]);
+                });
+
+                btnMoveAllToSelected?.addEventListener('click', () => {
+                    const availableQuery = normalizeSearch(availableSearchEl?.value || '');
+                    moveToSelected(getAvailableItems()
+                        .filter((item) => matchesSearch(item, availableQuery))
+                        .map((item) => item.id));
+                });
+
+                btnMoveToSelected?.addEventListener('click', () => {
+                    moveToSelected(Array.from(availableHighlight));
+                });
+
+                btnMoveToAvailable?.addEventListener('click', () => {
+                    moveToAvailable(Array.from(selectedHighlight));
+                });
+
+                btnMoveAllToAvailable?.addEventListener('click', () => {
+                    const selectedQuery = normalizeSearch(selectedSearchEl?.value || '');
+                    moveToAvailable(getSelectedItems()
+                        .filter((item) => matchesSearch(item, selectedQuery))
+                        .map((item) => item.id));
+                });
+
+                availableSearchEl?.addEventListener('input', render);
+                selectedSearchEl?.addEventListener('input', render);
+
+                render();
+            })();
 
             const cssColorToHex6 = (raw) => {
                 const v = String(raw || '').trim();
