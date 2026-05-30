@@ -21,7 +21,7 @@ class AdminUserSeeder extends Seeder
                 'role' => AdminUser::ROLE_ADMIN,
                 'permissions' => null,
                 'personnel_code' => null,
-                'is_active' => true,
+                'is_active' => true
             ]
         );
     }
