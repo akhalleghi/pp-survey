@@ -16,24 +16,12 @@ use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\UnitController;
 use App\Http\Controllers\Admin\UnitSupervisorController;
 use App\Http\Controllers\PublicSurveyController;
+use App\Models\Survey;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
-
-Route::get('surveys/public/{token}', [PublicSurveyController::class, 'show'])->name('surveys.public.show');
-Route::post('surveys/public/{token}/access', [PublicSurveyController::class, 'verifyAccess'])
-    ->middleware('throttle:15,1')
-    ->name('surveys.public.access');
-Route::post('surveys/public/{token}/otp/resend', [PublicSurveyController::class, 'resendOtp'])
-    ->middleware('throttle:6,1')
-    ->name('surveys.public.otp.resend');
-Route::post('surveys/public/{token}/otp/verify', [PublicSurveyController::class, 'verifyOtp'])
-    ->middleware('throttle:12,1')
-    ->name('surveys.public.otp.verify');
-Route::post('surveys/public/{token}/draft', [PublicSurveyController::class, 'saveDraft'])->name('surveys.public.draft');
-Route::post('surveys/public/{token}/submit', [PublicSurveyController::class, 'submit'])->name('surveys.public.submit');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -128,3 +116,55 @@ Route::prefix('admin')->name('admin.')->group(function () {
         });
     });
 });
+
+$publicSurveyToken = Survey::publicTokenRoutePattern();
+$publicSurveyMiddleware = ['public.survey.token'];
+
+$registerPublicSurveyRoutes = static function (string $prefix = '') use ($publicSurveyToken, $publicSurveyMiddleware): void {
+    $base = $prefix === '' ? '' : rtrim($prefix, '/') . '/';
+
+    Route::middleware($publicSurveyMiddleware)->group(function () use ($base, $publicSurveyToken): void {
+        Route::get($base . '{token}', [PublicSurveyController::class, 'show'])
+            ->where('token', $publicSurveyToken);
+        Route::post($base . '{token}/access', [PublicSurveyController::class, 'verifyAccess'])
+            ->middleware('throttle:15,1');
+        Route::post($base . '{token}/otp/resend', [PublicSurveyController::class, 'resendOtp'])
+            ->middleware('throttle:6,1');
+        Route::post($base . '{token}/otp/verify', [PublicSurveyController::class, 'verifyOtp'])
+            ->middleware('throttle:12,1');
+        Route::post($base . '{token}/draft', [PublicSurveyController::class, 'saveDraft'])
+            ->middleware('throttle:40,1');
+        Route::post($base . '{token}/submit', [PublicSurveyController::class, 'submit'])
+            ->middleware('throttle:12,1');
+    });
+};
+
+// لینک کوتاه: /{token}
+Route::middleware($publicSurveyMiddleware)->group(function () use ($publicSurveyToken): void {
+    Route::get('{token}', [PublicSurveyController::class, 'show'])
+        ->where('token', $publicSurveyToken)
+        ->name('surveys.public.show');
+    Route::post('{token}/access', [PublicSurveyController::class, 'verifyAccess'])
+        ->middleware('throttle:15,1')
+        ->where('token', $publicSurveyToken)
+        ->name('surveys.public.access');
+    Route::post('{token}/otp/resend', [PublicSurveyController::class, 'resendOtp'])
+        ->middleware('throttle:6,1')
+        ->where('token', $publicSurveyToken)
+        ->name('surveys.public.otp.resend');
+    Route::post('{token}/otp/verify', [PublicSurveyController::class, 'verifyOtp'])
+        ->middleware('throttle:12,1')
+        ->where('token', $publicSurveyToken)
+        ->name('surveys.public.otp.verify');
+    Route::post('{token}/draft', [PublicSurveyController::class, 'saveDraft'])
+        ->middleware('throttle:40,1')
+        ->where('token', $publicSurveyToken)
+        ->name('surveys.public.draft');
+    Route::post('{token}/submit', [PublicSurveyController::class, 'submit'])
+        ->middleware('throttle:12,1')
+        ->where('token', $publicSurveyToken)
+        ->name('surveys.public.submit');
+});
+
+// مسیر قدیمی (سازگاری با لینک‌های قبلی)
+$registerPublicSurveyRoutes('surveys/public');

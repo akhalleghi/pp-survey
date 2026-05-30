@@ -117,7 +117,7 @@ class SmsManagementController extends Controller
             ], 422);
         }
 
-        $url = route('surveys.public.show', $survey->public_token);
+        $url = $survey->publicUrl() ?? '';
 
         $audienceConfig = \App\Support\SurveyAudience::normalize($survey->audience_filters ?? []);
 

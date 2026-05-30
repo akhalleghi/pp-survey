@@ -110,12 +110,62 @@ class Survey extends Model
             for ($i = 0; $i < $length; $i++) {
                 $token .= $alphabet[random_int(0, $maxIndex)];
             }
-            if (!static::query()->where('public_token', $token)->exists()) {
+            if (! static::isReservedPublicToken($token)
+                && ! static::query()->where('public_token', $token)->exists()) {
                 return $token;
             }
         }
 
         throw new RuntimeException('امکان تولید لینک یکتا پس از چند تلاش وجود ندارد.');
+    }
+
+    /**
+     * مسیرهایی که نباید به‌عنوان توکن عمومی استفاده شوند (هم‌خوان با پیشوندهای رایج اپ).
+     *
+     * @var list<string>
+     */
+    private const RESERVED_PUBLIC_TOKENS = [
+        'surveys',
+        'survey',
+        'public',
+        'backup',
+        'backups',
+        'reports',
+        'dashboard',
+        'settings',
+        'personnel',
+        'companies',
+        'positions',
+        'units',
+        'storage',
+        'vendor',
+    ];
+
+    /**
+     * الگوی مسیر لینک عمومی (همان کاراکترهای تولید توکن؛ حداقل ۸ کاراکتر).
+     */
+    public static function publicTokenRoutePattern(): string
+    {
+        return '[23456789abcdefghjkmnpqrstuvwxyz]{8,64}';
+    }
+
+    public static function isReservedPublicToken(string $token): bool
+    {
+        return in_array(strtolower($token), self::RESERVED_PUBLIC_TOKENS, true);
+    }
+
+    public static function isValidPublicTokenFormat(string $token): bool
+    {
+        return (bool) preg_match('/^[23456789abcdefghjkmnpqrstuvwxyz]{8,64}$/', strtolower($token));
+    }
+
+    public function publicUrl(): ?string
+    {
+        if (! $this->public_token) {
+            return null;
+        }
+
+        return route('surveys.public.show', $this->public_token);
     }
 
     /**

@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.permission' => \App\Http\Middleware\EnsureAdminPermission::class,
             'admin.session_idle' => \App\Http\Middleware\AdminSessionIdle::class,
             'admin.only_main' => \App\Http\Middleware\EnsureAdminIsMain::class,
+            'public.survey.token' => \App\Http\Middleware\EnsurePublicSurveyTokenRoute::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

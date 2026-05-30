@@ -36,9 +36,10 @@ class PublicSurveyController extends Controller
             return redirect()->route('surveys.public.show', ['token' => $token]);
         }
 
-        $survey = Survey::where('public_token', $token)
-            ->with(['questions.options'])
-            ->firstOrFail();
+        $survey = $this->findPublicSurvey($token, ['questions.options']);
+        if ($survey === null) {
+            return $this->publicSurveyUnavailable();
+        }
 
         if ($survey->status !== 'active') {
             return view('surveys.public-unavailable', [
@@ -177,7 +178,10 @@ class PublicSurveyController extends Controller
 
     public function verifyAccess(Request $request, string $token): RedirectResponse
     {
-        $survey = Survey::where('public_token', $token)->firstOrFail();
+        $survey = $this->findPublicSurvey($token);
+        if ($survey === null) {
+            abort(404);
+        }
         if ($survey->status !== 'active'
             || ($survey->start_at && now()->lt($survey->start_at))
             || ($survey->end_at && now()->isAfter($survey->end_at->copy()->endOfDay()))
@@ -220,7 +224,10 @@ class PublicSurveyController extends Controller
 
     public function resendOtp(Request $request, string $token): JsonResponse
     {
-        $survey = Survey::where('public_token', $token)->firstOrFail();
+        $survey = $this->findPublicSurvey($token);
+        if ($survey === null) {
+            return response()->json(['ok' => false, 'message' => 'دسترسی به این نظرسنجی ممکن نیست.'], 404);
+        }
         if (! $this->surveyIsAccessible($survey)) {
             return response()->json(['ok' => false, 'message' => 'دسترسی به این نظرسنجی ممکن نیست.'], 403);
         }
@@ -241,7 +248,10 @@ class PublicSurveyController extends Controller
 
     public function verifyOtp(Request $request, string $token): RedirectResponse
     {
-        $survey = Survey::where('public_token', $token)->firstOrFail();
+        $survey = $this->findPublicSurvey($token);
+        if ($survey === null) {
+            abort(404);
+        }
         if (! $this->surveyIsAccessible($survey)) {
             return redirect()->route('surveys.public.show', ['token' => $token]);
         }
@@ -279,7 +289,10 @@ class PublicSurveyController extends Controller
 
     public function saveDraft(Request $request, string $token): JsonResponse
     {
-        $survey = Survey::where('public_token', $token)->with('questions.options')->firstOrFail();
+        $survey = $this->findPublicSurvey($token, ['questions.options']);
+        if ($survey === null) {
+            return response()->json(['ok' => false, 'message' => 'دسترسی به این نظرسنجی ممکن نیست.'], 404);
+        }
         if (!$survey->allow_partial) {
             return response()->json(['ok' => false, 'message' => 'ذخیره موقت برای این نظرسنجی فعال نیست.'], 422);
         }
@@ -322,7 +335,10 @@ class PublicSurveyController extends Controller
 
     public function submit(Request $request, string $token): RedirectResponse
     {
-        $survey = Survey::where('public_token', $token)->with('questions.options')->firstOrFail();
+        $survey = $this->findPublicSurvey($token, ['questions.options']);
+        if ($survey === null) {
+            abort(404);
+        }
         $context = $this->buildAccessContext($survey);
         if (!$context['audience_passed']) {
             return redirect()
@@ -927,6 +943,31 @@ class PublicSurveyController extends Controller
             '۷' => '7',
             '۸' => '8',
             '۹' => '9',
+        ]);
+    }
+
+    /**
+     * @param  list<string>  $with
+     */
+    private function findPublicSurvey(string $token, array $with = []): ?Survey
+    {
+        if (! Survey::isValidPublicTokenFormat($token) || Survey::isReservedPublicToken($token)) {
+            return null;
+        }
+
+        $query = Survey::query()->where('public_token', $token);
+        if ($with !== []) {
+            $query->with($with);
+        }
+
+        return $query->first();
+    }
+
+    private function publicSurveyUnavailable(): View
+    {
+        return view('surveys.public-unavailable', [
+            'title' => 'دسترسی امکان‌پذیر نیست',
+            'message' => 'این لینک معتبر نیست یا دیگر در دسترس نیست.',
         ]);
     }
 }

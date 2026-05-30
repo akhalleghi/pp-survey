@@ -300,7 +300,7 @@ final class SmsCampaignService
 
     private function publicUrlFor(Survey $survey): string
     {
-        return route('surveys.public.show', $survey->public_token);
+        return $survey->publicUrl() ?? '';
     }
 
     /**
