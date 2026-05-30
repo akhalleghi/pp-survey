@@ -351,6 +351,56 @@
             padding: 0.35rem 0.6rem;
             cursor: pointer;
         }
+        .option-toolbar {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            margin-bottom: 0.55rem;
+        }
+        .option-copy-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            width: 100%;
+            border: 1px dashed rgba(var(--primary-rgb), 0.42);
+            border-radius: 12px;
+            padding: 0.55rem 0.75rem;
+            background: rgba(var(--primary-rgb), 0.06);
+            color: var(--primary);
+            font-size: 0.82rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+        }
+        .option-copy-btn:hover:not(:disabled) {
+            background: rgba(var(--primary-rgb), 0.12);
+            border-color: rgba(var(--primary-rgb), 0.58);
+        }
+        .option-copy-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            border-color: rgba(15, 23, 42, 0.14);
+            background: rgba(15, 23, 42, 0.04);
+            color: var(--muted);
+        }
+        .option-copy-hint {
+            margin: 0;
+            font-size: 0.76rem;
+            line-height: 1.55;
+            color: var(--muted);
+        }
+        .option-actions-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin-top: 0.35rem;
+        }
+        .option-actions-row .type-btn {
+            flex: 1 1 auto;
+            min-width: 7rem;
+        }
         .save-btn {
             border: none;
             border-radius: 14px;
@@ -681,6 +731,22 @@
 
                 <div class="form-field" id="optionsWrapper" style="display:none;">
                     <label>گزینه‌ها (متن قابل نمایش + مقدار ذخیره‌سازی)</label>
+                    <div class="option-toolbar">
+                        <button
+                            type="button"
+                            class="option-copy-btn"
+                            id="copyOptionsFromPreviousBtn"
+                            hidden
+                            disabled
+                            title="کپی گزینه‌ها از آخرین سوال چندگزینه‌ای قبلی"
+                        >
+                            <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                            کپی گزینه‌ها از سوال قبلی
+                        </button>
+                        <p class="option-copy-hint" id="copyOptionsHint" hidden>
+                            برای فعال شدن این دکمه، ابتدا یک سوال از نوع «چندگزینه‌ای» یا «چندگزینه‌ای چندانتخابی» با گزینه ثبت کنید.
+                        </p>
+                    </div>
                     <div class="option-list" id="optionList">
                         <div class="option-row">
                             <input type="text" name="options[0][label]" placeholder="مثلاً خیلی خوب">
@@ -693,7 +759,9 @@
                             <button type="button" class="remove-option">حذف</button>
                         </div>
                     </div>
-                    <button type="button" class="type-btn" id="addOptionBtn">افزودن گزینه</button>
+                    <div class="option-actions-row">
+                        <button type="button" class="type-btn" id="addOptionBtn">افزودن گزینه</button>
+                    </div>
                     @error('options')
                         <small class="question-meta" style="color: #dc2626;">{{ $message }}</small>
                     @enderror
@@ -739,6 +807,10 @@
             const descriptionLabel = document.getElementById('questionDescriptionLabel');
             const descriptionInput = document.getElementById('questionDescription');
             const staticTextHint = document.getElementById('staticTextHint');
+            const copyOptionsBtn = document.getElementById('copyOptionsFromPreviousBtn');
+            const copyOptionsHint = document.getElementById('copyOptionsHint');
+            const COPYABLE_OPTION_TYPES = ['multiple_choice', 'checkboxes'];
+            const previousChoiceOptionsSource = @json($previousChoiceOptionsSource);
 
             const settingsGroups = {
                 short_text: ['text'],
@@ -759,6 +831,77 @@
                 file_upload: ['file']
             };
 
+            const updateCopyOptionsButton = (type) => {
+                if (!copyOptionsBtn || !copyOptionsHint) {
+                    return;
+                }
+
+                const supportsCopy = COPYABLE_OPTION_TYPES.includes(type);
+                const hasSource = Array.isArray(previousChoiceOptionsSource?.options)
+                    && previousChoiceOptionsSource.options.length > 0;
+
+                copyOptionsBtn.hidden = !supportsCopy;
+                copyOptionsHint.hidden = !supportsCopy || hasSource;
+                copyOptionsBtn.disabled = !supportsCopy || !hasSource;
+
+                if (supportsCopy && hasSource) {
+                    copyOptionsBtn.title = `کپی گزینه‌ها از سوال «${previousChoiceOptionsSource.question_title}»`;
+                } else {
+                    copyOptionsBtn.title = 'کپی گزینه‌ها از آخرین سوال چندگزینه‌ای قبلی';
+                }
+            };
+
+            const createOptionRow = (label = '', value = '') => {
+                const row = document.createElement('div');
+                row.className = 'option-row';
+
+                const labelInput = document.createElement('input');
+                labelInput.type = 'text';
+                labelInput.placeholder = 'متن گزینه';
+                labelInput.required = true;
+                labelInput.value = label;
+
+                const valueInput = document.createElement('input');
+                valueInput.type = 'text';
+                valueInput.placeholder = 'مقدار ذخیره';
+                valueInput.required = true;
+                valueInput.value = value;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'remove-option';
+                removeBtn.textContent = 'حذف';
+
+                row.append(labelInput, valueInput, removeBtn);
+                return row;
+            };
+
+            const rebuildOptionNames = () => {
+                const rows = optionList.querySelectorAll('.option-row');
+                rows.forEach((row, index) => {
+                    const labelInput = row.querySelector('input[name$="[label]"]');
+                    const valueInput = row.querySelector('input[name$="[value]"]');
+                    if (labelInput) {
+                        labelInput.name = `options[${index}][label]`;
+                    }
+                    if (valueInput) {
+                        valueInput.name = `options[${index}][value]`;
+                    }
+                });
+            };
+
+            const applyCopiedOptions = () => {
+                if (!Array.isArray(previousChoiceOptionsSource?.options) || !previousChoiceOptionsSource.options.length) {
+                    return;
+                }
+
+                optionList.innerHTML = '';
+                previousChoiceOptionsSource.options.forEach((option) => {
+                    optionList.appendChild(createOptionRow(option.label ?? '', option.value ?? ''));
+                });
+                rebuildOptionNames();
+            };
+
             const setActiveType = (type, hasOptions, isDisplayOnly) => {
                 typeInput.value = type;
                 typeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.type === type));
@@ -767,6 +910,7 @@
                     input.disabled = !hasOptions;
                     input.required = hasOptions;
                 });
+                updateCopyOptionsButton(type);
                 const activeGroups = settingsGroups[type] || [];
                 if (settingsWrapper) {
                     settingsWrapper.style.display = isDisplayOnly ? 'none' : 'block';
@@ -828,30 +972,16 @@
 
             setActiveType('short_text', false, false);
 
-            const rebuildOptionNames = () => {
-                const rows = optionList.querySelectorAll('.option-row');
-                rows.forEach((row, index) => {
-                    const labelInput = row.querySelector('input[name$="[label]"]');
-                    const valueInput = row.querySelector('input[name$="[value]"]');
-                    if (labelInput) {
-                        labelInput.name = `options[${index}][label]`;
-                    }
-                    if (valueInput) {
-                        valueInput.name = `options[${index}][value]`;
-                    }
-                });
-            };
-
             addOptionBtn?.addEventListener('click', () => {
-                const row = document.createElement('div');
-                row.className = 'option-row';
-                row.innerHTML = `
-                    <input type="text" name="options[0][label]" placeholder="متن گزینه" required>
-                    <input type="text" name="options[0][value]" placeholder="مقدار ذخیره" required>
-                    <button type="button" class="remove-option">حذف</button>
-                `;
-                optionList.appendChild(row);
+                optionList.appendChild(createOptionRow());
                 rebuildOptionNames();
+            });
+
+            copyOptionsBtn?.addEventListener('click', () => {
+                if (copyOptionsBtn.disabled) {
+                    return;
+                }
+                applyCopiedOptions();
             });
 
             optionList?.addEventListener('click', (event) => {

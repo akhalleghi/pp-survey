@@ -31,6 +31,35 @@
         .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .55rem; }
         .option-list { display: flex; flex-direction: column; gap: .45rem; }
         .option-row { display: grid; grid-template-columns: minmax(0,1fr) 130px auto; gap: .5rem; }
+        .option-copy-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .4rem;
+            width: 100%;
+            border: 1px dashed rgba(214, 17, 25, .4);
+            border-radius: 12px;
+            padding: .52rem .7rem;
+            background: rgba(214, 17, 25, .06);
+            color: var(--primary);
+            font-size: .82rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        .option-copy-btn:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            border-color: rgba(15, 23, 42, .14);
+            background: rgba(15, 23, 42, .04);
+            color: var(--muted);
+        }
+        .option-copy-hint {
+            margin: 0 0 .45rem;
+            font-size: .76rem;
+            color: var(--muted);
+            line-height: 1.55;
+        }
         .btn {
             border: none; border-radius: 12px; padding: .62rem .95rem; font-weight: 700;
             text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; font-family: inherit;
@@ -121,6 +150,18 @@
 
                 <div class="field" id="optionsWrapper" style="margin-top:.8rem;">
                     <label>گزینه‌ها (متن + مقدار)</label>
+                    <button
+                        type="button"
+                        class="option-copy-btn"
+                        id="copyOptionsFromPreviousBtn"
+                        hidden
+                        disabled
+                    >
+                        کپی گزینه‌ها از سوال قبلی
+                    </button>
+                    <p class="option-copy-hint" id="copyOptionsHint" hidden>
+                        برای فعال شدن این دکمه، یک سوال چندگزینه‌ای قبلی با گزینه ثبت‌شده لازم است.
+                    </p>
                     <div class="option-list" id="optionList">
                         @foreach ($options as $i => $option)
                             <div class="option-row">
@@ -178,11 +219,63 @@
             const descriptionLabel = document.getElementById('questionDescriptionLabel');
             const descriptionInput = document.getElementById('questionDescription');
             const staticTextHint = document.getElementById('staticTextHint');
+            const copyOptionsBtn = document.getElementById('copyOptionsFromPreviousBtn');
+            const copyOptionsHint = document.getElementById('copyOptionsHint');
+            const COPYABLE_OPTION_TYPES = ['multiple_choice', 'checkboxes'];
+            const previousChoiceOptionsSource = @json($previousChoiceOptionsSource ?? null);
             const settingsGroups = {
                 short_text: ['text'], long_text: ['text'], static_text_short: [], static_text_long: [],
                 multiple_choice: ['choice'], checkboxes: ['choice'],
                 dropdown: ['choice'], rating: ['choice', 'rating'], number: ['number'], email: [], date: ['date'],
                 phone: ['text'], url: ['text'], yes_no: ['choice'], linear_scale: ['choice', 'rating'], file_upload: ['file'],
+            };
+            const updateCopyOptionsButton = (type) => {
+                if (!copyOptionsBtn || !copyOptionsHint) return;
+                const supportsCopy = COPYABLE_OPTION_TYPES.includes(type);
+                const hasSource = Array.isArray(previousChoiceOptionsSource?.options) && previousChoiceOptionsSource.options.length > 0;
+                copyOptionsBtn.hidden = !supportsCopy;
+                copyOptionsHint.hidden = !supportsCopy || hasSource;
+                copyOptionsBtn.disabled = !supportsCopy || !hasSource;
+                if (supportsCopy && hasSource) {
+                    copyOptionsBtn.title = `کپی از سوال «${previousChoiceOptionsSource.question_title}»`;
+                }
+            };
+            const createOptionRow = (label = '', value = '') => {
+                const row = document.createElement('div');
+                row.className = 'option-row';
+                const labelInput = document.createElement('input');
+                labelInput.type = 'text';
+                labelInput.placeholder = 'متن گزینه';
+                labelInput.required = true;
+                labelInput.value = label;
+                const valueInput = document.createElement('input');
+                valueInput.type = 'text';
+                valueInput.placeholder = 'مقدار';
+                valueInput.required = true;
+                valueInput.value = value;
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'btn btn-ghost remove-option';
+                removeBtn.textContent = 'حذف';
+                row.append(labelInput, valueInput, removeBtn);
+                return row;
+            };
+            const rebuildOptionNames = () => {
+                const rows = optionList.querySelectorAll('.option-row');
+                rows.forEach((row, index) => {
+                    const labelInput = row.querySelector('input[name$="[label]"]');
+                    const valueInput = row.querySelector('input[name$="[value]"]');
+                    if (labelInput) labelInput.name = `options[${index}][label]`;
+                    if (valueInput) valueInput.name = `options[${index}][value]`;
+                });
+            };
+            const applyCopiedOptions = () => {
+                if (!Array.isArray(previousChoiceOptionsSource?.options) || !previousChoiceOptionsSource.options.length) return;
+                optionList.innerHTML = '';
+                previousChoiceOptionsSource.options.forEach((option) => {
+                    optionList.appendChild(createOptionRow(option.label ?? '', option.value ?? ''));
+                });
+                rebuildOptionNames();
             };
             const setActiveType = (type, hasOptions, isDisplayOnly) => {
                 typeInput.value = type;
@@ -192,6 +285,7 @@
                     input.disabled = !hasOptions;
                     input.required = hasOptions;
                 });
+                updateCopyOptionsButton(type);
                 const activeGroups = settingsGroups[type] || [];
                 if (settingsWrapper) {
                     settingsWrapper.style.display = isDisplayOnly ? 'none' : 'block';
@@ -232,23 +326,13 @@
                     }
                 }
             };
-            const rebuildOptionNames = () => {
-                const rows = optionList.querySelectorAll('.option-row');
-                rows.forEach((row, index) => {
-                    const labelInput = row.querySelector('input[name$="[label]"]');
-                    const valueInput = row.querySelector('input[name$="[value]"]');
-                    if (labelInput) labelInput.name = `options[${index}][label]`;
-                    if (valueInput) valueInput.name = `options[${index}][value]`;
-                });
-            };
             addOptionBtn?.addEventListener('click', () => {
-                const row = document.createElement('div');
-                row.className = 'option-row';
-                row.innerHTML = `<input type="text" name="options[0][label]" placeholder="متن گزینه" required>
-                    <input type="text" name="options[0][value]" placeholder="مقدار" required>
-                    <button type="button" class="btn btn-ghost remove-option">حذف</button>`;
-                optionList.appendChild(row);
+                optionList.appendChild(createOptionRow());
                 rebuildOptionNames();
+            });
+            copyOptionsBtn?.addEventListener('click', () => {
+                if (copyOptionsBtn.disabled) return;
+                applyCopiedOptions();
             });
             optionList?.addEventListener('click', (event) => {
                 const btn = event.target.closest('.remove-option');

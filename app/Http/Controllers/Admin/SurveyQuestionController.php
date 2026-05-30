@@ -53,8 +53,9 @@ class SurveyQuestionController extends Controller
         $survey->load(['questions.options', 'questions.answers']);
         $questionTypes = $this->questionTypes();
         $canReorderQuestions = $this->canReorderQuestions($survey);
+        $previousChoiceOptionsSource = $this->resolvePreviousChoiceOptionsSource($survey);
 
-        return view('admin.surveys-questions', compact('survey', 'questionTypes', 'canReorderQuestions'));
+        return view('admin.surveys-questions', compact('survey', 'questionTypes', 'canReorderQuestions', 'previousChoiceOptionsSource'));
     }
 
     public function store(Request $request, Survey $survey): RedirectResponse
@@ -102,8 +103,9 @@ class SurveyQuestionController extends Controller
 
         $question->load('options');
         $questionTypes = $this->questionTypes();
+        $previousChoiceOptionsSource = $this->resolvePreviousChoiceOptionsSource($survey, $question);
 
-        return view('admin.surveys-questions-edit', compact('survey', 'question', 'questionTypes'));
+        return view('admin.surveys-questions-edit', compact('survey', 'question', 'questionTypes', 'previousChoiceOptionsSource'));
     }
 
     public function update(Request $request, Survey $survey, SurveyQuestion $question): RedirectResponse
@@ -357,5 +359,52 @@ class SurveyQuestionController extends Controller
     private function canReorderQuestions(Survey $survey): bool
     {
         return $survey->responses()->doesntExist();
+    }
+
+    private const COPYABLE_OPTION_QUESTION_TYPES = [
+        'multiple_choice',
+        'checkboxes',
+    ];
+
+    /**
+     * @return array{question_title: string, question_type: string, options: list<array{label: string, value: string}>}|null
+     */
+    private function resolvePreviousChoiceOptionsSource(Survey $survey, ?SurveyQuestion $beforeQuestion = null): ?array
+    {
+        $questionsQuery = $survey->questions()->with('options')->orderBy('position')->orderBy('id');
+
+        if ($beforeQuestion !== null) {
+            $questionsQuery->where(function ($query) use ($beforeQuestion): void {
+                $query->where('position', '<', $beforeQuestion->position)
+                    ->orWhere(function ($nested) use ($beforeQuestion): void {
+                        $nested->where('position', $beforeQuestion->position)
+                            ->where('id', '<', $beforeQuestion->id);
+                    });
+            });
+        }
+
+        $sourceQuestion = $questionsQuery->get()
+            ->filter(function (SurveyQuestion $question): bool {
+                return in_array($question->type, self::COPYABLE_OPTION_QUESTION_TYPES, true)
+                    && $question->options->isNotEmpty();
+            })
+            ->last();
+
+        if ($sourceQuestion === null) {
+            return null;
+        }
+
+        return [
+            'question_title' => $sourceQuestion->title,
+            'question_type' => $sourceQuestion->type,
+            'options' => $sourceQuestion->options
+                ->sortBy('position')
+                ->values()
+                ->map(static fn (SurveyQuestionOption $option): array => [
+                    'label' => (string) $option->label,
+                    'value' => (string) ($option->value ?? ''),
+                ])
+                ->all(),
+        ];
     }
 }
