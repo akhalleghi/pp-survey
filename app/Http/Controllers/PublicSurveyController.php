@@ -9,12 +9,12 @@ use App\Models\SurveyResponse;
 use App\Models\SurveyResponseAnswer;
 use App\Services\Survey\SurveySmsOtpService;
 use App\Support\PublicSurveyAccessSession;
+use App\Support\SurveyFileStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
@@ -721,7 +721,7 @@ class PublicSurveyController extends Controller
                 if ($existing && $question->type === 'file_upload') {
                     $oldPath = $existing->answer_json['file_path'] ?? null;
                     if (is_string($oldPath) && $oldPath !== '') {
-                        Storage::disk('public')->delete($oldPath);
+                        SurveyFileStorage::delete($oldPath);
                     }
                 }
                 SurveyResponseAnswer::where('response_id', $response->id)->where('question_id', $question->id)->delete();
@@ -832,21 +832,20 @@ class PublicSurveyController extends Controller
                 ]);
             }
 
-            $ext = mb_strtolower((string) $uploadedFile->getClientOriginalExtension());
-            if ($ext === '' || !in_array($ext, $allowed, true)) {
-                throw ValidationException::withMessages([
-                    'answers.' . $question->id => 'پسوند فایل مجاز نیست. فرمت‌های مجاز: ' . implode(', ', $allowed),
-                ]);
+            try {
+                $path = SurveyFileStorage::storeUpload(
+                    $uploadedFile,
+                    (int) $question->survey_id,
+                    (int) $response->id,
+                    $allowed,
+                    $maxKb
+                );
+            } catch (ValidationException $e) {
+                $msg = collect($e->errors())->flatten()->first() ?: 'فایل نامعتبر است.';
+                throw ValidationException::withMessages(['answers.' . $question->id => $msg]);
             }
-            if ($uploadedFile->getSize() > ($maxKb * 1024)) {
-                throw ValidationException::withMessages([
-                    'answers.' . $question->id => 'حجم فایل بیشتر از حد مجاز است (' . number_format($maxKb) . 'KB).',
-                ]);
-            }
-
-            $path = $uploadedFile->store('survey-uploads/' . $question->survey_id . '/' . $response->id, 'public');
             if ($currentPath !== '') {
-                Storage::disk('public')->delete($currentPath);
+                SurveyFileStorage::delete($currentPath);
             }
 
             return array_merge($base, [
@@ -926,8 +925,11 @@ class PublicSurveyController extends Controller
             return false;
         }
 
-        return is_string($existing->answer_json['file_path'] ?? null)
-            && $existing->answer_json['file_path'] === $path;
+        $storedPath = $existing->answer_json['file_path'] ?? null;
+
+        return is_string($storedPath)
+            && $storedPath === $path
+            && SurveyFileStorage::pathBelongsToResponse($path, (int) $response->survey_id, (int) $response->id);
     }
 
     private function normalizeDigits(string $value): string

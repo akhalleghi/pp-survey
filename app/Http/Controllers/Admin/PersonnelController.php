@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ScopesSupervisorOrgAccess;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Personnel;
@@ -21,9 +22,12 @@ require_once app_path('Support/SimpleXLSXGen.php');
 
 class PersonnelController extends Controller
 {
+    use ScopesSupervisorOrgAccess;
+
     public function index(Request $request): View
     {
         $search = $request->query('search');
+        $unitScope = $this->supervisorUnitScope();
         $unitFilter = $request->query('unit');
         $positionFilter = $request->query('position');
         $companyFilter = $request->query('company');
@@ -31,6 +35,7 @@ class PersonnelController extends Controller
 
         $personnel = Personnel::query()
             ->with(['unit', 'position', 'company'])
+            ->when($unitScope !== null, fn ($query) => $query->whereIn('unit_id', $unitScope ?: [-1]))
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('first_name', 'like', "%{$search}%")
@@ -85,6 +90,7 @@ class PersonnelController extends Controller
             'birth_date' => ['required', 'date'],
         ]);
 
+        $this->assertUnitIdInSupervisorScope((int) $validated['unit_id']);
         Personnel::create($validated);
 
         return redirect()
@@ -94,6 +100,8 @@ class PersonnelController extends Controller
 
     public function update(Request $request, Personnel $personnel): RedirectResponse
     {
+        $this->authorizePersonnelInSupervisorScope($personnel);
+
         $validated = $request->validateWithBag('updatePersonnel', [
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
@@ -117,6 +125,7 @@ class PersonnelController extends Controller
             'birth_date' => ['required', 'date'],
         ]);
 
+        $this->assertUnitIdInSupervisorScope((int) $validated['unit_id']);
         $personnel->update($validated);
 
         return redirect()
@@ -126,6 +135,7 @@ class PersonnelController extends Controller
 
     public function destroy(Personnel $personnel): RedirectResponse
     {
+        $this->authorizePersonnelInSupervisorScope($personnel);
         $personnel->delete();
 
         return redirect()
@@ -246,6 +256,13 @@ class PersonnelController extends Controller
                 continue;
             }
 
+            $unitScope = $this->supervisorUnitScope();
+            if ($unitScope !== null && ($unitScope === [] || ! in_array((int) $unit->id, $unitScope, true))) {
+                $errors[] = "ردیف {$excelRow}: دسترسی به واحد انتخاب‌شده برای شما مجاز نیست.";
+                $skipped++;
+                continue;
+            }
+
             $positionId = $this->normalizeId($payload['position_id']);
             $position = $positionId ? Position::find($positionId) : null;
             if (!$position) {
@@ -277,6 +294,15 @@ class PersonnelController extends Controller
             }
 
             $personnel = Personnel::firstOrNew(['personnel_code' => $payload['personnel_code']]);
+            if ($personnel->exists) {
+                try {
+                    $this->authorizePersonnelInSupervisorScope($personnel);
+                } catch (\Symfony\Component\HttpKernel\Exception\HttpException) {
+                    $errors[] = "ردیف {$excelRow}: دسترسی به ویرایش این پرسنل مجاز نیست.";
+                    $skipped++;
+                    continue;
+                }
+            }
             $isNew = !$personnel->exists;
             $personnel->fill([
                 'first_name' => $payload['first_name'],

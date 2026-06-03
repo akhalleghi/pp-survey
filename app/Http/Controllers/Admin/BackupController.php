@@ -38,7 +38,7 @@ class BackupController extends Controller
 
             return response()->json([
                 'ok' => false,
-                'message' => 'ایجاد پشتیبان ناموفق بود: '.$e->getMessage(),
+                'message' => 'ایجاد پشتیبان ناموفق بود. جزئیات در گزارش خطای سامانه ثبت شد.',
             ], 500);
         }
 
@@ -119,7 +119,7 @@ class BackupController extends Controller
 
             return response()->json([
                 'ok' => false,
-                'message' => 'بازیابی ناموفق بود: '.$e->getMessage(),
+                'message' => 'بازیابی ناموفق بود. جزئیات در گزارش خطای سامانه ثبت شد.',
             ], 500);
         } finally {
             if ($tempPath && is_file($tempPath)) {

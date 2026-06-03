@@ -26,7 +26,9 @@ Route::get('/', function () {
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
-    Route::post('/captcha-refresh', [AuthController::class, 'refreshCaptcha'])->name('captcha.refresh');
+    Route::post('/captcha-refresh', [AuthController::class, 'refreshCaptcha'])
+        ->middleware('throttle:30,1')
+        ->name('captcha.refresh');
 
     Route::middleware(['admin.auth', 'admin.session_idle'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

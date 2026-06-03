@@ -101,9 +101,7 @@
                         <span title="{{ $ratingOptions->first()?->label }}">{{ $ratingOptions->first()?->label }}</span>
                         <span title="{{ $ratingOptions->last()?->label }}">{{ $ratingOptions->last()?->label }}</span>
                     </div>
-                    <script type="application/json" data-rating-options>
-                        {!! $ratingOptions->map(fn ($option) => ['id' => (int) $option->id, 'label' => (string) $option->label])->toJson(JSON_UNESCAPED_UNICODE) !!}
-                    </script>
+                    <script type="application/json" data-rating-options>@json($ratingOptions->map(fn ($option) => ['id' => (int) $option->id, 'label' => (string) $option->label])->values()->all())</script>
                 </div>
             @elseif ($question->options->isNotEmpty())
                 @foreach ($question->options as $option)

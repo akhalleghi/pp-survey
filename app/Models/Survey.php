@@ -100,7 +100,7 @@ class Survey extends Model
      * تولید شناسهٔ کوتاه برای لینک عمومی (مناسب پیامک)، بدون تکرار در جدول نظرسنجی‌ها.
      * از حروف و اعداد بدون ابهام در پیامک (بدون ۰/و، ۱/ال، …) استفاده می‌شود.
      */
-    public static function generateUniquePublicToken(int $length = 8): string
+    public static function generateUniquePublicToken(int $length = 12): string
     {
         $alphabet = '23456789abcdefghjkmnpqrstuvwxyz';
         $maxIndex = strlen($alphabet) - 1;

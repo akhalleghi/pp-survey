@@ -119,6 +119,16 @@ final class AdminPermissions
     }
 
     /**
+     * کلیدهایی که هنگام ساخت/ویرایش حساب ناظر قابل اختصاص هستند (بدون دسترسی‌های حساس مثل تنظیمات).
+     *
+     * @return list<string>
+     */
+    public static function assignableSupervisorPermissionKeys(): array
+    {
+        return array_values(array_keys(self::supervisorPortalAssignableDefinitions()));
+    }
+
+    /**
      * پیش‌فرض برای ناظری که تازه حساب پنل می‌گیرد.
      *
      * @return list<string>

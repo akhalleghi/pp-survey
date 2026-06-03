@@ -151,7 +151,7 @@ final class SystemBackupService
             if ($zip->open($zipPath) !== true) {
                 throw new RuntimeException('باز کردن فایل پشتیبان ناموفق بود.');
             }
-            $zip->extractTo($tempDir);
+            $this->extractZipSafely($zip, $tempDir);
             $zip->close();
 
             $this->restoreDatabaseFromExtracted($tempDir);
@@ -503,6 +503,55 @@ final class SystemBackupService
         File::ensureDirectoryExists(dirname($target));
         if (! copy($source, $target)) {
             throw new RuntimeException('بازیابی تنظیمات سامانه ناموفق بود.');
+        }
+    }
+
+    private function extractZipSafely(ZipArchive $zip, string $destination): void
+    {
+        File::ensureDirectoryExists($destination);
+        $destinationReal = realpath($destination);
+        if ($destinationReal === false) {
+            throw new RuntimeException('ایجاد پوشهٔ موقت بازیابی ناموفق بود.');
+        }
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $entry = $zip->getNameIndex($i);
+            if ($entry === false || $entry === '') {
+                continue;
+            }
+
+            $entry = str_replace('\\', '/', $entry);
+            if (str_contains($entry, "\0") || str_starts_with($entry, '/') || preg_match('#^[a-zA-Z]:/#', $entry) === 1) {
+                throw new RuntimeException('فایل پشتیبان حاوی مسیر نامعتبر است.');
+            }
+
+            $parts = array_values(array_filter(explode('/', $entry), static fn (string $p): bool => $p !== '' && $p !== '.'));
+            foreach ($parts as $part) {
+                if ($part === '..') {
+                    throw new RuntimeException('فایل پشتیبان حاوی مسیر نامعتبر است.');
+                }
+            }
+
+            if (str_ends_with($entry, '/')) {
+                continue;
+            }
+
+            $relative = implode(DIRECTORY_SEPARATOR, $parts);
+            $target = $destinationReal.DIRECTORY_SEPARATOR.$relative;
+            $parent = dirname($target);
+            File::ensureDirectoryExists($parent);
+            $parentReal = realpath($parent);
+            if ($parentReal === false || ! str_starts_with($parentReal, $destinationReal)) {
+                throw new RuntimeException('فایل پشتیبان حاوی مسیر نامعتبر است.');
+            }
+
+            $contents = $zip->getFromIndex($i);
+            if ($contents === false) {
+                throw new RuntimeException('خواندن محتوای فایل پشتیبان ناموفق بود.');
+            }
+            if (file_put_contents($target, $contents) === false) {
+                throw new RuntimeException('استخراج فایل پشتیبان ناموفق بود.');
+            }
         }
     }
 

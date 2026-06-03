@@ -19,6 +19,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use App\Support\SurveyFileStorage;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -478,7 +479,14 @@ class SurveyController extends Controller
             if (!is_dir($destination)) {
                 mkdir($destination, 0775, true);
             }
-            $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
+            $ext = mb_strtolower((string) ($file->extension() ?: $file->guessExtension() ?: ''));
+            if (! in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+                return redirect()
+                    ->route('admin.surveys.edit', $survey)
+                    ->withErrors(['background_upload' => 'فرمت تصویر پس‌زمینه مجاز نیست.'])
+                    ->withInput();
+            }
+            $fileName = Str::random(40).'.'.$ext;
             $file->move($destination, $fileName);
             $survey->update([
                 'background_image' => 'bg-images/custom/' . $fileName,
@@ -843,7 +851,7 @@ class SurveyController extends Controller
                     if ($existing && $question->type === 'file_upload') {
                         $old = $existing->answer_json['file_path'] ?? null;
                         if (is_string($old) && $old !== '') {
-                            Storage::disk('public')->delete($old);
+                            SurveyFileStorage::delete($old);
                         }
                     }
                     SurveyResponseAnswer::where('response_id', $response->id)
@@ -881,7 +889,7 @@ class SurveyController extends Controller
         foreach ($response->answers as $answer) {
             $old = $answer->answer_json['file_path'] ?? null;
             if (is_string($old) && $old !== '') {
-                Storage::disk('public')->delete($old);
+                SurveyFileStorage::delete($old);
             }
         }
 
@@ -909,13 +917,13 @@ class SurveyController extends Controller
             ->firstOrFail();
 
         $path = $answer->answer_json['file_path'] ?? null;
-        if (!is_string($path) || $path === '' || !Storage::disk('public')->exists($path)) {
+        if (! is_string($path) || $path === '' || ! SurveyFileStorage::exists($path)) {
             abort(404);
         }
 
         $name = (string) ($answer->answer_json['file_name'] ?? basename($path));
 
-        return Storage::disk('public')->download($path, $name);
+        return SurveyFileStorage::download($path, $name);
     }
 
     private function normalizeResponseAnswer($question, mixed $raw, ?UploadedFile $uploadedFile, SurveyResponse $response): ?array
@@ -936,7 +944,7 @@ class SurveyController extends Controller
 
         if (in_array($question->type, ['multiple_choice', 'dropdown', 'rating', 'yes_no', 'linear_scale'], true)) {
             $optionId = (int) (is_array($raw) ? ($raw['option_id'] ?? 0) : $raw);
-            if ($optionId <= 0) {
+            if ($optionId <= 0 || ! $this->optionBelongsToQuestion($question, $optionId)) {
                 return null;
             }
 
@@ -946,6 +954,7 @@ class SurveyController extends Controller
         if ($question->type === 'checkboxes') {
             $optionIds = is_array($raw) ? ($raw['option_ids'] ?? $raw) : [];
             $optionIds = array_values(array_unique(array_filter(array_map('intval', (array) $optionIds), fn ($id) => $id > 0)));
+            $optionIds = array_values(array_filter($optionIds, fn ($id) => $this->optionBelongsToQuestion($question, $id)));
             if (empty($optionIds)) {
                 return null;
             }
@@ -982,6 +991,9 @@ class SurveyController extends Controller
                 if ($removeCurrent || $currentPath === '') {
                     return null;
                 }
+                if (! SurveyFileStorage::pathBelongsToResponse($currentPath, (int) $question->survey_id, (int) $response->id)) {
+                    return null;
+                }
 
                 return array_merge($base, [
                     'answer_json' => [
@@ -1007,21 +1019,20 @@ class SurveyController extends Controller
                 ]);
             }
 
-            $ext = mb_strtolower((string) $uploadedFile->getClientOriginalExtension());
-            if ($ext === '' || !in_array($ext, $allowed, true)) {
-                throw ValidationException::withMessages([
-                    'answers.' . $question->id => 'پسوند فایل مجاز نیست. فرمت‌های مجاز: ' . implode(', ', $allowed),
-                ]);
+            try {
+                $path = SurveyFileStorage::storeUpload(
+                    $uploadedFile,
+                    (int) $question->survey_id,
+                    (int) $response->id,
+                    $allowed,
+                    $maxKb
+                );
+            } catch (ValidationException $e) {
+                $msg = collect($e->errors())->flatten()->first() ?: 'فایل نامعتبر است.';
+                throw ValidationException::withMessages(['answers.' . $question->id => $msg]);
             }
-            if ($uploadedFile->getSize() > ($maxKb * 1024)) {
-                throw ValidationException::withMessages([
-                    'answers.' . $question->id => 'حجم فایل بیشتر از حد مجاز است (' . number_format($maxKb) . 'KB).',
-                ]);
-            }
-
-            $path = $uploadedFile->store('survey-uploads/' . $question->survey_id . '/' . $response->id, 'public');
             if ($currentPath !== '') {
-                Storage::disk('public')->delete($currentPath);
+                SurveyFileStorage::delete($currentPath);
             }
 
             return array_merge($base, [
@@ -1042,6 +1053,18 @@ class SurveyController extends Controller
         }
 
         return array_merge($base, ['answer_text' => $value]);
+    }
+
+    private function optionBelongsToQuestion(SurveyQuestion $question, int $optionId): bool
+    {
+        if ($optionId <= 0) {
+            return false;
+        }
+        if ($question->relationLoaded('options')) {
+            return $question->options->contains('id', $optionId);
+        }
+
+        return $question->options()->whereKey($optionId)->exists();
     }
 
     private function resolveAnswerDisplayValue(SurveyResponseAnswer $answer): string

@@ -177,7 +177,7 @@ class UnitSupervisorController extends Controller
             ],
             'portal_password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'portal_permissions' => ['nullable', 'array'],
-            'portal_permissions.*' => ['string', Rule::in(AdminPermissions::allKeys())],
+            'portal_permissions.*' => ['string', Rule::in(AdminPermissions::assignableSupervisorPermissionKeys())],
             'portal_active' => ['nullable', 'boolean'],
             'requires_survey_publish_approval' => ['nullable', 'boolean'],
         ];
@@ -190,10 +190,15 @@ class UnitSupervisorController extends Controller
     {
         $username = isset($validated['portal_username']) ? trim((string) $validated['portal_username']) : '';
         $password = $validated['portal_password'] ?? null;
-        $perms = AdminUser::normalizePermissionsInput($validated['portal_permissions'] ?? []);
+        $assignable = AdminPermissions::assignableSupervisorPermissionKeys();
+        $perms = array_values(array_intersect(
+            AdminUser::normalizePermissionsInput($validated['portal_permissions'] ?? []),
+            $assignable
+        ));
         if ($perms === []) {
             $perms = AdminPermissions::defaultSupervisorPermissions();
         }
+        $perms = array_values(array_intersect($perms, $assignable));
         if (! in_array(AdminPermissions::DASHBOARD, $perms, true)) {
             $perms[] = AdminPermissions::DASHBOARD;
         }

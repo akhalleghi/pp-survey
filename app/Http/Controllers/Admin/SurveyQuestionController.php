@@ -345,8 +345,8 @@ class SurveyQuestionController extends Controller
             SurveyQuestionOption::create([
                 'question_id' => $question->id,
                 'position' => $index + 1,
-                'label' => $option['label'],
-                'value' => $option['value'] ?? null,
+                'label' => strip_tags((string) $option['label']),
+                'value' => isset($option['value']) ? strip_tags((string) $option['value']) : null,
             ]);
         }
     }
