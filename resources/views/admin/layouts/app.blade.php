@@ -1490,6 +1490,8 @@
         }
     </style>
 
+    @include('admin.partials.pagination-styles')
+
 </head>
 
 <body class="{{ $glassUiEnabled ? 'glass-ui-enabled' : '' }}">

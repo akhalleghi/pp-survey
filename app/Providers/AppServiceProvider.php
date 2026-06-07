@@ -9,6 +9,7 @@ use App\Support\AppFonts;
 use App\Support\AppSettings;
 use App\Support\AppTextScale;
 use Carbon\Carbon;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,6 +35,8 @@ class AppServiceProvider extends ServiceProvider
         if (extension_loaded('intl')) {
             \Locale::setDefault(str_contains($locale, '_') ? $locale : $locale.'_IR');
         }
+
+        Paginator::defaultView('vendor.pagination.admin');
 
         View::share('appSettings', AppSettings::all());
         View::share('appFont', AppFonts::resolve());
