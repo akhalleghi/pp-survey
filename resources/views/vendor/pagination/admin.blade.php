@@ -25,12 +25,12 @@
                 @if ($paginator->onFirstPage())
                     <span class="admin-pagination__btn admin-pagination__btn--nav is-disabled" aria-disabled="true">
                         <i class="fa-solid fa-angle-right" aria-hidden="true"></i>
-                        <span>{{ __('pagination.previous') }}</span>
+                        <span>قبلی</span>
                     </span>
                 @else
                     <a href="{{ $paginator->previousPageUrl() }}" rel="prev" class="admin-pagination__btn admin-pagination__btn--nav">
                         <i class="fa-solid fa-angle-right" aria-hidden="true"></i>
-                        <span>{{ __('pagination.previous') }}</span>
+                        <span>قبلی</span>
                     </a>
                 @endif
 
@@ -54,12 +54,12 @@
 
                 @if ($paginator->hasMorePages())
                     <a href="{{ $paginator->nextPageUrl() }}" rel="next" class="admin-pagination__btn admin-pagination__btn--nav">
-                        <span>{{ __('pagination.next') }}</span>
+                        <span>بعدی</span>
                         <i class="fa-solid fa-angle-left" aria-hidden="true"></i>
                     </a>
                 @else
                     <span class="admin-pagination__btn admin-pagination__btn--nav is-disabled" aria-disabled="true">
-                        <span>{{ __('pagination.next') }}</span>
+                        <span>بعدی</span>
                         <i class="fa-solid fa-angle-left" aria-hidden="true"></i>
                     </span>
                 @endif
