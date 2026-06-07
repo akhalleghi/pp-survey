@@ -66,6 +66,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('personnel', PersonnelController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::post('personnel/bulk-import', [PersonnelController::class, 'bulkImport'])->name('personnel.bulk-import');
             Route::get('personnel/template/download', [PersonnelController::class, 'downloadTemplate'])->name('personnel.template');
+            Route::get('personnel/export', [PersonnelController::class, 'export'])->name('personnel.export');
         });
 
         Route::middleware('admin.permission:org.supervisors')->group(function () {

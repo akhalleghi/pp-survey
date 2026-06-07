@@ -145,20 +145,47 @@ class PersonnelController extends Controller
 
     public function downloadTemplate()
     {
-        $rows = [
-            ['first_name', 'last_name', 'personnel_code', 'mobile', 'position_id', 'unit_id', 'company_id', 'gender', 'national_code', 'birth_date'],
-            ['Ali', 'Ahmadi', "'00123", '09120000000', 1, 2, 1, 1, '1234567890', '1400/01/01'],
-        ];
+        return $this->downloadPersonnelSpreadsheet(
+            $this->personnelSpreadsheetTemplateRows(),
+            'personnel-template.xlsx'
+        );
+    }
 
-        $filename = 'personnel-template.xlsx';
-        $tempPath = storage_path('app/tmp/'.$filename);
-        if (!is_dir(dirname($tempPath))) {
-            mkdir(dirname($tempPath), 0775, true);
+    public function export(Request $request)
+    {
+        $search = $request->query('search');
+        $unitFilter = $request->query('unit');
+        $positionFilter = $request->query('position');
+        $companyFilter = $request->query('company');
+        $genderFilter = $request->query('gender');
+
+        $records = Personnel::query()
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('personnel_code', 'like', "%{$search}%")
+                        ->orWhere('mobile', 'like', "%{$search}%")
+                        ->orWhere('national_code', 'like', "%{$search}%");
+                });
+            })
+            ->when($unitFilter, fn ($query) => $query->where('unit_id', $unitFilter))
+            ->when($positionFilter, fn ($query) => $query->where('position_id', $positionFilter))
+            ->when($companyFilter, fn ($query) => $query->where('company_id', $companyFilter))
+            ->when($genderFilter, fn ($query) => $query->where('gender', $genderFilter))
+            ->latest()
+            ->get();
+
+        $rows = $this->personnelSpreadsheetHeaderRow();
+
+        foreach ($records as $person) {
+            $rows[] = $this->personnelSpreadsheetDataRow($person);
         }
 
-        SimpleXLSXGen::fromArray($rows)->saveAs($tempPath);
-
-        return response()->download($tempPath)->deleteFileAfterSend(true);
+        return $this->downloadPersonnelSpreadsheet(
+            $rows,
+            'personnel-export-'.now()->format('Y-m-d').'.xlsx'
+        );
     }
 
     public function bulkImport(Request $request): RedirectResponse
@@ -326,6 +353,60 @@ class PersonnelController extends Controller
             ->route('admin.personnel.index')
             ->with('status', $status)
             ->with('bulk_errors', $errors);
+    }
+
+    private function personnelSpreadsheetHeaderRow(): array
+    {
+        return [
+            ['first_name', 'last_name', 'personnel_code', 'mobile', 'position_id', 'unit_id', 'company_id', 'gender', 'national_code', 'birth_date'],
+        ];
+    }
+
+    private function personnelSpreadsheetTemplateRows(): array
+    {
+        return [
+            ...$this->personnelSpreadsheetHeaderRow(),
+            [['Ali', 'Ahmadi', "'00123", '09120000000', 1, 2, 1, 1, '1234567890', '1400/01/01']],
+        ];
+    }
+
+    private function personnelSpreadsheetDataRow(Personnel $person): array
+    {
+        $genderMap = [
+            'male' => 1,
+            'female' => 2,
+            'other' => 3,
+        ];
+
+        $personnelCode = (string) $person->personnel_code;
+        if ($personnelCode !== '' && str_starts_with($personnelCode, '0')) {
+            $personnelCode = "'".$personnelCode;
+        }
+
+        return [
+            $person->first_name,
+            $person->last_name,
+            $personnelCode,
+            $person->mobile,
+            $person->position_id,
+            $person->unit_id,
+            $person->company_id,
+            $genderMap[$person->gender] ?? $person->gender,
+            $person->national_code,
+            jalali_date($person->birth_date),
+        ];
+    }
+
+    private function downloadPersonnelSpreadsheet(array $rows, string $filename)
+    {
+        $tempPath = storage_path('app/tmp/'.$filename);
+        if (!is_dir(dirname($tempPath))) {
+            mkdir(dirname($tempPath), 0775, true);
+        }
+
+        SimpleXLSXGen::fromArray($rows)->saveAs($tempPath);
+
+        return response()->download($tempPath)->deleteFileAfterSend(true);
     }
 
     private function rowIsEmpty(array $row): bool

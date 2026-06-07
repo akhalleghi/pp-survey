@@ -468,6 +468,7 @@
             <div class="personnel-actions">
                 <button type="button" class="primary" id="openCreatePersonnelModal">افزودن پرسنل جدید</button>
                 <button type="button" class="outline" id="openBulkImportModal">بارگذاری یکجا</button>
+                <a href="{{ route('admin.personnel.export', request()->query()) }}" class="ghost">خروجی اکسل</a>
                 <a href="{{ route('admin.personnel.index') }}" class="ghost">بارگذاری مجدد</a>
             </div>
         </div>
